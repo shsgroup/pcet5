@@ -1,0 +1,122 @@
+#############################################################
+#
+# Makefile for rate_flux
+#
+# Alexander Soudackov, The Pennsylvania State University
+# May 16, 2004
+#
+#############################################################
+
+.SUFFIXES: .o .mod .f90 .f
+
+FC      = pgf90
+FCFLAGS = -fastsse -tp p7
+MODDIR  = mod
+MODOPT  = -module $(MODDIR)
+OBJDIR  = obj
+PROGRAM = rate_flux
+LDFLAGS =
+LDFLAGS =
+EXEDIR  = .
+EXE     = $(EXEDIR)/$(PROGRAM).bin
+LIB     = lib$(PROGRAM).a
+
+# rules
+
+$(OBJDIR)/%.o : %.f90
+	$(FC) -c $(FCFLAGS) -o $(OBJDIR)/$*.o $(MODOPT) $*.f90
+
+$(OBJDIR)/%.o : %.f
+	$(FC) -c $(FCFLAGS) -o $(OBJDIR)/$*.o $(MODOPT) $*.f
+
+$(MODDIR)/%.mod : $(OBJDIR)/%.o
+	@if [ ! -f $@ ]; then rm $< ; $(MAKE) $< ; fi
+	
+SRCOBJ = $(OBJDIR)/quadpack.o  \
+	 $(OBJDIR)/rate_flux.o \
+	 $(OBJDIR)/second.o
+
+SRCSRC = quadpack.f    \
+	 rate_flux.f90 \
+	 second.f90
+
+MODOBJ  = $(OBJDIR)/constants.o   \
+          $(OBJDIR)/flux.o        \
+          $(OBJDIR)/monte_carlo.o \
+          $(OBJDIR)/rate_pars.o   \
+          $(OBJDIR)/ssplib.o
+
+
+MODMOD  = $(MODDIR)/constants.mod   \
+          $(MODDIR)/flux.mod        \
+          $(MODDIR)/monte_carlo.mod \
+          $(MODDIR)/rate_pars.mod   \
+          $(MODDIR)/ssplib.mod
+
+MODSRC  = constants.f90   \
+          flux.f90        \
+          monte_carlo.f90 \
+          rate_pars.f90   \
+          ssplib.f90
+
+note:
+	@echo
+	@echo '=== MAKEFILE for rate_flux ==='
+	@echo 'Options:'
+	@echo 'make build: build '
+	@echo 'make all: build and link '
+	@echo 'make clean: remove object and module files '
+	@echo 'Have fun !!!'
+	@echo
+
+
+build:  $(MODMOD)
+	@echo "*** building object files ***"
+	$(MAKE) FC=$(FC) $(SRCOBJ) $(MODOBJ)
+
+all:    build
+	@echo "*** linking $(PROGRAM) ***"
+	$(FC) $(FCFLAGS) $(LDFLAGS) -o $(EXE) $(MODOPT) $(SRCOBJ) $(MODOBJ)
+	@echo "---------------------------------------------------------------------------------------"
+	@size $(EXE)
+	@echo "---------------------------------------------------------------------------------------"
+
+clean:
+	rm -f *.o $(OBJDIR)/*.o *.mod $(MODDIR)/*.mod *.stb *.dll *.a
+
+#############################
+# source files dependencies
+#############################
+
+$(OBJDIR)/rate_flux.o : rate_flux.f90 \
+$(OBJDIR)/constants.o   \
+$(OBJDIR)/rate_pars.o   \
+$(OBJDIR)/flux.o        \
+$(OBJDIR)/monte_carlo.o \
+$(OBJDIR)/ssplib.o
+
+$(OBJDIR)/quadpack.o : quadpack.f
+
+$(OBJDIR)/second.o : second.f90
+
+#############################
+# module files dependencies
+#############################
+
+$(OBJDIR)/constants.o : constants.f90
+
+$(OBJDIR)/flux.o : flux.f90 \
+$(OBJDIR)/constants.o \
+$(OBJDIR)/rate_pars.o
+
+$(OBJDIR)/monte_carlo.o : monte_carlo.f90 \
+$(OBJDIR)/constants.o \
+$(OBJDIR)/rate_pars.o \
+$(OBJDIR)/flux.o
+
+$(OBJDIR)/rate_pars.o : rate_pars.f90 \
+$(OBJDIR)/constants.o
+
+$(OBJDIR)/ssplib.o : ssplib.f90
+
+

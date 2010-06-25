@@ -1,0 +1,98 @@
+#=========================================================================
+#  Sample AUTOMAKE configuration file (lf95)
+#  (lines beginning with a # are comments)
+#=========================================================================
+#
+   MAKEMAKE
+
+#  specify LF95 compiler
+
+   LF95
+
+#  specify source files
+
+   FILES=*.f90
+   and
+   FILES=*.f
+
+#  specify executable
+
+   TARGET=rate_flux.bin
+
+#  The LF95 line specifies a default compile command for the individual files 
+#  which match one of the FILES= wildcards, and a default link command for 
+#  creating the executable:
+#
+     COMPILE=lf95 -c --o2 --tp4 --sse2 %fi
+     LINK=lf95 %ob -o %ex --o2 --tp4 --sse2
+#
+#  If these defaults are inappropriate you can specify your own COMPILE= and LINK= 
+#  commands
+#
+#  The following placemarkers may be used in the COMPILE= command
+#
+#  %sd - the directory containing the source file (includes trailing "/")
+#  %sf - the source file name (no directory or extension)
+#  %se - the source file extension (includes leading ".")
+#  %fi - equivalent to %sd%sf%se
+#  %od - the directory containing object files (includes trailing "/")
+#                       (specified using OBJDIR=, see below)
+#  %oe - the object file extension (includes leading ".")
+#                       (specified using OBJEXT=, see below)
+#  %id - the INCLUDE file search path
+#                       (specified using INCLUDE=, see below)
+#
+#  The following placemarkers may be used in the LINK= command
+#
+#  %ob - expands to the object files corresponding to the source files
+#        specified using FILES=.  For example if FILES=*.f, and
+#        OBJEXT=.o (the default), %ob expands to "*.o".  If there
+#        are several compilation phases, %ob combines the object files
+#        for all phases.  For example, given
+#
+#            FILES=*.f
+#            AND
+#            FILES=extra/*.f
+#
+#        %ob expands to "*.o extra/*.o"
+#
+#  %rf - expands to the name of a response file, created by AUTOMAKE
+#        containing the names of object files to be linked.
+#  %ex - the executable file name as specified using TARGET=
+#
+#  Additional commands may be added as required:
+#
+#  OBJDIR=    specifies the name of the directory containing object files
+#                                         (default same as source files)
+#  OBJEXT=    specifies the object file extension         (default .o  )
+#  INCLUDE=   specifies a search path for INCLUDE files
+#             (e.g.  INCLUDE=;/usr/include;/include)      (default none)
+#  SYSINCLUDE=specifies a search path for system INCLUDE files (used
+#             when include file name is enclosed in angle brackets <>)
+#  CHECK=     specifies a command to be executed after each compilation.
+#
+#  If the files to be compiled cannot be represented by a single wild-card
+#  or if you need a different compiler or different compile options for
+#  different files, use the AND keyword to specify different sections.
+#
+#    e.g.      COMPILE=f77 -c %fi
+#              FILES=fsource/*.f
+#                AND
+#              COMPILE=cc -c %fi
+#              FILES=csource/*.c
+#
+#  The COMPILE=, OBJEXT=, INCLUDE=, SYSINCLUDE= & CHECK= keywords may
+#  be specified for each phase as necessary. If they are not specified
+#  they retain their previous value.  OBJDIR= defaults to the source
+#  directory in each section.
+#
+#=========================================================================
+#  AUTOMAKE and Fortran 90 modules
+#=========================================================================
+#
+#  This version of AUTOMAKE deals automatically with MODULEs and the
+#  associated dependency issues.  AUTOMAKE detects module dependencies
+#  automatically and ensures that changes to a MODULE cause programs or
+#  other modules that use it to be recompiled, and that compilations take
+#  place in the correct order.
+
