@@ -88,9 +88,9 @@ subroutine prnsol
       WRITE(6,'(/1X,''Solvated profiles along H coordinate '',&
       &''for zp='',f7.3,'' and ze='',f7.3,/,1x,&
       &''are written to the external file <'',a,''>'')')&
-      &zp,ze,job(1:ljob)//'/'//'ptsol'
+      &zp,ze,job(1:ljob)//'/'//'ptsol.dat'
       write(6,'(1x,''zp='',f7.3,'' ze='',f7.3)') zp,ze
-      open(1,file=job(1:ljob)//'/'//'ptsol',status='new')
+      open(1,file=job(1:ljob)//'/'//'ptsol.dat',status='new')
 
    else
 
