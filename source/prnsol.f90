@@ -1,4 +1,5 @@
 subroutine prnsol
+
 !===================================================================C
 !
 !  Print out solvated energy profiles along the proton coordinate
@@ -9,25 +10,10 @@ subroutine prnsol
 !
 !--------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:37
-!  4.1
-!  Exp
-!  prnsol.f90,v 4.1 2010/06/25 20:02:37 souda Exp
-!  prnsol.f90,v
-!  Revision 4.1  2010/06/25 20:02:37  souda
-!  Release 4.1
-!
-!  Revision 1.3  2008/04/11 00:07:20  souda
-!  length of string OPTIONS increased to 1024
-!  to accomodate more options (not critical)
-!
-!  Revision 1.2  2007/11/06 22:20:02  souda
-!  new mmgen gas phase potential o-h o systems added
-!
-!  Revision 1.1.1.1  2003/12/18 04:32:54  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:37 $
+!  $Revision: 5.3 $
+!  $Log: not supported by cvs2svn $
 !
 !===================================================================C
 

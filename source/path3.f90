@@ -1,4 +1,5 @@
 subroutine path3
+
 !===================================================================C
 !  Calculates the free energy along the specified path
 !  in the space of solvent coordinates ZP and ZE
@@ -38,27 +39,13 @@ subroutine path3
 !  DKLOUT= - name of the output file with nonadiabatic couplings
 !--------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:36
-!  4.1
-!  Exp
-!  path3.f90,v 4.1 2010/06/25 20:02:36 souda Exp
-!  path3.f90,v
-!  Revision 4.1  2010/06/25 20:02:36  souda
-!  Release 4.1
-!
-!  Revision 1.3  2008/04/11 00:07:20  souda
-!  length of string OPTIONS increased to 1024
-!  to accomodate more options (not critical)
-!
-!  Revision 1.2  2007/11/06 22:20:01  souda
-!  new mmgen gas phase potential o-h o systems added
-!
-!  Revision 1.1.1.1  2004/01/13 20:08:17  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:36 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !===================================================================C
+
    use pardim
    use control
    use strings

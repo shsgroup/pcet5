@@ -1,14 +1,18 @@
+module rk_parameters
+
 !=======================================================================
 !  Parameters for Runge-Kutta methods
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-26 21:06:21 $
-!  $Revision: 5.1 $
+!  $Date: 2010-10-28 21:29:36 $
+!  $Revision: 5.2 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.1  2010/10/26 21:06:21  souda
+!  new routines/modules
+!
 !
 !=======================================================================
-module rk_parameters
 
    implicit none
    public

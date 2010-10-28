@@ -1,13 +1,16 @@
 module propagators_3d
 
    !---------------------------------------------------------------------
-   ! Contains the routines for langevin propagators
+   ! Contains the routines for Langevin and MDQT propagators
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2010-10-26 21:06:21 $
-   !  $Revision: 5.1 $
+   !  $Date: 2010-10-28 21:29:36 $
+   !  $Revision: 5.2 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.1  2010/10/26 21:06:21  souda
+   !  new routines/modules
+   !
    !
    !---------------------------------------------------------------------
 
@@ -95,6 +98,7 @@ module propagators_3d
    public :: store_vibronic_energies
    public :: store_wavefunctions
    public :: get_evb_weights
+   public :: get_vibronic_coupling
    public :: langevin_debye_2d
    public :: langevin_onodera_2d
    public :: print_propagators_3d
@@ -276,6 +280,16 @@ contains
    end subroutine calculate_vibronic_couplings
 
    !--------------------------------------------------------------------
+   !-- extract vibronic coupling vector
+   !--------------------------------------------------------------------
+   function get_vibronic_coupling(i_,j_) result(coupz)
+      integer, intent(in) :: i_, j_
+      real(8), dimension(2) :: coupz
+      coupz(1) = coupz1(i_,j_)
+      coupz(2) = coupz2(i_,j_)
+   end function get_vibronic_coupling
+
+   !--------------------------------------------------------------------
    !-- store vibronic couplings
    !   for current vibronic wavefunctions
    !--------------------------------------------------------------------
@@ -342,13 +356,13 @@ contains
    !-- calculate transition probabilities b_jk
    !   from renormalized amplitudes
    !--------------------------------------------------------------------
-   subroutine calculate_bprob_amp(istate,t)
+   subroutine calculate_bprob_amp(istate,t_)
       integer, intent(in) :: istate
-      real(8), intent(in) :: t
+      real(8), intent(in) :: t_
       real(8) :: vdji
       integer :: j
       do j=1,nstates
-         vdji = a0_vdotd(j,istate) + a1_vdotd(j,istate)*t + a2_vdotd(j,istate)*t*t
+         vdji = a0_vdotd(j,istate) + a1_vdotd(j,istate)*t_ + a2_vdotd(j,istate)*t_*t_
          b_prob(j) = -2.d0*Real(amplitude(j)*conjg(amplitude(istate))*vdji)
       enddo
    end subroutine calculate_bprob_amp
@@ -357,13 +371,13 @@ contains
    !-- calculate transition probabilities b_jk
    !   from density matrix
    !--------------------------------------------------------------------
-   subroutine calculate_bprob_den(istate,t)
+   subroutine calculate_bprob_den(istate,t_)
       integer, intent(in) :: istate
-      real(8), intent(in) :: t
+      real(8), intent(in) :: t_
       real(8) :: vdji
       integer :: j
       do j=1,nstates
-         vdji = a0_vdotd(j,istate) + a1_vdotd(j,istate)*t + a2_vdotd(j,istate)*t*t
+         vdji = a0_vdotd(j,istate) + a1_vdotd(j,istate)*t_ + a2_vdotd(j,istate)*t_*t_
          b_prob(j) = -2.d0*Real(density_matrix(j,istate)*vdji)
       enddo
    end subroutine calculate_bprob_den
@@ -447,18 +461,18 @@ contains
    !-- calculate linear interpolation coefficients
    !   for the adiabatic energies
    !--------------------------------------------------------------------
-   subroutine interpolate_energy(t_prev,t)
-      real(8), intent(in) :: t_prev, t
-      real(8) :: dt, f1, f2, t1, t2
+   subroutine interpolate_energy(t_prev_,t_)
+      real(8), intent(in) :: t_prev_, t_
+      real(8) :: dt0, f1, f2, t01, t02
       integer :: i
-      t1 = t_prev
-      t2 = t
-      dt = t - t_prev
+      t01 = t_prev_
+      t02 = t_
+      dt0 = t_ - t_prev_
       do i=1,nstates
          f2 = fe(i)
          f1 = fe_prev(i)
-         a0_fe(i) = (t2*f1 - t1*f2)/dt
-         a1_fe(i) = (f2 - f1)/dt
+         a0_fe(i) = (t02*f1 - t01*f2)/dt0
+         a1_fe(i) = (f2 - f1)/dt0
          a2_fe(i) = 0.d0
       enddo
    end subroutine interpolate_energy
@@ -467,17 +481,17 @@ contains
    !-- calculate interpolation coefficients
    !   for the nonadiabatic coupling terms v*d_{kl}
    !--------------------------------------------------------------------
-   subroutine interpolate_vdotd(interpolation,t_prev,t)
+   subroutine interpolate_vdotd(interpolation,t_prev_,t_)
 
       character(len=*), intent(in) :: interpolation
-      real(8), intent(in) :: t_prev, t
+      real(8), intent(in) :: t_prev_, t_
       integer :: i, j
       real(8) :: x0, x1, x2, x01, x02, x12
       real(8) :: y0, y1, y2, y01, y02, y12
       real(8) :: xdenom, a0, a1, a2
       
-      x0 = t_prev
-      x2 = t
+      x0 = t_prev_
+      x2 = t_
       x1 = 0.5d0*(x0 + x2)
       
       x01 = x0 - x1
@@ -775,9 +789,9 @@ contains
    !-- Right-hand side (time derivative) of von-Neumann equation
    !   for density matrix
    !--------------------------------------------------------------------
-   subroutine tdvn_derivatives(t,ro,dro)
+   subroutine tdvn_derivatives(t_,ro,dro)
 
-      real(8), intent(in) :: t
+      real(8), intent(in) :: t_
       complex(8), intent(in),  dimension(nstates,nstates) :: ro
       complex(8), intent(out), dimension(nstates,nstates) :: dro
 
@@ -794,21 +808,21 @@ contains
 
                do k=1,nstates
                   !-- interpolate the nonadiabatic coupling term
-                  vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t + a2_vdotd(i,k)*t*t
+                  vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t_ + a2_vdotd(i,k)*t_*t_
                   droij = droij - 2.d0*real(ro(k,i))*vdik
                enddo
 
             else
 
                !-- interpolate adiabatic energies
-               ei = a0_fe(i) + a1_fe(i)*t + a2_fe(i)*t*t
-               ej = a0_fe(j) + a1_fe(j)*t + a2_fe(j)*t*t
+               ei = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_
+               ej = a0_fe(j) + a1_fe(j)*t_ + a2_fe(j)*t_*t_
                droij = droij - ro(i,j)*(ei - ej)/(ii*hbarps)
 
                do k=1,nstates
                   !-- interpolate the nonadiabatic coupling terms
-                  vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t + a2_vdotd(i,k)*t*t
-                  vdkj = a0_vdotd(k,j) + a1_vdotd(k,j)*t + a2_vdotd(k,j)*t*t
+                  vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t_ + a2_vdotd(i,k)*t_*t_
+                  vdkj = a0_vdotd(k,j) + a1_vdotd(k,j)*t_ + a2_vdotd(k,j)*t_*t_
                   droij = droij - (ro(k,j)*vdik - ro(i,k)*vdkj)
                enddo
 
@@ -826,9 +840,9 @@ contains
    !-- Quantum propagator for the density matrix (von Neumann equation)
    !   I. Based on the classic 4-th order Runge-Kutta algorithm.
    !--------------------------------------------------------------------
-   subroutine propagate_density_rk4(t,qtstep)
+   subroutine propagate_density_rk4(t_,qtstep)
 
-      real(8), intent(in) :: t, qtstep
+      real(8), intent(in) :: t_, qtstep
 
       complex(8), dimension(nstates,nstates) :: y, dy1, dy2, dy3, dy4
 
@@ -836,10 +850,10 @@ contains
       y = density_matrix
 
       !-- Runge-Kutta steps
-      call tdvn_derivatives(t,y,dy1)
-      call tdvn_derivatives(t+0.5d0*qtstep,y+0.5d0*qtstep*dy1,dy2)
-      call tdvn_derivatives(t+0.5d0*qtstep,y+0.5d0*qtstep*dy2,dy3)
-      call tdvn_derivatives(t+qtstep,y+qtstep*dy3,dy4)
+      call tdvn_derivatives(t_,y,dy1)
+      call tdvn_derivatives(t_+0.5d0*qtstep,y+0.5d0*qtstep*dy1,dy2)
+      call tdvn_derivatives(t_+0.5d0*qtstep,y+0.5d0*qtstep*dy2,dy3)
+      call tdvn_derivatives(t_+qtstep,y+qtstep*dy3,dy4)
 
       !-- final amplitude (array operation)
       density_matrix = y + qtstep*(dy1 + 2.d0*dy2 + 2.d0*dy3 + dy4)/6.d0
@@ -849,9 +863,9 @@ contains
    !--------------------------------------------------------------------
    !-- Right-hand side (time derivative) of TDSE
    !--------------------------------------------------------------------
-   subroutine tdse_derivatives(t,c,dc)
+   subroutine tdse_derivatives(t_,c,dc)
 
-      real(8), intent(in) :: t
+      real(8), intent(in) :: t_
       complex(8), intent(in),  dimension(nstates) :: c
       complex(8), intent(out), dimension(nstates) :: dc
 
@@ -860,20 +874,20 @@ contains
       complex(8) :: dci
 
       !-- interpolated value of the ground state energy
-      e0 = a0_fe(1) + a1_fe(1)*t + a2_fe(1)*t*t
+      e0 = a0_fe(1) + a1_fe(1)*t_ + a2_fe(1)*t_*t_
 
       do i=1,nstates
 
          !-- calculate the interpolated value of energy
          !   relative to the ground state energy
-         de = a0_fe(i) + a1_fe(i)*t + a2_fe(i)*t*t - e0
+         de = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_ - e0
 
          dci = c(i)*de/(ii*hbarps)
          
          do j=1,nstates
             !-- calculate the interpolated value of the
             !   nonadiabatic coupling term
-            vdij = a0_vdotd(i,j) + a1_vdotd(i,j)*t + a2_vdotd(i,j)*t*t
+            vdij = a0_vdotd(i,j) + a1_vdotd(i,j)*t_ + a2_vdotd(i,j)*t_*t_
             dci = dci - c(j)*vdij
          enddo
 
@@ -887,9 +901,9 @@ contains
    !-- Quantum propagator for renormalized amplitudes
    !   I. Based on the classic 4-th order Runge-Kutta algorithm.
    !--------------------------------------------------------------------
-   subroutine propagate_amplitudes_rk4(t,qtstep)
+   subroutine propagate_amplitudes_rk4(t_,qtstep)
 
-      real(8), intent(in) :: t, qtstep
+      real(8), intent(in) :: t_, qtstep
 
       complex(8), dimension(nstates) :: y, dy1, dy2, dy3, dy4
 
@@ -897,10 +911,10 @@ contains
       y = amplitude
 
       !-- Runge-Kutta steps
-      call tdse_derivatives(t,y,dy1)
-      call tdse_derivatives(t+0.5d0*qtstep,y+0.5d0*qtstep*dy1,dy2)
-      call tdse_derivatives(t+0.5d0*qtstep,y+0.5d0*qtstep*dy2,dy3)
-      call tdse_derivatives(t+qtstep,y+qtstep*dy3,dy4)
+      call tdse_derivatives(t_,y,dy1)
+      call tdse_derivatives(t_+0.5d0*qtstep,y+0.5d0*qtstep*dy1,dy2)
+      call tdse_derivatives(t_+0.5d0*qtstep,y+0.5d0*qtstep*dy2,dy3)
+      call tdse_derivatives(t_+qtstep,y+qtstep*dy3,dy4)
 
       !-- final amplitude (array operation)
       amplitude = y + qtstep*(dy1 + 2.d0*dy2 + 2.d0*dy3 + dy4)/6.d0
@@ -948,7 +962,7 @@ contains
       vdkl  = v_dot_d(istate,new_state)
       ekl = fe(istate) - fe(new_state)
 
-      discr = vdkl*vdkl - 2.d0*dkl_sq*ekl/effmass
+      discr = vdkl*vdkl + 2.d0*dkl_sq*ekl/effmass
 
       if (discr.lt.0.d0) then
 
@@ -956,10 +970,11 @@ contains
          success = .false.
 
          !=== DEBUG ===================================================================
-         write(*,*) "-----------------------------------------------------------------"
+         write(*,*)
+         write(*,'(137("-"))')
          write(*,*) "Rejected switch:",istate," --->",new_state
-         write(*,*) "Energy gap (positive is switch down):",fe(istate)-fe(new_state)
-         write(*,*) "-----------------------------------------------------------------"
+         write(*,*) "Energy gap:", -ekl, " kcal/mol"
+         write(*,'(137("-"))')
          !=== end DEBUG ===============================================================
 
       else
@@ -979,13 +994,17 @@ contains
          success = .true.
 
          !=== DEBUG ===================================================================
-         write(*,*) "-----------------------------------------------------------------"
-         write(*,*) "Switch:",istate," --->",new_state
-         write(*,*) "Switch probability:",switch_prob(new_state)
-         write(*,*) "Energy gap (positive is switch down):",fe(istate)-fe(new_state)
-         write(*,*) "Velocity adjustments: vz1 = vz1 - ",gamma*dkl_z1
-         write(*,*) "                      vz2 = vz2 - ",gamma*dkl_z2
-         write(*,*) "-----------------------------------------------------------------"
+         write(*,*)
+         write(*,'(137("-"))')
+         write(*,*) "Switch: ",istate," --->", new_state
+         write(*,*) "Nonadiabatic coupling: d_z1 = ", dkl_z1
+         write(*,*) "                       d_z2 = ", dkl_z2
+         write(*,*) "                       |d|  = ", sqrt(dkl_sq)
+         write(*,*) "Switch probability: ", switch_prob(new_state)
+         write(*,*) "Kinetic energy gain (loss if negative): ", ekl, " kcal/mol"
+         !write(*,*) "Velocity adjustments: vz1 = vz1 + ", -gamma*dkl_z1
+         !write(*,*) "                      vz2 = vz2 + ", -gamma*dkl_z2
+         write(*,'(137("-"))')
          !=== end DEBUG ===============================================================
 
       endif

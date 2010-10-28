@@ -1,5 +1,14 @@
 subroutine banner(version)
 
+!-------------------------------------------------------------------------------
+!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:35 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
+!
+!-------------------------------------------------------------------------------
+
    implicit none
    real(4), intent(in) :: version
 

@@ -1,4 +1,5 @@
 subroutine usol(mode,k,kg,zp,ze,u,cu)
+
 !======================================================================!
 !
 !  Calculates the free energy U(i,q,ZP,ZE) at the grid point K
@@ -27,20 +28,13 @@ subroutine usol(mode,k,kg,zp,ze,u,cu)
 !
 !-----------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:37
-!  4.1
-!  Exp
-!  usol.f90,v 4.1 2010/06/25 20:02:37 souda Exp
-!  usol.f90,v
-!  Revision 4.1  2010/06/25 20:02:37  souda
-!  Release 4.1
-!
-!  Revision 1.1.1.1  2004/01/07 15:00:56  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:37 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !======================================================================!
+
    use pardim
    use gasmat
    use solmat
@@ -215,8 +209,8 @@ subroutine usol(mode,k,kg,zp,ze,u,cu)
 
    return
 
-   !======================================================================
-   contains
+!======================================================================
+contains
 
    !======================================================================
    function selfen(k,kg,zp,ze) result(sw)

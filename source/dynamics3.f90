@@ -33,9 +33,12 @@ subroutine dynamics3
 !
 !  NOWEIGHTS - do not calculate the evb weights along the trajectory (default is YES)
 !
-!  ZP0=<float> - center of the initial distribution along ZP coordinate
+!  TRANSFORM - initial values of solvent coordinates are given in the
+!              rotated and scaled frame (z1,z2).
 !
-!  ZE0=<float> - center of the initial distribution along ZE coordinate
+!  ZP0=<float> - center of the initial distribution along ZP (or z1) coordinate
+!
+!  ZE0=<float> - center of the initial distribution along ZE (or z2) coordinate
 !
 !  NSTATES=<int> - number of states to include in dynamics (for MDQT only)
 !
@@ -77,14 +80,18 @@ subroutine dynamics3
 !
 !  NDUMP=<int> - trajectory output frequency (every NDUMP steps)
 !
+!  NDUMP6=<int> - trajectory screen output frequency (every NDUMP6 steps)
+!
 !  T=<float> - temperature in K
 !
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-26 21:06:20 $
-!  $Revision: 5.1 $
+!  $Date: 2010-10-28 21:29:35 $
+!  $Revision: 5.2 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.1  2010/10/26 21:06:20  souda
+!  new routines/modules
 !
 !===================================================================C
 
@@ -116,19 +123,20 @@ subroutine dynamics3
 
    logical :: adiab, diab2, diab4, weights
    logical :: switch=.false.
+   logical :: transform=.false.
 
    integer :: nstates_dyn, nzdim_dyn, ielst_dyn, iseed_inp
-   integer :: istate, new_state
+   integer :: istate, new_state, ndump6
 
    integer :: ikey, ioption, islash, istart, kg0
    integer :: ize1, nze, ioutput, lenf, ispa
    integer :: itraj, istep, iqstep, k, itmp
-   integer :: itraj_channel=1
+   integer :: itraj_channel=11
 
    real(8) :: sigma, sample, population_current, wf_norm
-   real(8) :: time_start, time_end, time_total, second
-   real(8) :: time, time_prev
-   real(8) :: timeq, timeq_prev
+   real(8) :: zeit_start, zeit_end, zeit_total, second
+   real(8) :: zeit, zeit_prev
+   real(8) :: zeitq, zeitq_prev
    real(8) :: z1, z2, zp, ze, vz1, vz2, vzp, vze, z10, z20, zp0, ze0, ekin, efes
    real(8) :: vz1_prev, vz2_prev
 
@@ -140,11 +148,11 @@ subroutine dynamics3
    !~~~~~~~~~~~~~~
    ! Print banner
    !~~~~~~~~~~~~~~
-   write(*,*)
-   write(*,'("================================================================")')
-   write(*,'("              SOLVENT DYNAMICS MODULE (optional MDQT)           ")')
-   write(*,'("         (two solvent coordinates + fixed gating distance)      ")')
-   write(*,'("================================================================"/)')
+   write(6,*)
+   write(6,'("================================================================")')
+   write(6,'("              SOLVENT DYNAMICS MODULE (optional MDQT)           ")')
+   write(6,'("         (two solvent coordinates + fixed gating distance)      ")')
+   write(6,'("================================================================"/)')
 
    !~~~~~~~~~~~~~~~~~
    ! Extract options
@@ -174,12 +182,12 @@ subroutine dynamics3
 
    if (npntsg.eq.1) then
       kg0 = 1
-      write(*,'(1x,"The gating distance is fixed at the value from the input geometry: ",f8.3," A"/)') abs(xyzgas(1,iptgas(3)) - xyzgas(1,iptgas(1)))
+      write(6,'(1x,"The gating distance is fixed at the value from the input geometry: ",f8.3," A"/)') abs(xyzgas(1,iptgas(3)) - xyzgas(1,iptgas(1)))
    else
       if (kg0.ge.1.and.kg0.le.npntsg) then
-         write(*,'(1x," The gating distance is fixed at the value: ",f8.3," A (grid point #",i3,")"/)') glist(kg0),kg0
+         write(6,'(1x," The gating distance is fixed at the value: ",f8.3," A (grid point #",i3,")"/)') glist(kg0),kg0
       else
-         write(*,'(1x," The specified gating grid point #",i3," is outside the allowed range (1,",i3,")"/)') kg0,npntsg
+         write(6,'(1x," The specified gating grid point #",i3," is outside the allowed range (1,",i3,")"/)') kg0,npntsg
          stop
       endif
    endif
@@ -195,7 +203,7 @@ subroutine dynamics3
       temp = 300.d0
    endif
 
-   write(*,'(1x,"Temperature: ",f8.3," K"/)') temp
+   write(6,'(1x,"Temperature: ",f8.3," K"/)') temp
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Dielectric relaxation model
@@ -248,9 +256,9 @@ subroutine dynamics3
          stop
       endif
       call set_debye_model_parameters()
-      write(*,'(1x,"Debye relaxation time TAUD (ps):        ",f15.6)') taud
-      write(*,'(1x,"Longitudianl relaxation time TAUL (ps): ",f15.6)') taul
-      write(*,'(1x,"Effective mass of the solvent (ps^2):   ",f15.6)') effmass
+      write(6,'(1x,"Debye relaxation time TAUD (ps):        ",f15.6)') taud
+      write(6,'(1x,"Longitudianl relaxation time TAUL (ps): ",f15.6)') taul
+      write(6,'(1x,"Effective mass of the solvent (ps^2):   ",f15.6)') effmass
 
    elseif (solvent_model.eq."DEBYE2") then
 
@@ -279,10 +287,10 @@ subroutine dynamics3
       endif
 
       call set_debye2_model_parameters()
-      write(*,'(1x,"First  relaxation time TAU1 (ps):       ",f15.6)') tau1
-      write(*,'(1x,"Second relaxation time TAU2 (ps):       ",f15.6)') tau2
-      write(*,'(1x,"Longitudianl relaxation time TAUL (ps): ",f15.6)') taul
-      write(*,'(1x,"Effective mass of the solvent (ps^2):   ",f15.6)') effmass
+      write(6,'(1x,"First  relaxation time TAU1 (ps):       ",f15.6)') tau1
+      write(6,'(1x,"Second relaxation time TAU2 (ps):       ",f15.6)') tau2
+      write(6,'(1x,"Longitudianl relaxation time TAUL (ps): ",f15.6)') taul
+      write(6,'(1x,"Effective mass of the solvent (ps^2):   ",f15.6)') effmass
 
    elseif (solvent_model.eq."ONODERA") then
 
@@ -303,12 +311,12 @@ subroutine dynamics3
       endif
 
       call set_onodera_model_parameters()
-      write(*,'(1x,"Inverse Pekar factor f_0         :       ",f15.6)') f0
-      write(*,'(1x,"Debye   relaxation time TAUD (ps):       ",f15.6)') taud
-      write(*,'(1x,"Onodera relaxation time TAU0 (ps):       ",f15.6)') tau0
-      write(*,'(1x,"Longitudinal relaxation time TAUL  (ps): ",f15.6)') taul
-      write(*,'(1x,"Longitudinal relaxation time TAU0L (ps): ",f15.6)') tau0l
-      write(*,'(1x,"Effective mass of the solvent (ps^2):    ",f15.6)') effmass
+      write(6,'(1x,"Inverse Pekar factor f_0         :       ",f15.6)') f0
+      write(6,'(1x,"Debye   relaxation time TAUD (ps):       ",f15.6)') taud
+      write(6,'(1x,"Onodera relaxation time TAU0 (ps):       ",f15.6)') tau0
+      write(6,'(1x,"Longitudinal relaxation time TAUL  (ps): ",f15.6)') taul
+      write(6,'(1x,"Longitudinal relaxation time TAU0L (ps): ",f15.6)') tau0l
+      write(6,'(1x,"Effective mass of the solvent (ps^2):    ",f15.6)') effmass
 
    elseif (solvent_model.eq."ONODERA2") then
 
@@ -324,11 +332,11 @@ subroutine dynamics3
 
    if (index(options,' MDQT').ne.0) then
       mdqt = .true.
-      write(*,'(/1x,"Mixed quantum-classical dynamics on multiple vibronic free energy surfaces.",/,&
+      write(6,'(/1x,"Mixed quantum-classical dynamics on multiple vibronic free energy surfaces.",/,&
                 &1x,"Tullys fewest switches surface hopping algorithm (MDQT) will be utilized."/)')
    else
       mdqt = .false.
-      write(*,'(/1x,"Classical dynamics on a single vibronic free energy surface (default)."/)')
+      write(6,'(/1x,"Classical dynamics on a single vibronic free energy surface (default)."/)')
    endif
 
 
@@ -342,21 +350,21 @@ subroutine dynamics3
       diab2 = .false.
       diab4 = .false.
       ielst_dyn = nelst
-      write(*,'(/1x,"Solvent dynamics on adiabatic free energy surface(s)."/)')
+      write(6,'(/1x,"Solvent dynamics on adiabatic free energy surface(s)."/)')
    elseif (index(options,' DIAB2').ne.0) then
       mode_dyn  = 'DIAB2'
       adiab = .false.
       diab2 = .true.
       diab4 = .false.
       ielst_dyn = 2
-      write(*,'(/1x,"Solvent dynamics on ET adiabatic free energy surface(s)."/)')
+      write(6,'(/1x,"Solvent dynamics on ET adiabatic free energy surface(s)."/)')
    elseif (index(options,' DIAB4').ne.0) then
       mode_dyn  = 'DIAB4'
       adiab = .false.
       diab2 = .false.
       diab4 = .true.
       ielst_dyn = 1
-      write(*,'(/1x,"Solvent dynamics on a single diabatic free energy surface."/)')
+      write(6,'(/1x,"Solvent dynamics on a single diabatic free energy surface."/)')
       if (mdqt) then
          write(*,'(/1x,"MDQT in the diabatic representation is not implemented in the current version."/)')
          stop
@@ -374,7 +382,7 @@ subroutine dynamics3
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    if (index(options,' NOWEIGHTS').ne.0) then
       weights = .false.
-      write(*,'(/1x,"EVB weights WILL NOT be calculated along the trajectory."/)')
+      write(6,'(/1x,"EVB weights WILL NOT be calculated along the trajectory."/)')
    endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -393,7 +401,7 @@ subroutine dynamics3
          initial_state = reada(options,istart)
          if (initial_state.le.0) initial_state = 1
          initial_set = 1
-         write(*,'(1x,"At t=0: initial adiabatic state: ",i6)') initial_state
+         write(6,'(1x,"At t=0: initial adiabatic state: ",i6)') initial_state
 
       elseif (mode_dyn.eq.'DIAB2') then
 
@@ -406,9 +414,9 @@ subroutine dynamics3
          initial_state = reada(options(istart:istart+islash-2),1)
          initial_set = reada(options,istart+islash)
          if (initial_set.eq.1) then
-            write(*,'(1x,"At t=0: initial ET diabatic state: ",i6," within the first (1a,1b) ET subset")') initial_state
+            write(6,'(1x,"At t=0: initial ET diabatic state: ",i6," within the first (1a,1b) ET subset")') initial_state
          elseif (initial_set.eq.2) then
-            write(*,'(1x,"At t=0: initial ET diabatic state: ",i6," within the second (2a,2b) ET subset")') initial_state
+            write(6,'(1x,"At t=0: initial ET diabatic state: ",i6," within the second (2a,2b) ET subset")') initial_state
          else
             write(*,'(/1x,"*** (in DYNAMICS): subset in ISTATE keyword must be 1 or 2 ***"/)')
             stop
@@ -425,13 +433,13 @@ subroutine dynamics3
          initial_state = reada(options(istart:istart+islash-2),1)
          initial_set = reada(options,istart+islash)
          if (initial_set.eq.1) then
-            write(*,'(1x,"At t=0: initial diabatic state: ",i6," within the 1a electronic set")') initial_state
+            write(6,'(1x,"At t=0: initial diabatic state: ",i6," within the 1a electronic set")') initial_state
          elseif (initial_set.eq.2) then
-            write(*,'(1x,"At t=0: initial diabatic state: ",i6," within the 1b electronic set")') initial_state
+            write(6,'(1x,"At t=0: initial diabatic state: ",i6," within the 1b electronic set")') initial_state
          elseif (initial_set.eq.3) then
-            write(*,'(1x,"At t=0: initial diabatic state: ",i6," within the 2a electronic set")') initial_state
+            write(6,'(1x,"At t=0: initial diabatic state: ",i6," within the 2a electronic set")') initial_state
          elseif (initial_set.eq.4) then
-            write(*,'(1x,"At t=0: initial diabatic state: ",i6," within the 2b electronic set")') initial_state
+            write(6,'(1x,"At t=0: initial diabatic state: ",i6," within the 2b electronic set")') initial_state
          else
             write(*,'(/1x,"*** (in DYNAMICS): subset in ISTATE keyword must be 1 or 2 or 3 or 4 ***"/)')
             stop
@@ -443,7 +451,7 @@ subroutine dynamics3
 
       initial_state = 1
       initial_set = 1
-      write(*,'(1x,"(Default) At t=0: initial: ",i6," within the first electronic set")') initial_state
+      write(6,'(1x,"(Default) At t=0: initial: ",i6," within the first electronic set")') initial_state
 
    endif
 
@@ -455,15 +463,15 @@ subroutine dynamics3
    
    if (ioption.ne.0) then
       nstates_dyn = reada(options,ioption+9)
-      write(*,'(/1x,"Number of vibronic states to include in MDQT dynamics: ",i4/)') nstates_dyn
+      write(6,'(/1x,"Number of vibronic states to include in MDQT dynamics: ",i4/)') nstates_dyn
    else
       nstates_dyn = nelst*nprst
-      write(*,'(/1x,"Number of vibronic states to include in MDQT dynamics (default): ",i4/)') nstates_dyn
+      write(6,'(/1x,"Number of vibronic states to include in MDQT dynamics (default): ",i4/)') nstates_dyn
    endif
 
    if (.not.mdqt) then
       nstates_dyn = 1
-      write(*,'(/1x,"However, no MDQT keyword was found: number of states is reset to 1 (one)."/)')
+      write(6,'(/1x,"However, no MDQT keyword was found: number of states is reset to 1 (one)."/)')
    endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -477,7 +485,7 @@ subroutine dynamics3
    else
       ntraj = 1
    endif
-   write(*,'(1x,"Number of trajectories to generate: ",i4/)') ntraj
+   write(6,'(1x,"Number of trajectories to generate: ",i4/)') ntraj
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Timesteps
@@ -490,7 +498,7 @@ subroutine dynamics3
       tstep = 0.0005d0
    endif
 
-   write(*,'(1x,"Timestep for solvent dynamics: ",g15.6," ps"/)') tstep
+   write(6,'(1x,"Timestep for solvent dynamics: ",g15.6," ps"/)') tstep
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Number of steps in each trajectory
@@ -500,10 +508,10 @@ subroutine dynamics3
    
    if (ioption.ne.0) then
       nsteps = reada(options,ioption+8)
-      write(*,'(1x,"Number of steps in each trajectory: ",i10/)') nsteps
+      write(6,'(1x,"Number of steps in each trajectory: ",i10/)') nsteps
    else
       nsteps = 100
-      write(*,'(1x,"Number of steps in each trajectory (default value): ",i10/)') nsteps
+      write(6,'(1x,"Number of steps in each trajectory (default value): ",i10/)') nsteps
    endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -516,14 +524,14 @@ subroutine dynamics3
    
       if (ioption.ne.0) then
          itmp = reada(options,ioption+9)
-         write(*,'(1x,"Number of TDSE steps per classical step in MDQT: ",i10/)') itmp
+         write(6,'(1x,"Number of TDSE steps per classical step in MDQT: ",i10/)') itmp
       else
          itmp = 100
-         write(*,'(1x,"Number of TDSE steps per classical step in MDQT (default value): ",i10/)') itmp
+         write(6,'(1x,"Number of TDSE steps per classical step in MDQT (default value): ",i10/)') itmp
       endif
 
       call set_tdse_timestep(itmp,tstep)
-      write(*,'(1x,"Timestep for TDSE: ",g15.6," ps"/)') tstep/real(itmp)
+      write(6,'(1x,"Timestep for TDSE: ",g15.6," ps"/)') tstep/real(itmp)
 
    endif
 
@@ -569,10 +577,23 @@ subroutine dynamics3
    
    if (ioption.ne.0) then
       ndump = reada(options,ioption+7)
-      write(*,'(1x,"Dump trajectory data every ",i10," steps"/)') ndump
+      write(6,'(1x,"Dump trajectory data every ",i10," steps"/)') ndump
    else
       ndump = 1
-      write(*,'(1x,"Dump trajectory data every ",i10," steps (default value)"/)') ndump
+      write(6,'(1x,"Dump trajectory data every single step (default)"/)')
+   endif
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Trajectory screen output frequency (every NDUMP6 steps)
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   ioption = index(options," NDUMP6=")
+   
+   if (ioption.ne.0) then
+      ndump6 = reada(options,ioption+8)
+      write(6,'(1x,"Dump trajectory to screen data every ",i10," steps"/)') ndump
+   else
+      ndump6 = 0
    endif
 
 
@@ -589,7 +610,17 @@ subroutine dynamics3
    endif
    call set_random_seed(iseed_inp)
 
-   write(*,'(1x,"Random seed: ",i6/)') iseed_inp
+   write(6,'(1x,"Random seed: ",i6/)') iseed_inp
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! The solvent coordinate frame used for initial values
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ioption = index(options,"TRANSFORM")
+   if (ioption.ne.0) then
+      transform = .true.
+   else
+      transform = .false.
+   endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Initial solvent coordinates
@@ -614,7 +645,13 @@ subroutine dynamics3
       stop
    endif
 
-   call zpze_to_z1z2(zp0,ze0,z10,z20)
+   if (.not.transform) then
+      call zpze_to_z1z2(zp0,ze0,z10,z20)
+   else
+      z10 = zp0
+      z20 = ze0
+      call z1z2_to_zpze(z10,z20,zp0,ze0)
+   endif
 
    write(6,'(/1x,"Center of the initial distribution of solvent coordinates:",/,&
    &" ZP(0) = ",F7.3,2X,A," and ZE(0) = ",F7.3,2X,A,/,&
@@ -659,7 +696,7 @@ subroutine dynamics3
       fname = trim(fname)//"_diab4_"//iset_char_diab4(initial_set)
    endif
 
-   write(6,'(/1x,"Trajectory data are written to the file(s) <",a,">")') trim(fname)//"_<NNNN>.dat"
+   write(6,'(/1x,"Trajectory data are written to the file(s) <",a,">"/)') trim(fname)//"_<NNNN>.dat"
 
    !-- set some variables in propagators module
    nzdim_dyn = nprst*ielst_dyn
@@ -674,11 +711,12 @@ subroutine dynamics3
    !===DEBUG===
    !call print_propagators_3d
 
-   time_start = second()
+   zeit_start = second()
 
    !======================================!
    !      MAIN LOOP OVER TRAJECTORIES     !
    !======================================!
+
    loop_over_trajectories: do itraj=1,ntraj
 
       !-- initialize the suffix of the output file
@@ -747,23 +785,35 @@ subroutine dynamics3
 
       !-- write the header of the trajectory file
 
-      write(itraj_channel,'("#",130("="))')
-      write(itraj_channel,'("#   Data for the trajectory ",i5)') itraj
-      write(itraj_channel,'("#",130("-"))')
       if (weights) then
-         write(itraj_channel,'("#",t6,"t(ps)",t17,"z1",t27,"z2",t37,"vz1",t47,"vz2",t57,"zp",t67,"ze",t76,"vzp",t86,"vze",t96,"Ekin",t106,"Efe",t116,"occ.state",t126,"EVB weights")')
+         write(itraj_channel,'("#",168("="))')
       else
-         write(itraj_channel,'("#",t6,"t(ps)",t17,"z1",t27,"z2",t37,"vz1",t47,"vz2",t57,"zp",t67,"ze",t76,"vzp",t86,"vze",t96,"Ekin",t106,"Efe",t116,"occ.state")')
+         write(itraj_channel,'("#",141("="))')
       endif
-      write(itraj_channel,'("#",130("-"))')
+      write(itraj_channel,'("#   Data for the trajectory ",i5)') itraj
+      if (weights) then
+         write(itraj_channel,'("#",168("-"))')
+         write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"z2",t44,"vz1",t56,"vz2",t68,"zp",t80,"ze",t92,"vzp",t103,"vze",t115,"Ekin",t126,"Efe",t135,"occ.",t142,"EVB weights (1a,1b,2a,2b)")')
+         write(itraj_channel,'("#",168("-"))')
+      else
+         write(itraj_channel,'("#",141("-"))')
+         write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"z2",t44,"vz1",t56,"vz2",t68,"zp",t80,"ze",t92,"vzp",t103,"vze",t115,"Ekin",t126,"Efe",t135,"occ.")')
+         write(itraj_channel,'("#",141("-"))')
+      endif
+
+      write(6,'(/1x,"===> Trajectory ",i5)') itraj
+      write(6,*)
+      write(6,'(137x,$)')
 
       !===============================!
       !   MAIN LOOP OVER TIME STEPS   !
       !===============================!
       loop_over_time: do istep=1,nsteps
 
-         time_prev = (istep-1)*tstep
-         time = istep*tstep
+         switch = .false.
+
+         zeit_prev = real(istep-1)*tstep
+         zeit = real(istep)*tstep
 
          !-- MDQT: store couplings, vibronic energies, and velocities
          !         from the previous step (for iterpolation)
@@ -837,12 +887,12 @@ subroutine dynamics3
 
             !-- calculate interpolation coefficients for the adiabatic energies
             !------------------------------------------------------------------
-            call interpolate_energy(time_prev,time)
+            call interpolate_energy(zeit_prev,zeit)
 
             !-- calculate interpolation coefficients
             !   for the nonadiabatic coupling terms v*d_{kl}
             !-----------------------------------------------
-            call interpolate_vdotd(interpolation,time_prev,time)
+            call interpolate_vdotd(interpolation,zeit_prev,zeit)
 
             !-- calculate the population of the current state at time t_prev
             !---------------------------------------------------------------
@@ -854,18 +904,18 @@ subroutine dynamics3
             !------------------------------------------------------------------
             do iqstep=1,nqsteps
 
-               timeq_prev = (iqstep-1)*qtstep + time_prev
-               timeq = iqstep*qtstep + time_prev
+               zeitq_prev = (iqstep-1)*qtstep + zeit_prev
+               zeitq = iqstep*qtstep + zeit_prev
 
                !-- propagate amplitudes forward in time
                !-------------------------------------------------------
-               call propagate_amplitudes_rk4(timeq_prev,qtstep)
-               !call propagate_density_rk4(timeq_prev,qtstep)
+               call propagate_amplitudes_rk4(zeitq_prev,qtstep)
+               !call propagate_density_rk4(zeitq_prev,qtstep)
 
                !-- calculate transition probabilities from current state
                !--------------------------------------------------------
-               call calculate_bprob_amp(istate,timeq)
-               !call calculate_bprob_den(istate,timeq)
+               call calculate_bprob_amp(istate,zeitq)
+               !call calculate_bprob_den(istate,zeitq)
 
                !-- accumulate swithing probabilities (array operation)
                !------------------------------------------------------
@@ -876,7 +926,7 @@ subroutine dynamics3
             !-- check the norm of the time-dependent wavefunction
             !-----------------------------------------------------
             wf_norm = tdwf_norm()
-            if (abs(wf_norm-1.d0).gt.1.d-3) then
+            if (abs(wf_norm-1.d0).gt.1.d-6) then
                write(*,*) "DYNAMICS3: Amplitudes are not normalized after timestep", istep
                call deallocate_all_arrays
                stop
@@ -889,7 +939,7 @@ subroutine dynamics3
 
             !-- construct the full density matrix (do we really need it?)
             !------------------------------------------------------------
-            call calculate_density_matrix
+            !call calculate_density_matrix
 
             !-- decision time: should we make a hop?
             !-------------------------------------------
@@ -898,7 +948,16 @@ subroutine dynamics3
             if (new_state.ne.istate) then
                !-- attempt adjusting velocities
                call adjust_velocities(istate,new_state,vz1,vz2,switch)
-               if (switch) istate = new_state
+               if (switch) then
+                  write(itraj_channel,'("#--------------------------------------------------------------------")')
+                  write(itraj_channel,'("#  t  = ",f12.6," ps ==> switch ",i3,"  -->",i3)') zeit,istate,new_state
+                  write(itraj_channel,'("#  d  = (",f20.6,",",f20.6,")")') &
+                  & get_vibronic_coupling(istate,new_state)
+                  write(itraj_channel,'("# |d| = ",f20.6)') &
+                  & sqrt(dot_product(get_vibronic_coupling(istate,new_state),get_vibronic_coupling(istate,new_state)))
+                  write(itraj_channel,'("#--------------------------------------------------------------------")')
+                  istate = new_state
+               endif
             endif
 
          endif  !mdqt
@@ -917,29 +976,39 @@ subroutine dynamics3
 
          if (mod(istep,ndump).eq.0) then
             if (weights) then
-               call get_evb_weights
-               write(itraj_channel,'(11f10.3,i10,(f10.3))') time, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn)
+               write(itraj_channel,'(f12.6,10f12.5,i5,4f8.3)') &
+               & zeit, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn)
             else
-               write(itraj_channel,'(11f10.3,i10)') time, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate
+               write(itraj_channel,'(f12.6,10f12.5,i5)') &
+               & zeit, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate
             endif
-            write(*,'(11f10.3,i10)') time, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate
          endif
+
+         if (ndump6.gt.0.and.mod(istep,ndump6).eq.0) &
+         & write(6,'(137("\b"),f12.6,10f12.5,i5,$)') zeit, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate
 
       enddo loop_over_time
 
-      write(itraj_channel,'("#",130("-"))')
+      write(itraj_channel,'("#",141("-"))')
+      close(itraj_channel)
+      
+      write(6,*)
+      write(6,*)
+
+      !-- reset the initial state
+      istate = initial_state
 
    enddo loop_over_trajectories
 
-   time_end = second()
-   time_total = time_end - time_start
-   write(*,*)
-   write(*,'(1x,"================================================================================")')
-   write(*,'(1x,"Done. Time elapsed         (sec): ",f20.3)') time_total
-   write(*,'(1x,"      Time per trajectory  (sec): ",f20.3)') time_total/ntraj
-   write(*,'(1x,"      Time per timestep    (sec): ",f20.3)') time_total/(ntraj*nsteps)
-   write(*,'(1x,"      Productivity rate (ps/day): ",f20.3)') 3600.d0*24.d0*tstep*ntraj*nsteps/time_total
-   write(*,'(1x,"================================================================================")')
+   zeit_end = second()
+   zeit_total = zeit_end - zeit_start
+   write(6,*)
+   write(6,'(1x,"================================================================================")')
+   write(6,'(1x,"Done. Time elapsed         (sec): ",f20.3)') zeit_total
+   write(6,'(1x,"      Time per trajectory  (sec): ",f20.3)') zeit_total/ntraj
+   write(6,'(1x,"      Time per timestep    (sec): ",f20.3)') zeit_total/(ntraj*nsteps)
+   write(6,'(1x,"      Productivity rate (ps/day): ",f20.3)') 3600.d0*24.d0*tstep*ntraj*nsteps/zeit_total
+   write(6,'(1x,"================================================================================")')
 
    !-- Deallocate arrays in propagators module
 

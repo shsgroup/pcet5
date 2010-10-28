@@ -1,4 +1,5 @@
 subroutine prngas
+
 !===================================================================C
 !
 !  Print out the gas-phase and electronically solvated
@@ -9,29 +10,13 @@ subroutine prngas
 !
 !--------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:36
-!  4.1
-!  Exp
-!  prngas.f90,v 4.1 2010/06/25 20:02:36 souda Exp
-!  prngas.f90,v
-!  Revision 4.1  2010/06/25 20:02:36  souda
-!  Release 4.1
-!
-!  Revision 1.4  2007/11/06 22:20:02  souda
-!  new mmgen gas phase potential o-h o systems added
-!
-!  Revision 1.3  2004/06/05 01:08:05  souda
-!  minor bug
-!
-!  Revision 1.2  2004/06/05 01:04:59  souda
-!  ET diabatic energies added to prngas and ugas
-!
-!  Revision 1.1.1.1  2003/12/16 17:06:05  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:37 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !===================================================================C
+
    use pardim
    use cst
    use keys
@@ -53,7 +38,7 @@ subroutine prngas
 
       write(6,'(/1X,''Gas phase energy surfaces are written to the external file <'',A,''>'')')&
       &job(1:ljob)//'/'//'ptgas'
-      open(1,file=job(1:ljob)//'/'//'ptgas',status='new')
+      open(1,file=job(1:ljob)//'/'//'ptgas.dat',status='new')
 
    else
 

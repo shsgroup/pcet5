@@ -1,40 +1,22 @@
 subroutine setmat
+
 !===================================================================C
 !  Calculates the matrices on the grid along the proton coordinate
 !-------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:37
-!  4.1
-!  Exp
-!  setmat.f90,v 4.1 2010/06/25 20:02:37 souda Exp
-!  setmat.f90,v
-!  Revision 4.1  2010/06/25 20:02:37  souda
-!  Release 4.1
-!
-!  Revision 1.5  2008/04/11 00:07:20  souda
-!  length of string OPTIONS increased to 1024
-!  to accomodate more options (not critical)
-!
-!  Revision 1.4  2007/11/06 22:20:03  souda
-!  new mmgen gas phase potential o-h o systems added
-!
-!  Revision 1.3  2007/03/12 23:04:52  souda
-!  output format changes
-!
-!  Revision 1.2  2004/06/04 16:56:17  souda
-!  replace harmonic potential with hybrid potential
-!
-!  Revision 1.1.1.1  2004/01/13 20:11:32  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:37 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !===================================================================C
+
    use pardim
    use keys
    use strings
    use cst
    use control
+   use parsol
    use geogas
    use geosol
    use gasmat
@@ -80,7 +62,8 @@ subroutine setmat
    real(8) :: h0fill, dh0fill, d2h0fill, dgh0fill, dg2h0fill
    real(8) :: alim1, blim1, alim2, blim2
    real(8) :: ratio, gratio, rl, rcoef
-   real(8) :: talp1, talp2, tbeta, tdet
+   real(8) :: talp1, talp2, tbeta, tdet, tr1a1b, tr1a2a
+   real(8) :: ersum, erdif, ersq, tanth, sqtan
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Local arrays
@@ -311,9 +294,19 @@ subroutine setmat
                call d2h0mat_mm5gen(d2h0k)
             endif
 
+         elseif (igas.eq.7) then
+            !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            ! Harmonic potential for general D-H...A systems
+            !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            call h0mat_harm(h0k)
+            if (deriv) then
+               call  dh0mat_harm(dh0k)
+               call d2h0mat_harm(d2h0k)
+            endif
+
          else
 
-            write(*,'(/1x,'' ERROR in SETMAT: IGAS='',i2)') igas
+            write(*,'(/1x,'' ERROR in SETMAT: unknown IGAS='',i2)') igas
             stop
 
          endif
@@ -392,10 +385,10 @@ subroutine setmat
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Read external file with the reorganization energy matrices
-   ! if TREAD option is specified for the keyword SOLV()
+   ! if TREAD option is specified for the keyword SOLVENT()
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   ikey = index(keywrd,' SOLV(')
+   ikey = index(keywrd,' SOLVENT(')
    call getopt(keywrd,ikey,options)
 
    itread = index(options,' TREAD=')
@@ -852,7 +845,7 @@ subroutine setmat
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Write the reorganization energy matrices into an external file
-   ! if TWRITE= option is specified for the keyword SOLV()
+   ! if TWRITE= option is specified for the keyword SOLVENT()
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    itwrite = index(options,' TWRITE=')
@@ -900,32 +893,34 @@ subroutine setmat
 
       open(72,file='tmat.nice',status='new',form='formatted')
 
-      write(72,*) np2, alim, blim, ng2, aglim, bglim
-      write(72,*) 'TMAT INNERTIAL'
+      write(72,'("Proton grid point: ",i4,";  Limits: from ",f8.3," to ",f8.3)') np2, alim, blim
+      write(72,'("Gating grid point: ",i4,";  Limits: from ",f8.3," to ",f8.3)') ng2, aglim, bglim
+      write(72,*)
+      write(72,*) '---------- TMAT INNERTIAL'
       write(72,'(4(3x,f15.6))') (    t(1,j,np2,ng2),j=1,4)
       write(72,'(4(3x,f15.6))') (    t(2,j,np2,ng2),j=1,4)
       write(72,'(4(3x,f15.6))') (    t(3,j,np2,ng2),j=1,4)
       write(72,'(4(3x,f15.6))') (    t(4,j,np2,ng2),j=1,4)
-
-      write(72,*) ' REDUCED TMAT INNERTIAL'
+      write(72,*)
+      write(72,*) '---------- REDUCED TMAT INNERTIAL'
       write(72,'(4(3x,f15.6))') (   tr(1,j,np2,ng2),j=1,4)
       write(72,'(4(3x,f15.6))') (   tr(2,j,np2,ng2),j=1,4)
       write(72,'(4(3x,f15.6))') (   tr(3,j,np2,ng2),j=1,4)
       write(72,'(4(3x,f15.6))') (   tr(4,j,np2,ng2),j=1,4)
-
-      write(72,*) 'TMAT INFINITY'
+      write(72,*)
+      write(72,*) '---------- TMAT INFINITY'
       write(72,'(4(3x,f15.6))') ( tinf(1,j,np2,ng2),j=1,4)
       write(72,'(4(3x,f15.6))') ( tinf(2,j,np2,ng2),j=1,4)
       write(72,'(4(3x,f15.6))') ( tinf(3,j,np2,ng2),j=1,4)
       write(72,'(4(3x,f15.6))') ( tinf(4,j,np2,ng2),j=1,4)
-
-      write(72,*) 'REDUCED TMAT INFINITY'
+      write(72,*)
+      write(72,*) '---------- REDUCED TMAT INFINITY'
       write(72,'(4(3x,f15.6))') (trinf(1,j,np2,ng2),j=1,4)
       write(72,'(4(3x,f15.6))') (trinf(2,j,np2,ng2),j=1,4)
       write(72,'(4(3x,f15.6))') (trinf(3,j,np2,ng2),j=1,4)
       write(72,'(4(3x,f15.6))') (trinf(4,j,np2,ng2),j=1,4)
-
-      write(72,*) 'TOTAL TMAT'
+      write(72,*)
+      write(72,*) '---------- TOTAL TMAT'
       write(72,'(4(3x,f15.6))') ((t(1,j,np2,ng2) + tinf(1,j,np2,ng2)),j=1,4)
       write(72,'(4(3x,f15.6))') ((t(2,j,np2,ng2) + tinf(2,j,np2,ng2)),j=1,4)
       write(72,'(4(3x,f15.6))') ((t(3,j,np2,ng2) + tinf(3,j,np2,ng2)),j=1,4)
@@ -958,7 +953,58 @@ subroutine setmat
    write(6,'(10x,''Lambda_ET:  '',f15.6)') eret
    write(6,'(10x,''Coupling:   '',f15.6)') erx
 
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! calculate the eigenvalues of the truncated reorganization
+   ! energy matrix
+   !
+   !   erpt   erx
+   !                  ---->     er1, er2  (er1<er2)
+   !   erx   eret
+   !
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ersum = eret + erpt
+   erdif = eret - erpt
+   ersq = sqrt(erdif*erdif + 4.d0*erx*erx)
+   er1 = half*(ersum - ersq)
+   er2 = half*(ersum + ersq)
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! calculate the transformation angle
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   tanth = half*(erdif - ersq)/erx
+   sqtan = sqrt(1.d0 + tanth*tanth)
+   sin_theta = tanth/sqtan
+   cos_theta = 1.d0/sqtan
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! initialize transformation matrix for solvent coordinates:
+   ! ztmat = S*C^{tr} so that (z1,z2) = [ztmat]*(zp,ze)
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   sq1 = sqrt(2.d0*f0*er1)
+   sq2 = sqrt(2.d0*f0*er2)
+   ztmat(1,1) =  cos_theta/sq1
+   ztmat(2,2) =  cos_theta/sq2
+   ztmat(1,2) =  sin_theta/sq1
+   ztmat(2,1) = -sin_theta/sq2
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! initialize transformation matrix for gradient:
+   ! gtmat = S^{-1}*C^{tr} so that grad(z1,z2) = [gtmat]*grad(zp,ze)
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   gtmat(1,1) =  sq1*cos_theta
+   gtmat(2,2) =  sq2*cos_theta
+   gtmat(1,2) =  sq1*sin_theta
+   gtmat(2,1) = -sq2*sin_theta
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! initialize shifts for new solvent coordinates
+   ! (d1,d2) = [S*C^{tr}]*(tr1a1b,tr1a2a)
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   tr1a1b = tr(1,2,kpoint,kgpoint)
+   tr1a2a = tr(1,3,kpoint,kgpoint)
+   delta_1 =  cos_theta*tr1a1b/sq1 + sin_theta*tr1a2a/sq1
+   delta_2 = -sin_theta*tr1a1b/sq2 + cos_theta*tr1a2a/sq2
+
    return
 
 end subroutine setmat
-

@@ -59,28 +59,10 @@ subroutine et2
 !
 !----------------------------------------------------------------------C
 !
-!  souda
-!  2010/06/25 20:02:35
-!  4.1
-!  Exp
-!  et2.f90,v 4.1 2010/06/25 20:02:35 souda Exp
-!  et2.f90,v
-!  Revision 4.1  2010/06/25 20:02:35  souda
-!  Release 4.1
-!
-!  Revision 1.4  2008/04/11 00:07:19  souda
-!  length of string OPTIONS increased to 1024
-!  to accomodate more options (not critical)
-!
-!  Revision 1.3  2007/11/06 22:20:00  souda
-!  new mmgen gas phase potential o-h o systems added
-!
-!  Revision 1.2  2004/06/04 16:56:17  souda
-!  replace harmonic potential with hybrid potential
-!
-!  Revision 1.1.1.1  2003/12/19 16:49:08  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:35 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !======================================================================C
    use pardim

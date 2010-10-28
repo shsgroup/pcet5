@@ -1,41 +1,16 @@
 module potential
+
 !----------------------------------------------------------------
 !  Gas-phase potentials
 !----------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:36
-!  4.1
-!  Exp
-!  module_potential.f90,v 4.1 2010/06/25 20:02:36 souda Exp
-!  module_potential.f90,v
-!  Revision 4.1  2010/06/25 20:02:36  souda
-!  Release 4.1
-!
-!  Revision 1.7  2007/11/06 22:20:01  souda
-!  new mmgen gas phase potential o-h o systems added
-!
-!  Revision 1.6  2007/03/12 23:04:06  souda
-!  added option of excluding the Coulomb interactions
-!  (NOCOULOMB option)
-!
-!  Revision 1.5  2004/06/11 20:32:09  souda
-!  corrections before orthogonalization
-!
-!  Revision 1.4  2004/06/04 19:28:06  souda
-!  minor bug in sethyb
-!
-!  Revision 1.3  2004/06/04 16:56:17  souda
-!  replace harmonic potential with hybrid potential
-!
-!  Revision 1.2  2004/05/15 03:32:45  souda
-!  Added Borgis-Hynes rate routine
-!
-!  Revision 1.1.1.1  2004/01/13 20:05:44  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:36 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !----------------------------------------------------------------
+
    use pardim
    use cst
    use strings
@@ -44,6 +19,23 @@ module potential
 
    implicit none
    private
+
+   !-----------------------------------------------------------------------------
+   ! one-dimensional harmonic potential for general D--H--A systems (DA is fixed)
+   !-----------------------------------------------------------------------------
+   type, private :: harm_1d
+      real(8) :: r0dh
+      real(8) :: r0ah
+      real(8) :: omega_dh
+      real(8) :: omega_ah
+      real(8) :: vpt_1
+      real(8) :: vpt_2
+      real(8) :: vet_a
+      real(8) :: vet_b
+      real(8) :: vept_1
+      real(8) :: vept_2
+      real(8), dimension(4) :: corr  ! energy bias parameters for diabatic states
+   end type harm_1d
 
    !-----------------------------------------------------------------------------
    ! one-dimensional PCET potential for Nocera-like N-H-O systems
@@ -232,6 +224,10 @@ module potential
                                      & zero,zero,zero,zero,zero,zero,zero,&
                                      & (/zero,zero,zero,zero/))
 
+   type(harm_1d), private, target, save :: harmpar = harm_1d(&
+                                     & zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,&
+                                     & (/zero,zero,zero,zero/))
+
    logical :: leadsp
    logical, public, save  :: coulomb=.true.
    integer, dimension(60) :: istart
@@ -247,10 +243,12 @@ module potential
    public  :: h0mat_mm5gen, dh0mat_mm5gen, d2h0mat_mm5gen
    public  :: h0mat_leps0, h0mat_leps2
    public  :: h0mat_hyb
-   private :: sethyb, setleps, setmm5, setmm5gen
+   public  :: h0mat_harm, dh0mat_harm, d2h0mat_harm
+   private :: sethyb, setleps, setmm5, setmm5gen, setharm
 
-   !----------------------------------------------------------------
-   contains
+!----------------------------------------------------------------
+contains
+!----------------------------------------------------------------
 
    subroutine set_potential(iunit,id)
 
@@ -258,10 +256,11 @@ module potential
       integer, intent(in) :: iunit  ! parameter file unit
       integer, intent(in) :: id     ! id of the potential (unique)
 
-      type(mm5_1D)    :: mm5par_
-      type(mm5gen_1D) :: mm5genpar_
-      type(leps_2D)   :: lepspar_
-      type(hybrid_2D) :: hybpar_
+      type(harm_1d)   :: harmpar_
+      type(mm5_1d)    :: mm5par_
+      type(mm5gen_1d) :: mm5genpar_
+      type(leps_2d)   :: lepspar_
+      type(hybrid_2d) :: hybpar_
 
       logical :: l_exist, l_opened
 
@@ -295,9 +294,220 @@ module potential
             call setmm5gen(iunit,mm5genpar_)
             mm5genpar = mm5genpar_
 
+         case(7)
+            call setharm(iunit,harmpar_)
+            harmpar = harmpar_
+
       end select
 
    end subroutine set_potential
+
+   !======================================================================
+   ! Reads parameters of the model harmonic potential
+   !======================================================================
+   subroutine setharm(ifile,pars)
+
+      implicit none
+
+      integer, intent(in) :: ifile
+      type(harm_1d), intent(out) :: pars
+
+      integer, parameter :: npars=11
+      character(8),  dimension(npars) :: pa
+      character(15), dimension(npars) :: dime
+
+      integer :: io_status, i, nvalue, numpar
+      real(8), dimension(10) :: vpari
+      real(8)  :: vpar
+
+      pa = (/ 'R0DH    ',&
+              'R0AH    ',&
+              'OMEGA_DH',&
+              'OMEGA_AH',&
+              'CORR    ',&
+              'VPT_1   ',&
+              'VPT_2   ',&
+              'VET_A   ',&
+              'VET_B   ',&
+              'VEPT_1  ',&
+              'VEPT_2  '   /)
+
+      dime = (/ 'Angstrom       ',&
+                'Angstrom       ',&
+                'cm^(-1)        ',&
+                'cm^(-1)        ',&
+                'kcal/mol       ',&
+                'kcal/mol       ',&
+                'kcal/mol       ',&
+                'kcal/mol       ',&
+                'kcal/mol       ',&
+                'kcal/mol       ',&
+                'kcal/mol       '   /)
+
+      !-- equilibrium distances
+      pars%r0dh = 1.d0
+      pars%r0ah = 1.d0
+
+      !-- frequencies
+      pars%omega_dh = 3000.d0
+      pars%omega_ah = 3000.d0
+
+      !-- PT coupling parameters VPT
+      pars%vpt_1 = 50.d0
+      pars%vpt_2 = 50.d0
+
+      !-- ET coupling parameters VET
+      pars%vet_a = 1.d0
+      pars%vet_b = 1.d0
+
+      !-- EPT mixed coupling parameters VEPT
+      pars%vept_1 = zero
+      pars%vept_2 = zero
+
+      ! Constant correction terms
+      pars%corr(1) = zero
+      pars%corr(2) = zero
+      pars%corr(3) = zero
+      pars%corr(4) = zero
+      
+      !**************************************************
+      !***   Read parameters from the external file   ***
+      !**************************************************
+
+      write(6,'(/)')
+      write(6,'(1x,''Parameters used in calculation:'')')
+      write(6,'(1x,59(''=''))')
+      write(6,'(5x,''parameter'',5x,''dimension'',5x,''value(s)'')')
+      write(6,'(1x,59(''-''))')
+
+      ! read from the parameter file (ifile)
+      do
+
+         read(ifile,'(a)',iostat=io_status) line
+
+         if (io_status.lt.0) exit
+         if (io_status.gt.0) then
+            write(*,'(/5x,''msg from setharm: error in reading external file'')')
+            stop
+         endif
+
+         if (line.eq.' ') cycle
+
+         if (line(1:1).eq.'#'.or.&
+             line(1:1).eq.'*'.or.&
+             line(1:1).eq.'C'.or.&
+             line(1:1).eq.'!'.or.&
+             line(1:1).eq.'c')      cycle
+
+         ! Clean the input data
+         do i = 1,len(line)
+            if (line(i:i).eq.tab.or.line(i:i).eq.comma) line(i:i)=space
+         enddo
+
+         ! Initialize ISTART to interpret blanks as zero's
+         do i=1,60
+            istart(i)=80
+         enddo
+
+         ! Find initial digit of all numbers,
+         ! check for leading spaces followed
+         ! by a character and store in ISTART
+
+         leadsp=.true.
+         nvalue=0
+         do i=1,len(line)
+            if (leadsp.and.line(i:i).ne.space) then
+               nvalue = nvalue + 1
+               istart(nvalue) = i
+            endif
+            leadsp=(line(i:i).eq.space)
+         enddo
+
+         ! Parameter symbol is read
+
+         string = line(istart(1):istart(2)-1)
+         par_symbol = string(1:8)
+
+         ! Check for error in parameter symbol
+
+         numpar = 0
+         do i=1,npars
+            if (par_symbol.eq.pa(i)) then
+               numpar=i
+               exit
+            endif
+         enddo
+
+         ! All O.K.
+
+         if (numpar.eq.5) then
+            do i=1,nvalue-1
+               vpari(i) = reada(line,istart(1+i))
+            enddo
+         else
+            vpar = reada(line,istart(2))
+         endif
+
+         ! Begin to set the parameter PA(NUMPAR)
+
+         select case(numpar)
+
+            case(0)
+               write(6,'(//5x,''SETHARM: unrecognized parameter name:  <'',a,''>'')') par_symbol
+               stop
+
+            case(1)
+                pars%r0dh = vpar
+            
+            case(2)
+                pars%r0ah = vpar
+            
+            case(3)
+                pars%omega_dh = vpar
+
+            case(4)
+                pars%omega_ah = vpar
+            
+            case(5)
+                do i=1,4
+                   pars%corr(i) = vpari(i)
+                enddo
+
+            case(6)
+                pars%vpt_1 = vpar
+
+            case(7)
+                pars%vpt_2 = vpar
+            
+            case(8)
+                pars%vet_a = vpar
+
+            case(9)
+                pars%vet_b = vpar
+
+            case(10)
+                pars%vept_1 = vpar
+            
+            case(11)
+                pars%vept_2 = vpar
+
+         end select
+
+         if (numpar.eq.5) then
+            do i=1,nvalue-1
+               write(6,'(5x,a8,2x,a15,3x,f12.5)') par_symbol,dime(numpar),vpari(i)
+            enddo
+         else
+            write(6,'(5x,a8,2x,a15,3x,f12.5)') par_symbol,dime(numpar),vpar
+         endif
+
+      enddo
+
+      write(6,'(1x,59(''='')/)')
+
+      return
+
+   end subroutine setharm
 
 
    !======================================================================
@@ -1634,6 +1844,266 @@ module potential
       return
 
    end subroutine sethyb
+
+   subroutine h0mat_harm(h0_)
+   !======================================================================!
+   ! Calculates the gas phase Hamiltonian matrix using
+   ! harmonic potential for general D---H---A systems (kcal/mole)
+   !======================================================================!
+      implicit none
+
+      real(8), intent(out), dimension(4,4) :: h0_
+
+      integer :: pdgas, nhgas, pagas, i, ia, ja
+      real(8)  :: dp, dp2, q, ua, ub, odh, oah, rdh, rah
+
+      !-- local variables: parameters
+      real(8) :: r0dh
+      real(8) :: r0ah
+      real(8) :: omega_dh
+      real(8) :: omega_ah
+      real(8) :: vpt_1
+      real(8) :: vpt_2
+      real(8) :: vet_a
+      real(8) :: vet_b
+      real(8) :: vept_1
+      real(8) :: vept_2
+      real(8), dimension(4) :: corr
+
+      !-- pointer to the real set of parameters
+      type(harm_1d), pointer :: par
+
+      par => harmpar
+
+      r0dh     = par%r0dh
+      r0ah     = par%r0ah
+      omega_dh = par%omega_dh
+      omega_ah = par%omega_ah
+      vpt_1    = par%vpt_1
+      vpt_2    = par%vpt_2
+      vet_a    = par%vet_a
+      vet_b    = par%vet_b
+      vept_1   = par%vept_1
+      vept_2   = par%vept_2
+      corr     = par%corr
+
+      h0_ = zero
+      pdgas = iptgas(1)
+      nhgas = iptgas(2)
+      pagas = iptgas(3)
+
+      !-- DP - a distance between PT donor (PDGAS) and acceptor (PAGAS)
+      !   Note that PT interface is oriented along the x-axis.
+      !   Q - antisymmetrical proton coordinate
+
+      dp  = dabs(xyzgas(1,pagas)-xyzgas(1,pdgas))
+      dp2 = dp/2.d0
+      q   = xyzgas(1,nhgas)
+
+      rdh = (dp2 + q - r0dh)*a2bohr
+      rah = (dp2 - q - r0ah)*a2bohr
+
+      odh = omega_dh*cm2ev*ev2au
+      oah = omega_ah*cm2ev*ev2au
+
+      !==== DIAGONAL ELEMENTS
+
+      !-- Harmonic potentials for proton transfer EVB states
+
+      ua = half*pm*odh*odh*rdh*rdh*au2cal
+      ub = half*pm*oah*oah*rah*rah*au2cal
+
+      h0_(1,1) = ua + corr(1)
+      h0_(2,2) = ub + corr(2)
+      h0_(3,3) = ua + corr(3)
+      h0_(4,4) = ub + corr(4)
+
+      !==== OFF-DIAGONAL ELEMENTS
+
+      !-- PT couplings
+
+      h0_(1,2) = vpt_1
+      h0_(2,1) = vpt_1
+      h0_(3,4) = vpt_2
+      h0_(4,3) = vpt_2
+
+      !-- ET couplings
+
+      h0_(1,3) = vet_a
+      h0_(3,1) = vet_a
+      h0_(2,4) = vet_b
+      h0_(4,2) = vet_b
+
+      !-- Mixed EPT couplings
+
+      h0_(1,4) = vept_1
+      h0_(4,1) = vept_1
+      h0_(2,3) = vept_2
+      h0_(3,2) = vept_2
+
+      return
+
+   end subroutine h0mat_harm
+
+
+   subroutine dh0mat_harm(dh0_)
+   !======================================================================!
+   ! Calculates the derivative of the gas phase Hamiltonian matrix using
+   ! harmonic potential for general D---H---A systems (kcal/mole)
+   !======================================================================!
+      implicit none
+
+      real(8), intent(out), dimension(4,4) :: dh0_
+
+      integer :: pdgas, nhgas, pagas, i, ia, ja
+      real(8)  :: dp, dp2, q, dua, dub, odh, oah, rdh, rah
+
+      !-- local variables: parameters
+      real(8) :: r0dh
+      real(8) :: r0ah
+      real(8) :: omega_dh
+      real(8) :: omega_ah
+      real(8) :: vpt_1
+      real(8) :: vpt_2
+      real(8) :: vet_a
+      real(8) :: vet_b
+      real(8) :: vept_1
+      real(8) :: vept_2
+      real(8), dimension(4) :: corr
+
+      !-- pointer to the real set of parameters
+      type(harm_1d), pointer :: par
+
+      par => harmpar
+
+      r0dh     = par%r0dh
+      r0ah     = par%r0ah
+      omega_dh = par%omega_dh
+      omega_ah = par%omega_ah
+      vpt_1    = par%vpt_1
+      vpt_2    = par%vpt_2
+      vet_a    = par%vet_a
+      vet_b    = par%vet_b
+      vept_1   = par%vept_1
+      vept_2   = par%vept_2
+      corr     = par%corr
+
+      dh0_ = zero
+      pdgas = iptgas(1)
+      nhgas = iptgas(2)
+      pagas = iptgas(3)
+
+      !-- DP - a distance between PT donor (PDGAS) and acceptor (PAGAS)
+      !   Note that PT interface is oriented along the x-axis.
+      !   Q - antisymmetrical proton coordinate
+
+      dp  = dabs(xyzgas(1,pagas)-xyzgas(1,pdgas))
+      dp2 = dp/2.d0
+      q   = xyzgas(1,nhgas)
+
+      rdh = (dp2 + q - r0dh)*a2bohr
+      rah = (dp2 - q - r0ah)*a2bohr
+
+      odh = omega_dh*cm2ev*ev2au
+      oah = omega_ah*cm2ev*ev2au
+
+      !==== derivatives of the DIAGONAL ELEMENTS
+
+      !-- Harmonic potentials for proton transfer EVB states
+
+      dua = pm*odh*odh*rdh
+      dub = pm*oah*oah*rah
+
+      dh0_(1,1) = dua
+      dh0_(2,2) = dub
+      dh0_(3,3) = dua
+      dh0_(4,4) = dub
+
+      !==== OFF-DIAGONAL ELEMENTS are zero (constant couplings)
+
+      return
+
+   end subroutine dh0mat_harm
+
+
+   subroutine d2h0mat_harm(d2h0_)
+   !======================================================================!
+   ! Calculates the second derivative of the Hamiltonian matrix using
+   ! harmonic potential for general D---H---A systems (kcal/mole)
+   !======================================================================!
+      implicit none
+
+      real(8), intent(out), dimension(4,4) :: d2h0_
+
+      integer :: pdgas, nhgas, pagas, i, ia, ja
+      real(8)  :: dp, dp2, q, d2ua, d2ub, odh, oah, rdh, rah
+
+      !-- local variables: parameters
+      real(8) :: r0dh
+      real(8) :: r0ah
+      real(8) :: omega_dh
+      real(8) :: omega_ah
+      real(8) :: vpt_1
+      real(8) :: vpt_2
+      real(8) :: vet_a
+      real(8) :: vet_b
+      real(8) :: vept_1
+      real(8) :: vept_2
+      real(8), dimension(4) :: corr
+
+      !-- pointer to the real set of parameters
+      type(harm_1d), pointer :: par
+
+      par => harmpar
+
+      r0dh     = par%r0dh
+      r0ah     = par%r0ah
+      omega_dh = par%omega_dh
+      omega_ah = par%omega_ah
+      vpt_1    = par%vpt_1
+      vpt_2    = par%vpt_2
+      vet_a    = par%vet_a
+      vet_b    = par%vet_b
+      vept_1   = par%vept_1
+      vept_2   = par%vept_2
+      corr     = par%corr
+
+      d2h0_ = zero
+      pdgas = iptgas(1)
+      nhgas = iptgas(2)
+      pagas = iptgas(3)
+
+      !-- DP - a distance between PT donor (PDGAS) and acceptor (PAGAS)
+      !   Note that PT interface is oriented along the x-axis.
+      !   Q - antisymmetrical proton coordinate
+
+      dp  = dabs(xyzgas(1,pagas)-xyzgas(1,pdgas))
+      dp2 = dp/2.d0
+      q   = xyzgas(1,nhgas)
+
+      rdh = (dp2 + q - r0dh)*a2bohr
+      rah = (dp2 - q - r0ah)*a2bohr
+
+      odh = omega_dh*cm2ev*ev2au
+      oah = omega_ah*cm2ev*ev2au
+
+      !==== second derivatives of the DIAGONAL ELEMENTS
+
+      !-- Harmonic potentials for proton transfer EVB states
+
+      d2ua = pm*odh*odh
+      d2ub = pm*oah*oah
+
+      d2h0_(1,1) = d2ua
+      d2h0_(2,2) = d2ub
+      d2h0_(3,3) = d2ua
+      d2h0_(4,4) = d2ub
+
+      !==== OFF-DIAGONAL ELEMENTS are zero (constant couplings)
+
+      return
+
+   end subroutine d2h0mat_harm
 
 
    subroutine h0mat_mm5(h0_)

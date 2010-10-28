@@ -1,25 +1,15 @@
 module geometry
+
 !-----------------------------------------------------------------------
 ! Routines related to the geometry manipulations
 !-----------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:36
-!  4.1
-!  Exp
-!  module_geometry.f90,v 4.1 2010/06/25 20:02:36 souda Exp
-!  module_geometry.f90,v
-!  Revision 4.1  2010/06/25 20:02:36  souda
-!  Release 4.1
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:36 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
-!  Revision 1.2  2004/06/21 16:39:48  souda
-!  some beautification...
-!
-!  Revision 1.1.1.1  2004/01/11 19:45:59  souda
-!  Initial PCET-4.0 Release
-!
-!
-!-------------------------------------------------------------------
+!-----------------------------------------------------------------------
 
    use pardim
    use cst
@@ -32,8 +22,8 @@ module geometry
    implicit none
    public
 
-   !---------------------------------------------------------------------
-   contains
+!---------------------------------------------------------------------
+contains
 
    !---------------------------------------------------------------------
    subroutine read0(in)
@@ -1075,7 +1065,7 @@ module geometry
       integer :: i, itit,itit2
       integer :: length, lengt1, lengt2, lengt3, lengt4, lengt5
 
-      ! Determine the actual lengths of TITLE and TITLE2
+      !-- Determine the actual lengths of TITLE and TITLE2
 
       do i=80,1,-1
          if (title(i:i).ne.' ') then
@@ -1091,23 +1081,17 @@ module geometry
          endif
       enddo
 
-      ! Print banner
+      !-- Print banner
 
-      write(6,'(//)')
-      write(6,'(1x,79(''*''))')
-      write(6,'(1x,''PCET Version 4.0 (Fortran 90)'')')
-      write(6,'(1x,''Hammes-Schiffer Group'')')
-      write(6,'(1x,''Department of Chemistry'')')
-      write(6,'(1x,''The Pennsylvania State University'')')
-      write(6,'(1x,''University Park, PA 16802'')')
-      write(6,'(1x,79(''*''))')
-      write(6,'(3x,''Title of the job:  '',a)') title (1:itit)
-      write(6,'(22x,a)')                        title2(1:itit2)
-      write(6,'(3x,''Start date:        '',a)') strdat
-      write(6,'(3x,''Job identificator: '',a)') job
-      write(6,'(1x,79(''-''))')
+      call banner(5.1)
 
-      ! Print keywords
+      write(6,'(3x,"Title of the job:  ",a)') title (1:itit)
+      write(6,'(22x,a)')                      title2(1:itit2)
+      write(6,'(3x,"Start date:        ",a)') strdat
+      write(6,'(3x,"Job identificator: ",a)') job
+      write(6,'(1x,79("-"))')
+
+      !-- Print keywords
 
       do i=481,1,-1
          if (keywrd(i:i).ne.' ') then

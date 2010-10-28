@@ -21,18 +21,10 @@ subroutine getmin(in,nrmin,nsmin,rzpi,rzei,rzpj,rzej)
 !            (m is nrmin or npmin)
 !--------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:35
-!  4.1
-!  Exp
-!  getmin.f90,v 4.1 2010/06/25 20:02:35 souda Exp
-!  getmin.f90,v
-!  Revision 4.1  2010/06/25 20:02:35  souda
-!  Release 4.1
-!
-!  Revision 1.1.1.1  2003/12/19 16:54:42  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:35 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !===================================================================C
    implicit none

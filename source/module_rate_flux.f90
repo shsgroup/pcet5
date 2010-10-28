@@ -1,27 +1,37 @@
 module rate_flux
+
 !-------------------------------------------------------------------------------
-! Tests various numerical integration methods to calculate
-! the flux integral in the rate expression
 !
-! Integral to calculate is:
+!  Various numerical integration methods to calculate
+!  the flux integral in the rate expression
 !
-! Int[-inf,inf] Exp[-x*t^2 + p*(Cos[t]-1)]*Cos[q*Sin[t]+theta*t]
+!  Integral to calculate is:
 !
-! Methods used:
+!  Int[-inf,inf] Exp[-x*t^2 + p*(Cos[t]-1)]*Cos[q*Sin[t]+theta*t]
 !
-! (1) DQSF - standard Gaussian quadrature for the whole function
+!  Methods used:
 !
-! (2) DQAGS - adaptive algorithm QAGS (from QUADPACK) for the whole function
+!  (1) DQSF - standard Gaussian quadrature for the whole function
 !
-! (3) DQH64 (from SSPLIB) - for integrals Exp[-t^2]*F[x] - 64 points quadrature
+!  (2) DQAGS - adaptive algorithm QAGS (from QUADPACK) for the whole function
 !
-! (5) Monte-Carlo integration with importance sampling (Doll)
+!  (3) DQH64 (from SSPLIB) - for integrals Exp[-t^2]*F[x] - 64 points quadrature
 !
-! (6) High-temperature analytical expression
+!  (5) Monte-Carlo integration with importance sampling (Doll)
 !
-! (7) Low-temperature analytical expression
+!  (6) High-temperature analytical expression
+!
+!  (7) Low-temperature analytical expression
 !
 !-------------------------------------------------------------------------------
+!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:36 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
+!
+!-------------------------------------------------------------------------------
+
    use cst
    use monte_carlo
    use ssplib

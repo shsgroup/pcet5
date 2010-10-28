@@ -1,4 +1,5 @@
 program pcet
+
 !======================================================================!
 !                                                                      !
 !     " 2b, or not 2b: that is the question "                          !
@@ -71,28 +72,19 @@ program pcet
 !     2003 - Fortran-90 adaptation + modular structure
 !     v4.0   (by Alexander Soudackov, Penn State)
 !
+!     2010 - added functionality: MDQT dynamics in the space
+!     v5.0   of two solvent coordinates for four state model
+!            (by Alexander Soudackov, Penn State)
+!
 !-----------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:36
-!  4.1
-!  Exp
-!  pcet.f90,v 4.1 2010/06/25 20:02:36 souda Exp
-!  pcet.f90,v
-!  Revision 4.1  2010/06/25 20:02:36  souda
-!  Release 4.1
-!
-!  Revision 1.3  2007/11/06 22:20:02  souda
-!  new mmgen gas phase potential o-h o systems added
-!
-!  Revision 1.2  2004/05/15 03:32:45  souda
-!  Added Borgis-Hynes rate routine
-!
-!  Revision 1.1.1.1  2004/01/13 20:09:18  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:36 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !======================================================================!
+
    use pardim
    use keys
    use strings
@@ -103,7 +95,7 @@ program pcet
 
    character( 8) :: cdum
    character(10) :: curdat, curtim
-   character(80) :: input, line
+   character(160) :: input, line
    
    real*8  :: tstart, time_s, time0, time1, time2
    real*8  :: telapsed, tend, ttotal
@@ -126,10 +118,12 @@ program pcet
 
    tstart = second()
 
+   !---------------------------------------------
    ! Initialize maximum dimensions
    !---------------------------------------------
    call init_pardim
 
+   !---------------------------------------------------
    ! Initialization of constants and conversion factors
    !---------------------------------------------------
    call init_cst
@@ -138,8 +132,9 @@ program pcet
    ! Read the main INPUT file
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+   !-------------------------------------------------------------------
    ! extract the name of the input file from the command line argument
-   !---------------------------------------------
+   !-------------------------------------------------------------------
    n1 = 1
    call getarg(n1,input)
    lfile = nblen(input)
@@ -150,12 +145,14 @@ program pcet
       stop 'Sorry...'
    endif
 
+   !---------------------------------------------
    ! Open the file and parse keywords
    !---------------------------------------------
    open(5,file=input(1:lfile),status='old')
 
    ijob = 0
 
+   !-----------------------------------------------------
    ! MAIN LOOP OVER THE JOBS SPECIFIED IN THE INPUT FILE
    !-----------------------------------------------------
    do
@@ -164,6 +161,7 @@ program pcet
 
       if (index(line,'END').ne.0.or.index(line,'end').ne.0) exit
 
+      !-------------------------------------------------
       ! Extract the name of the job from the first line
       ! of the input. If a JOBNAME is not specified use
       ! the consequtive number of the job instead.
@@ -181,22 +179,25 @@ program pcet
          ljob = 2
       endif
 
+      !-------------------------------------------------
       ! Create a subdirectory for the current job.
       ! The name is given in the string JOB.
       !
       ! ATTENTION!!! The following line is machine
-      !              dependent and is a call of a
+      !              dependent and is a call to a
       !              system routine. It might be
       !              different on different platforms.
       !---------------------------------------------
       call system('mkdir '//job(1:ljob))
       call system('cp '//input(1:lfile)//' '//job(1:ljob))
 
+      !-------------------------------------------------
       ! Read titles and keywords for the current job
       !---------------------------------------------
       backspace 5
       call read0(5)
 
+      !-------------------------------------------------
       ! Initiate timing and set date
       !---------------------------------------------
       time_s = second()
@@ -205,15 +206,18 @@ program pcet
       strdat=curdat(5:6)//"/"//curdat(7:8)//"/"//curdat(1:4)//&
        " at "//curtim(1:2)//":"//curtim(3:4)//":"//curtim(5:6)
 
+      !-------------------------------------------------
       ! Print a banner for the calculation and
       ! a list of specified keywords with definitions
       !---------------------------------------------
       call printb
 
+      !-------------------------------------------------
       ! Set options and parameters for the current job
       !---------------------------------------------
       call setjob
 
+      !-------------------------------------------------
       !     ET2 - one-dimensional free energy profiles and
       !           non-adiabatic rates for single ET reaction
       !           (standard Marcus two-state model)
@@ -223,10 +227,12 @@ program pcet
          if (index(keywrd,' QUANTUM').eq.0) cycle
       endif
 
+      !-------------------------------------------------
       ! Initialize matrices on the grid
       !---------------------------------------------
       call initmat
 
+      !-------------------------------------------------
       ! Calculate matrices on the grid
       ! along the coordinate of the quantum particle
       ! To be done: parallelization over grid points
@@ -240,12 +246,14 @@ program pcet
       WRITE(6,'( 1X,''Time for calculation of matrices on the grid: '',F15.3,'' sec.'')') telapsed
       WRITE(6,'( 1X,70(''-'')/)')
 
+      !-------------------------------------------------
       ! Print out gas-phase and electronically solvated
       ! energy profiles along the proton coordinate
       ! (if PTGAS keyword is specified)
       !-------------------------------------------------
       if (index(keywrd,' PTGAS').ne.0) call prngas
 
+      !-------------------------------------------------
       ! Print out solvated free energy profiles along the
       ! proton coordinate (if PTSOL keyword is specified)
       !--------------------------------------------------
@@ -255,15 +263,17 @@ program pcet
       !  NOW START THE PRODUCTION:
       !==================================================
 
+      !-------------------------------------------------
       ! PT2 - one-dimensional free energy profiles and
       !       non-adiabatic rates for single PT reaction
       !       (standard two-state model is utilized)
       !-------------------------------------------------
       if (index(keywrd,' PT2').ne.0) then
-         write(*,*) 'PT2 is not done yet...'
+         write(*,*) 'PT2 is not implemented in this version...'
          !call pt2
       endif
 
+      !-------------------------------------------------
       ! SURF3 - three-dimensional free energy surfaces
       !         If only one grid point along the gating
       !         coordinate is defined output two-dimensional
@@ -271,56 +281,78 @@ program pcet
       !-----------------------------------------------------
       if (index(keywrd,' SURF3').ne.0) call surface3
 
+      !-------------------------------------------------
       ! SURF2 - two-dimensional free energy surfaces
       !         Gating coordinate should be treated
       !         quantum-mechanically (GQUANT=.true.)
       !-------------------------------------------------
       if (index(keywrd,' SURF2').ne.0) call surface2
 
+      !-------------------------------------------------
       ! PATH - free energy profiles along a given path
       !        (quantum gating)
       !-------------------------------------------------
       if (index(keywrd,' PATH2').ne.0) call path2
 
+      !-------------------------------------------------
       ! PATH - free energy profiles along a given path
       !        (classical gating: 2D surfaces along the path)
       !------------------------------------------------------
       if (index(keywrd,' PATH3').ne.0) call path3
 
+      !-------------------------------------------------
       ! MIN2  - find minimums on the 2D free energy surfaces
       !------------------------------------------------------
       if (index(keywrd,' MIN2').ne.0) call minima2
 
+      !-------------------------------------------------
       ! MIN3  - find minimums on the 3D free energy surfaces
       !-----------------------------------------------------
       if (index(keywrd,' MIN3').ne.0) call minima3
 
+      !-------------------------------------------------
       ! WAVEFUN3 - calculate and write out the proton
       !            and vibrational wavefunctions
       !            depending on the gating coordinate
       !-------------------------------------------------
       if (index(keywrd,' WAVEFUN3').ne.0) call wavef3
 
+      !-------------------------------------------------
       ! WAVEFUN2 - calculate and write out the proton
       !            and gating vibrational wavefunctions
       !-------------------------------------------------
       if (index(keywrd,' WAVEFUN2').ne.0) call wavef2
 
+      !-------------------------------------------------
       ! RATE3 - estimate non-adiabatic rates by averaging
       !         over the gating coordinate
       !-------------------------------------------------
       if (index(keywrd,' RATE3').ne.0) call rate3
 
+      !-------------------------------------------------
       ! RATEB - estimate non-adiabatic rates using
       !         exact flux expressions
       !-------------------------------------------------
       if (index(keywrd,' RATEB').ne.0) call rateb
 
+      !-------------------------------------------------
       ! RATE2 - estimate non-adiabatic rates with
       !         quantization over the gating coordinate
       !-------------------------------------------------
       if (index(keywrd,' RATE2').ne.0) call rate2
 
+      !--------------------------------------------------------------
+      !                  ######################
+      !__________________# New in version 5.x #______________________
+      !                  ######################
+      ! DYNAMICS - solvent dynamics in the 2D space of solvent
+      !            coordinates (optional Surface Hopping dynamics)
+      !            and fixed gating distance (gating coordinate
+      !            will be dynamica in the later version)
+      !--------------------------------------------------------------
+      if (index(keywrd,' DYNAMICS3').ne.0) call dynamics3
+
+      !-------------------------------------------------
       ! deallocate arrays and prepare for the next job
       !-------------------------------------------------
       call deinitmat

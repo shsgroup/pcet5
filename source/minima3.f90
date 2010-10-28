@@ -65,25 +65,10 @@ subroutine minima3
 !
 !--------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:35
-!  4.1
-!  Exp
-!  minima3.f90,v 4.1 2010/06/25 20:02:35 souda Exp
-!  minima3.f90,v
-!  Revision 4.1  2010/06/25 20:02:35  souda
-!  Release 4.1
-!
-!  Revision 1.3  2008/04/11 00:07:19  souda
-!  length of string OPTIONS increased to 1024
-!  to accomodate more options (not critical)
-!
-!  Revision 1.2  2007/03/12 23:08:03  souda
-!  Modifications related to using LBFGS minimization method.
-!
-!  Revision 1.1.1.1  2003/12/19 23:55:05  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:36 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !====================================================================
 
@@ -94,6 +79,7 @@ subroutine minima3
    use control
    use quantum
    use fesmin_3d
+   use solmat
 
    implicit none
 
@@ -109,7 +95,7 @@ subroutine minima3
    integer :: iprin, imcorr, ifactr, ipgtol
 
    real(8) :: zp0, zps, ze0, zes, r0
-   real(8) :: zpmin, zemin, rmin, femin
+   real(8) :: zpmin, zemin, z1min, z2min, rmin, femin
 
    real(8), dimension(3)   :: grad
    real(8), dimension(3,3) :: hess
@@ -386,14 +372,16 @@ subroutine minima3
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    write(6,'(/1x,"RESULTS OF THE MINIMIZATION (kcal/mol):"/)')
-   write(6,'( 1x,"Solvent coordinates: ",  2f12.6)') zpmin,zemin
+   write(6,'( 1x,"Solvent coordinates:             ",2f12.6)') zpmin,zemin
+   call zpze_to_z1z2(zpmin,zemin,z1min,z2min)
+   write(6,'( 1x,"Transformed solvent coordinates: ",2f12.6)') z1min,z2min
    if (.not.gfix) write(6,'( 1x,"Gating grid point: ",  i3,f12.6)') kgmin,rmin
    write(6,'( 1x,"Free energy at the min: ",f12.6)') femin
    if (gfix) then
-      write(6,'( 1x,"Gradient: ",             2f12.6)') dzpmin,dzemin
+      write(6,'( 1x,"Gradient: ",             2g20.10)') dzpmin,dzemin
       write(6,'( 1x,"Hessian: ",/,           (2f12.6))') d2zpmin, d2zpzemin, d2zpzemin, d2zemin
    else
-      write(6,'( 1x,"Gradient: ",             3f12.6)') grad
+      write(6,'( 1x,"Gradient: ",             3g20.10)') grad
       write(6,'( 1x,"Hessian: ",/,           (3f12.6))') ((hess(i,j),j=1,3),i=1,3)
    endif
    write(6,'(/)')

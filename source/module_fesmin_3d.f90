@@ -1,38 +1,17 @@
 module fesmin_3d
+
 !=======================================================================
 !     Routines related to the finfing on minima
 !     on 3-dimensional free-energy surfaces
 !-----------------------------------------------------------------------
 !
-!     souda
-!     2010/06/25 20:02:35
-!     4.1
-!     Exp
-!     module_fesmin_3d.f90,v 4.1 2010/06/25 20:02:35 souda Exp
-!     module_fesmin_3d.f90,v
-!     Revision 4.1  2010/06/25 20:02:35  souda
-!     Release 4.1
-!
-!     Revision 1.6  2007/11/06 22:20:00  souda
-!     new mmgen gas phase potential o-h o systems added
-!
-!     Revision 1.5  2007/03/12 23:08:03  souda
-!     Modifications related to using LBFGS minimization method.
-!
-!     Revision 1.4  2004/06/21 16:39:48  souda
-!     some beautification...
-!
-!     Revision 1.3  2004/06/14 15:58:24  souda
-!     decrease amount of out put in verbose mode in rate*
-!
-!     Revision 1.2  2004/05/15 03:32:45  souda
-!     Added Borgis-Hynes rate routine
-!
-!     Revision 1.1.1.1  2003/12/19 17:16:58  souda
-!     Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:36 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !=======================================================================
+
    use pardim
    use cst
    use eispack
@@ -370,7 +349,7 @@ module fesmin_3d
          d2zemin = zes*zes*f(2,2)
          d2zpzemin = zps*zes*f(1,2)
 
-      elseif (iminim.eq.1) then
+      elseif (iminim.eq.2) then
 
          call d2fes3(n,kg,x,xs,f)
          d2zpmin   = f(1,1)

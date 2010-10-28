@@ -1,42 +1,17 @@
 subroutine setjob
+
 !====================================================================C
 !   Analyses specified keywords and sets options
 !   and parameters for the current job
 !---------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:37
-!  4.1
-!  Exp
-!  setjob.f90,v 4.1 2010/06/25 20:02:37 souda Exp
-!  setjob.f90,v
-!  Revision 4.1  2010/06/25 20:02:37  souda
-!  Release 4.1
-!
-!  Revision 1.7  2008/04/11 00:07:20  souda
-!  length of string OPTIONS increased to 1024
-!  to accomodate more options (not critical)
-!
-!  Revision 1.6  2007/11/06 22:20:03  souda
-!  new mmgen gas phase potential o-h o systems added
-!
-!  Revision 1.5  2007/03/12 23:07:16  souda
-!  added: keyword MINIM and option NOCOULOMB
-!
-!  Revision 1.4  2006/10/23 20:09:55  souda
-!  defaults for npntsg changed
-!
-!  Revision 1.3  2004/06/09 20:19:16  souda
-!  mass units changed in output
-!
-!  Revision 1.2  2004/06/04 16:56:17  souda
-!  replace harmonic potential with hybrid potential
-!
-!  Revision 1.1.1.1  2004/01/13 20:11:13  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:37 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !====================================================================C
+
    use pardim
    use cst
    use keys
@@ -571,7 +546,7 @@ subroutine setjob
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ! Integration step (STEPG) and array of grid points (GLIST)
       ! for the gating coordinate
-      ! (now it's done in module_quantum:alloc_pquant)
+      ! (now it's done in module_quantum:alloc_gquant)
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
       ! IF (NPNTSG.GT.1) THEN
@@ -718,13 +693,21 @@ subroutine setjob
       write(6,'(/1x,"Hybrid LEPS/harmonic gas phase potential")')
       igas = 5
 
+   else if (index(options,' HARM').ne.0) then
+
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      ! Harmonic potential (1-dimensional)
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      write(6,'(/1x,"Harmonic gas phase potential")')
+      igas = 7
+
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    else
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ! Put here your potential...
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      write(*,'( 1x,"*** (in SETJOB): MM5, MMGEN, WATER, LEPS0, LEPS5, and HYBRID potentials are available ***"/)')
+      write(*,'( 1x,"*** (in SETJOB): HARM, MM5, MMGEN, WATER, LEPS0, LEPS5, and HYBRID potentials are available ***"/)')
       stop
 
    endif
@@ -815,22 +798,22 @@ subroutine setjob
    endif
 
    !==============================================================
-   ! Solvation model
+   ! Solvent model
    !==============================================================
    ! FRCM    - Frequency Resolved Cavity Model (Basilevsky, Rostov)
    ! ELLIPSE - Simple electrostatic model with ellipsoidal cavity
    !==============================================================
 
-   ikey = index(keywrd,' SOLV(')
+   ikey = index(keywrd,' SOLVENT(')
 
    if (ikey.eq.0) then
 
-      write(*,'(/1x,"*** (in SETJOB): You MUST specify the SOLV keyword with options ***"/)')
+      write(*,'(/1x,"*** (in SETJOB): You MUST specify the SOLVENT keyword with options ***"/)')
       stop
 
    else
 
-      call getopt(keywrd,ikey+6,options)
+      call getopt(keywrd,ikey+9,options)
 
    endif
 
@@ -851,8 +834,8 @@ subroutine setjob
 
    elseif (index(options,' MEOH').ne.0) then
 
-      eps0 = 32.7d0
-      eps8 = 1.76d0
+      eps0 = 33.7d0
+      eps8 = 5.6d0
 
    elseif (index(options,' ETOH').ne.0) then
 
@@ -904,6 +887,11 @@ subroutine setjob
       endif
 
    endif
+
+   !-- initialize inverse Pekar factor f_0
+   f0 = four*pi*eps0*eps8/(eps0 - eps8)
+
+   !-- symmetrization options for reorganization energy matrices
 
    if (index(options,' SYMT').ne.0) then
       symt=.true.
@@ -1200,10 +1188,10 @@ subroutine setjob
 
    return
    
+contains
 !=======================================================================
-!     Internal procedures
+!  Internal procedures
 !=======================================================================
-   contains
    
    subroutine scan_geo(iunit,n)
    ! scans geometry input file (iunit) and extracts

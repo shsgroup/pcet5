@@ -1,4 +1,5 @@
 subroutine minima2
+
 !====================================================================
 !  Sets parameters for the routine which finds minima
 !  on the spesified two-dimensional free energy surface
@@ -61,33 +62,13 @@ subroutine minima2
 !
 !--------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:35
-!  4.1
-!  Exp
-!  minima2.f90,v 4.1 2010/06/25 20:02:35 souda Exp
-!  minima2.f90,v
-!  Revision 4.1  2010/06/25 20:02:35  souda
-!  Release 4.1
-!
-!  Revision 1.5  2008/04/11 00:07:19  souda
-!  length of string OPTIONS increased to 1024
-!  to accomodate more options (not critical)
-!
-!  Revision 1.4  2007/03/12 23:08:03  souda
-!  Modifications related to using LBFGS minimization method.
-!
-!  Revision 1.3  2004/05/15 03:32:45  souda
-!  Added Borgis-Hynes rate routine
-!
-!  Revision 1.2  2004/01/15 20:09:53  souda
-!  minor bugs
-!
-!  Revision 1.1.1.1  2004/01/13 19:32:44  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:36 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !====================================================================
+
    use pardim
    use strings
    use keys

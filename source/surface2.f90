@@ -1,5 +1,7 @@
 subroutine surface2
+
 !===================================================================C
+!
 !  Calculates the two-dimensional free energy surfaces
 !  on rectangular grid in the space of solvent coordinates
 !  ZP and ZE. Gating coordinate is quantized.
@@ -16,6 +18,9 @@ subroutine surface2
 !  DIAB4 - diabatic free energy surfaces (four output files)
 !
 !  SCALE - scale solvent coordinates with the reorganization energies
+!
+!  TRANSFORM - use rotated and scaled frame in which the self energy
+!              is diagonal (***NEW KEYWORD***)!
 !
 !  ZP=ZP1/ZP2/NZP - grid along ZP: NZP points from ZP1 to ZP2
 !
@@ -36,26 +41,16 @@ subroutine surface2
 !           states (only for ADIAB)
 !
 !  DKLOUT= - name of the output file with nonadiabatic couplings
+!
 !-------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:37
-!  4.1
-!  Exp
-!  surface2.f90,v 4.1 2010/06/25 20:02:37 souda Exp
-!  surface2.f90,v
-!  Revision 4.1  2010/06/25 20:02:37  souda
-!  Release 4.1
-!
-!  Revision 1.2  2008/04/11 00:07:20  souda
-!  length of string OPTIONS increased to 1024
-!  to accomodate more options (not critical)
-!
-!  Revision 1.1.1.1  2004/01/13 20:11:49  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:37 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !===================================================================C
+
    use pardim
    use cst
    use keys
@@ -69,17 +64,18 @@ subroutine surface2
 
    character(1024) :: options
    character(  40) :: fname
-   character(  10) :: zdim
+   character(  20) :: zdim
    character(   5) :: mode
 
-   logical :: adiab, diab2, diab4, dkl, scale, weights
+   logical :: adiab, diab2, diab4, dkl
+   logical :: scale, transform, weights
 
    integer :: ikey, ielst, izp, ize, izp1, islash1, islash2, nzp, ize1, nze
    integer :: instates, nstates_tot, nf, nstates, ngatst, ioutput, lenf, ispa
    integer :: iweights, idklin, nlines, ndkl, nzdim, nz, npsiga
    integer :: i, ndabf, ievb
 
-   real(8) :: pscal, escal, zp1, zp2, ze1, ze2, zpstep, zestep
+   real(8) :: pscal, escal, zp1, zp2, ze1, ze2, zpstep, zestep, z1, z2, dum1, dum2
    real(8) :: zp, zp0, ze, ze0, timep1, timep2, second, time0, time1, times
 
    integer, dimension(30,2) :: npair
@@ -89,6 +85,7 @@ subroutine surface2
    real(8), allocatable, dimension(:,:,:,:) :: psiel, psipr
    real(8), allocatable, dimension(:,:,:)   :: enel, envib, envibg
    real(8), allocatable, dimension(:,:)     :: wght
+   real(8), allocatable, dimension(:,:)   :: solv_coord_p, solv_coord_e
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Check whether gating quantization is specified
@@ -104,6 +101,7 @@ subroutine surface2
    dkl     = .false.
    scale   = .false.
    weights = .false.
+   transform = .false.
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Extract options
@@ -155,6 +153,21 @@ subroutine surface2
    endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Using transformed solvent coordinates (TRANSFORM)
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   if (index(options,' TRANSFORM').ne.0) then
+      transform = .true.
+      zdim = '(kcal/mol)^(1/2)'
+      if (scale) then
+         write(*,'(/1x,"Warning in SURF2: SCALE keyword is incompatible with TRANSFORM and thus is ignored."/)')
+         scale = .false.
+         pscal = 1.d0
+         escal = 1.d0
+      endif
+   endif
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Grid specification
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -193,14 +206,29 @@ subroutine surface2
 
    endif
 
-   write(6,'(/1x,"Surface grid specification:",/,&
-   &" along ZP: ",I3," points from ",F7.3," to ",F7.3,2X,A,/,&
-   &" along ZE: ",I3," points from ",F7.3," to ",F7.3,2X,A)')&
-   &   NZP,ZP1,ZP2,ZDIM,NZE,ZE1,ZE2,ZDIM
+   if (.not.transform) then
+
+      write(6,'(/1x,"Surface grid specification:",/,&
+      &" along ZP: ",I3," points from ",F7.3," to ",F7.3,2X,A,/,&
+      &" along ZE: ",I3," points from ",F7.3," to ",F7.3,2X,A)')&
+      &  NZP,ZP1,ZP2,ZDIM,NZE,ZE1,ZE2,ZDIM
+
+   else
+
+      write(6,'(/1x,"Surface grid specification:",/,&
+      &" along z1: ",I3," points from ",F7.3," to ",F7.3,2X,A,/,&
+      &" along z2: ",I3," points from ",F7.3," to ",F7.3,2X,A)')&
+      &  NZP,ZP1,ZP2,ZDIM,NZE,ZE1,ZE2,ZDIM
+
+   endif
 
    if (scale) write(*,'(/1x,"The solvent coordinates ZP and ZE are scaled",/,&
              &1X,"by the PT and ET partial reorganization",/,&
              &1X,"energies (see above), respectively.")')
+
+   if (transform) write(*,'(/1x,"The transformed solvent coordinates z1 and z2 are used:",/,&
+                     &          1x,"the self energy is diagonal in this frame.")')
+
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Number of states to print out
@@ -453,6 +481,28 @@ subroutine surface2
    ! Loops over the grid points
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+   !-- generate two-dimensional array for solvent coordinates values
+
+   allocate (solv_coord_p(nzp,nze))                                                                                          
+   allocate (solv_coord_e(nzp,nze))                                                                                          
+
+   do izp=1,nzp
+      z1 = zp1 + (izp-1)*zpstep
+      z1 = z1*pscal
+      do ize=1,nze
+         z2 = ze1 + (ize-1)*zestep
+         z2 = z2*escal
+         if (transform) then
+            call z1z2_to_zpze(z1,z2,dum1,dum2)
+            solv_coord_p(izp,ize) = dum1
+            solv_coord_e(izp,ize) = dum2
+         else
+            solv_coord_p(izp,ize) = z1
+            solv_coord_e(izp,ize) = z2
+         endif
+      enddo
+   enddo
+
    write(6,'(/1x,"Calculating free energies at ",i6," grid points..."/)') nzp*nze
    time0 = second()
 
@@ -461,13 +511,16 @@ subroutine surface2
 
    do izp=1,nzp
 
-      zp = zp1 + (izp-1)*zpstep
-      zp0 = zp*pscal
+      z1 = zp1 + (izp-1)*zpstep
+      z1 = z1*pscal
 
       do ize=1,nze
 
-         ze = ze1 + (ize-1)*zestep
-         ze0 = ze*escal
+         z2 = ze1 + (ize-1)*zestep
+         z2 = z2*escal
+
+         zp0 = solv_coord_p(izp,ize)
+         ze0 = solv_coord_e(izp,ize)
 
          !icount = icount + 1
          !write(*,'(i10,2f20.6)') icount,zp0,ze0
@@ -476,12 +529,12 @@ subroutine surface2
          call feszz2(mode,1,zp0,ze0,nstates,nf,f,nz,z,ndabf,&
                     &ielst,enel,envib,envibg,psiel,psipr,npsiga,psiga)
          timep2 = second()
-         write(1,'(2f10.3,2x,20g15.9)') zp,ze,(f(i),i=1,nstates_tot)
-         write(*,'(f20.3,2x,2f10.3,2x,10g15.9)') timep2-timep1,zp,ze,(f(i),i=1,nstates_tot)
+         write(1,'(2f10.3,2x,20g15.9)') z1,z2,(f(i),i=1,nstates_tot)
+         write(*,'(f20.3,2x,2f10.3,2x,10g15.9)') timep2-timep1,z1,z2,(f(i),i=1,nstates_tot)
 
          if (weights) then
             call evbweig(mode,1,nstates_tot,ndabf,nz,z,ielst,psiel,psipr,npsiga,psiga,wght)
-            write(21,'(2f10.3,2x,40g20.6)') zp,ze,((wght(ievb,i),ievb=1,4),i=1,nstates_tot)
+            write(21,'(2f10.3,2x,40g20.6)') z1,z2,((wght(ievb,i),ievb=1,4),i=1,nstates_tot)
          endif
 
          if (diab2) then
@@ -490,12 +543,12 @@ subroutine surface2
             call feszz2(mode,2,zp0,ze0,nstates,nf,f,nz,z,ndabf,&
                        &ielst,enel,envib,envibg,psiel,psipr,npsiga,psiga)
             timep2 = second()
-            write(2,'(2f10.3,2x,20g15.9)') zp,ze,(f(i),i=1,nstates_tot)
-            write(*,'(f20.3,2x,2f10.3,2x,20g15.9)') timep2-timep1,zp,ze,(f(i),i=1,nstates_tot)
+            write(2,'(2f10.3,2x,20g15.9)') z1,z2,(f(i),i=1,nstates_tot)
+            write(*,'(f20.3,2x,2f10.3,2x,20g15.9)') timep2-timep1,z1,z2,(f(i),i=1,nstates_tot)
 
             if (weights) then
                call evbweig(mode,2,nstates_tot,ndabf,nz,z,ielst,psiel,psipr,npsiga,psiga,wght)
-               write(22,'(2f10.3,2x,40g20.6)') zp,ze,((wght(ievb,i),ievb=1,4),i=1,nstates_tot)
+               write(22,'(2f10.3,2x,40g20.6)') z1,z2,((wght(ievb,i),ievb=1,4),i=1,nstates_tot)
             endif
 
          endif
@@ -503,15 +556,15 @@ subroutine surface2
          if (diab4) then
             call feszz2(mode,3,zp0,ze0,nstates,nf,f,nz,z,ndabf,&
                        &ielst,enel,envib,envibg,psiel,psipr,npsiga,psiga)
-            write(3,'(2f10.3,2x,20g15.9)') zp,ze,(f(i),i=1,nstates_tot)
+            write(3,'(2f10.3,2x,20g15.9)') z1,z2,(f(i),i=1,nstates_tot)
             call feszz2(mode,4,zp0,ze0,nstates,nf,f,nz,z,ndabf,&
                        &ielst,enel,envib,envibg,psiel,psipr,npsiga,psiga)
-            write(4,'(2f10.3,2x,20g15.9)') zp,ze,(f(i),i=1,nstates_tot)
+            write(4,'(2f10.3,2x,20g15.9)') z1,z2,(f(i),i=1,nstates_tot)
          endif
 
          if (dkl) then
             call zcoup   !(ndabf1,f1,z,psiel,psipr,ndkl,npair,dklp,dkle)
-            !write(11,'(2f10.3,30g15.9)') zp,ze,(dklp(i),dkle(i),dsqrt(dklp(i)**2+dkle(i)**2),i=1,ndkl)
+            !write(11,'(2f10.3,30g15.9)') z1,z2,(dklp(i),dkle(i),dsqrt(dklp(i)**2+dkle(i)**2),i=1,ndkl)
          endif
 
       enddo
@@ -553,6 +606,7 @@ subroutine surface2
 
    deallocate (f,z,psiel,psipr,psiga)
    deallocate (enel,envib,envibg)
+   deallocate (solv_coord_p, solv_coord_e)
    if (weights) deallocate (wght)
 
    return

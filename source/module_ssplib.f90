@@ -3,10 +3,17 @@ module ssplib
 !---------------------------------------------------------------------
 ! Some routines from SSPLIB
 !---------------------------------------------------------------------
+!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:36 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
+!
+!---------------------------------------------------------------------
 
    implicit none
 
-   contains
+contains
                                                                       
       SUBROUTINE DQH64(FCT,Y)                                           
 

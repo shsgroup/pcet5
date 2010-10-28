@@ -1,4 +1,5 @@
 module pardim
+
 !======================================================================
 !  Dimensions of arrays
 !----------------------------------------------------------------------
@@ -12,42 +13,35 @@ module pardim
 !  MAXSTA   - total number of basis vibronic/gating states
 !-----------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:36
-!  4.1
-!  Exp
-!  module_pardim.f90,v 4.1 2010/06/25 20:02:36 souda Exp
-!  module_pardim.f90,v
-!  Revision 4.1  2010/06/25 20:02:36  souda
-!  Release 4.1
-!
-!  Revision 1.1.1.1  2004/01/13 20:03:51  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:36 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !======================================================================
-  implicit none
-  public
-  save
 
-  integer :: maxatm
-  integer :: maxpnt
-  integer :: nelst
-  integer :: nprstmax
-  integer :: ngastmax
-  integer :: maxsta
+   implicit none
+   public
+   save
 
-  public :: init_pardim
+   integer :: maxatm
+   integer :: maxpnt
+   integer :: nelst
+   integer :: nprstmax
+   integer :: ngastmax
+   integer :: maxsta
 
-  contains
+   public :: init_pardim
+
+contains
   
-  subroutine init_pardim
-     maxatm   = 250
-     maxpnt   = 128
-     nelst    =   4
-     nprstmax =  40
-     ngastmax =  40
-     maxsta   = nelst*nprstmax*ngastmax
-  end subroutine init_pardim
+   subroutine init_pardim
+      maxatm   = 250
+      maxpnt   = 256
+      nelst    =   4
+      nprstmax =  80
+      ngastmax =  80
+      maxsta   = nelst*nprstmax*ngastmax
+   end subroutine init_pardim
 
 end module pardim

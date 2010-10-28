@@ -1,7 +1,7 @@
       module frcm
 
-      !----------------------------------------------------------------------|
-      ! Author:      Ivan Rostov (module structure by Alexander Soudackov)
+      !----------------------------------------------------------------|
+      ! Author:      Ivan Rostov (module structure by A. V. Soudackov)
       ! Date:        11/05/2003
       ! Module name: frcm
       ! Description: contains all the FRCM related routines for
@@ -10,22 +10,14 @@
       ! Format:      fixed F77 format
       ! Notes:       All FRCM common blocks are replaced by module
       !              private variables; interfaces are added.
-      !-------------------------------------------------------------------
+      !----------------------------------------------------------------|
       !
-      !  souda
-      !  2010/06/25 20:02:36
-      !  4.1
-      !  Exp
-      !  module_frcm.f,v 4.1 2010/06/25 20:02:36 souda Exp
-      !  module_frcm.f,v
-      !  Revision 4.1  2010/06/25 20:02:36  souda
-      !  Release 4.1
+      !  $Author: souda $
+      !  $Date: 2010-10-28 21:29:36 $
+      !  $Revision: 5.2 $
+      !  $Log: not supported by cvs2svn $
       !
-      !  Revision 1.1.1.1  2004/01/08 21:18:18  souda
-      !  Initial PCET-4.0 Release
-      !
-      !
-      !----------------------------------------------------------------------|
+      !----------------------------------------------------------------|
 
       !----------------------------------------------------------------|
       ! Use statements

@@ -1,20 +1,16 @@
 module feszz_3d
+
 !======================================================================
-!  3D free energy surface
+!  3D free energy surface (third dimension is the gating mode)
 !======================================================================
-!  souda
-!  2010/06/25 20:02:36
-!  4.1
-!  Exp
-!  module_feszz_3d.f90,v 4.1 2010/06/25 20:02:36 souda Exp
-!  module_feszz_3d.f90,v
-!  Revision 4.1  2010/06/25 20:02:36  souda
-!  Release 4.1
 !
-!  Revision 1.1.1.1  2004/01/13 19:58:33  souda
-!  Initial PCET-4.0 Release
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:36 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !======================================================================
+
    use pardim
    use cst
    use control
@@ -25,11 +21,22 @@ module feszz_3d
 
    implicit none
    private
-   
+
+   public :: reset_feszz3_counter
    public :: feszz3
    public :: evbwei
+   public :: dvdzz3
+   public :: coupzz3
+
+   integer, save :: numr = 0
+   real(8), allocatable, dimension(:,:) :: zprev
    
-   contains
+contains
+
+   !-- reset the call counter numr
+   subroutine reset_feszz3_counter
+      numr = 0
+   end subroutine reset_feszz3_counter
 
    !======================================================================
    subroutine feszz3(mode,iset,kg,zp,ze,nstates,fe,nz,z,ndabf,&
@@ -114,16 +121,24 @@ module feszz_3d
    ! of the wavefunctions along the solvent coordinates.
    ! It is not necessary unless we want to calculate
    ! non-adiabatic coupling vector for solvent dynamics
-   !
-   !integer, save                           :: numr   = 0
-   !real*8,  save, dimension(maxsta,maxsta) :: zprev  = 0.d0
-   !real*8,  save, dimension(nelst,nelst)   :: zeprev = 0.d0
-   !real*8,  save, dimension(maxpnt,maxpnt) :: zpprev = 0.d0
+
+   !real(8),  save, dimension(nelst,nelst)   :: zeprev = 0.d0
+   !real(8),  save, dimension(maxpnt,maxpnt) :: zpprev = 0.d0
 
    nzdim = nprst*ielst
    fe = 0.d0
+   z = 0.d0
+   do i=1,nz
+      z(i,i) = 1.d0
+   enddo
 
-   !numr = numr + 1
+   if (numr.eq.0) then
+      if (allocated(zprev)) deallocate(zprev)
+      allocate (zprev(nzdim,nzdim))
+      zprev = 0.d0
+   endif
+
+   numr = numr + 1
 
    adiab = mode.eq.'ADIAB'
    diab2 = mode.eq.'DIAB2'
@@ -324,17 +339,17 @@ module feszz_3d
 
    ! check phases between the calls
 
-   !if (numr.gt.1) then
-   !   do kk=1,ndabf
-   !      p = dot_product(z(1:ndabf,kk),zprev(1:ndabf,kk))
-   !      if (p.lt.0d0) then
-   !         do ll=1,ndabf
-   !            z(ll,kk) = -z(ll,kk)
-   !         enddo
-   !      endif
-   !   enddo
-   !endif
-   !zprev(1:ndabf,1:ndabf) = z(1:ndabf,1:ndabf)
+   if (numr.gt.1) then
+      do kk=1,ndabf
+         p = dot_product(z(1:ndabf,kk),zprev(1:ndabf,kk))
+         if (p.lt.0d0) then
+            do ll=1,ndabf
+               z(ll,kk) = -z(ll,kk)
+            enddo
+         endif
+      enddo
+   endif
+   zprev(1:ndabf,1:ndabf) = z(1:ndabf,1:ndabf)
 
    return
 
@@ -886,6 +901,234 @@ module feszz_3d
    return
 
    end subroutine evbwei
+   !============================================================================!
+
+
+   !============================================================================!
+   subroutine dvdzz3(mode,iset,istate,ndabf,z,ielst,gradzp,gradze)
+   !============================================================================!
+   !  Calculates the gradient of the vibronic part of the free energy
+   !  with respect to the solvent coordinates ZP and ZE.
+   !  Note that the vibronic part DOES NOT include the self-energy.
+   !
+   !  MODE - type of the state (ADIAB/DIAB2/DIAB4)
+   !  ISET - set of states (1 for ADIAB, 1/2 for DIAB2)
+   !  ISTATE - index of the vibronic state of interest
+   !  NDABF - dimension of the total Hamiltonian
+   !  Z - total wavefunction coefficients (eigenvectors)
+   !  IELST - number of electronic states (just for consistency checking)
+   !  GRADZP - dV(istate)/dZP
+   !  GRADZE - dV(istate)/dZE
+   !
+   !  Important: values of the input parameters MODE, ISET, NDABF, IELST
+   !  should match the values used in the previous call to feszz3.
+   !============================================================================!
+      character(5), intent(in)  :: mode
+      integer,      intent(in)  :: iset, istate, ndabf, ielst
+      real(8), dimension(ndabf,ndabf), intent(in)  :: z
+      real(8), intent(out) :: gradzp, gradze
+
+      integer :: ielst0, mu
+      real(8) :: zsq
+      real(8), dimension(nelst) :: dhdzp, dhdze
+
+      if (method.ne.1) then
+         write(*,*) " From DVDZZ: SORRY, only METHOD=1 is implemented in the dynamical branch of the current version"
+         stop
+      endif
+
+      !- initialization
+      gradzp = 0.d0
+      gradze = 0.d0
+
+      if (mode.eq.'ADIAB') then
+         ielst0 = nelst
+      elseif (mode.eq.'DIAB2') then
+         ielst0 = 2
+      elseif (mode.eq.'DIAB4') then
+         ielst0 = 1
+      endif
+
+      if (ielst0.ne.ielst) then
+         write(6,*) ' Wrong input parameter for dvdzz: ielst=',ielst,' but should be',ielst0
+         stop
+      endif
+
+      !-- derivatives of the diagonal elements of the electronic Hamiltonian
+      !   (off-diagonal elements are assumed to be independent on ZP, ZE)
+
+      dhdzp = 0.d0
+      dhdze = 0.d0
+      dhdzp(1) = 0.d0   ! 1a
+      dhdzp(2) = 1.d0   ! 1b
+      dhdzp(3) = 0.d0   ! 2a
+      dhdzp(4) = 1.d0   ! 2b
+      dhdze(1) = 0.d0   ! 1a
+      dhdze(2) = 0.d0   ! 1b
+      dhdze(3) = 1.d0   ! 2a
+      dhdze(4) = 1.d0   ! 2b
+
+
+      if (mode.eq.'DIAB4') then
+
+         !-- DIAB4 - single diabatic set
+         !   (1a or 1b or 2a or 2b)
+         gradzp = dhdzp(iset)
+         gradze = dhdze(iset)
+         return
+
+      elseif (mode.eq.'DIAB2') then
+
+         !-- DIAB2 - ET diabatic set
+         !   (1a/1b or 2a/2b)
+
+         do mu=1,nprst
+            zsq = z(mu+nprst,istate)*z(mu+nprst,istate)
+            gradzp = gradzp + zsq
+         enddo
+         gradze = real(iset-1)
+         return
+
+      elseif (mode.eq.'ADIAB') then
+
+         !-- ADIAB - full adiabatic set
+         !   (1a/1b/2a/2b)
+
+         do mu=nprst+1,2*nprst
+            zsq = z(mu,istate)*z(mu,istate)
+            gradzp = gradzp + zsq
+         enddo
+         do mu=3*nprst+1,ndabf
+            zsq = z(mu,istate)*z(mu,istate)
+            gradzp = gradzp + zsq
+         enddo
+
+         do mu=2*nprst+1,ndabf
+            zsq = z(mu,istate)*z(mu,istate)
+            gradze = gradze + zsq
+         enddo
+
+         return
+
+      endif
+
+   end subroutine dvdzz3
+   !============================================================================!
+
+   !============================================================================!
+   subroutine coupzz3(mode,iset,nstates,fe,ndabf,z,ielst,coupzp,coupze)
+   !============================================================================!
+   !  Calculates the matrix of nonadiabatic coupling vectors for pairs
+   !  of vibronic states.
+   !
+   !  MODE - type of the state (ADIAB/DIAB2/DIAB4)
+   !  ISET - set of states (1 for ADIAB, 1/2 for DIAB2)
+   !  NSTATES - number of the vibronic states
+   !  FE - free energies of the vibronic states
+   !  NDABF - dimension of the total Hamiltonian
+   !  Z - total wavefunction coefficients (eigenvectors)
+   !  IELST - number of electronic states (just for consistency checking)
+   !  COUPZP - 2D-array of d^{ZP}(:,:) = <Psi_m|d\Psi_n/dZP>
+   !  COUPZE - 2D-array of d^{ZE}(:,:) = <Psi_m|d\Psi_n/dZE>
+   !
+   !  Important: values of the input parameters MODE, ISET, NDABF, IELST
+   !  should match the values used in the previous call to feszz3.
+   !============================================================================!
+      character(5), intent(in)  :: mode
+      integer,      intent(in)  :: iset, nstates, ndabf, ielst
+      real(8), dimension(nstates), intent(in)  :: fe
+      real(8), dimension(ndabf,ndabf), intent(in)  :: z
+      real(8), dimension(nstates,nstates), intent(out) :: coupzp
+      real(8), dimension(nstates,nstates), intent(out) :: coupze
+
+      integer :: ielst0, istate, jstate, mu
+      real(8) :: dvdzp, dvdze, zsq
+
+      if (method.ne.1) then
+         write(*,*) " From COUPZZ: SORRY, only METHOD=1 is implemented in the dynamical branch of the current version"
+         stop
+      endif
+
+      !- array initialization
+      coupzp = 0.d0
+      coupze = 0.d0
+
+      if (mode.eq.'ADIAB') then
+         ielst0 = nelst
+      elseif (mode.eq.'DIAB2') then
+         ielst0 = 2
+      elseif (mode.eq.'DIAB4') then
+         ielst0 = 1
+      endif
+
+      if (ielst0.ne.ielst) then
+         write(6,*) ' Wrong input parameter for COUPZZ: ielst=',ielst,' but should be',ielst0
+         stop
+      endif
+
+
+      if (mode.eq.'DIAB4') then
+
+         !-- DIAB4 - single diabatic set
+         !   (1a or 1b or 2a or 2b)
+         !   In this case all the couplings vanish
+         return
+
+      elseif (mode.eq.'DIAB2') then
+
+         !-- DIAB2 - ET diabatic set
+         !   (1a/1b or 2a/2b)
+
+         do istate=1,nstates
+            do jstate=istate+1,nstates
+               dvdzp = 0.d0
+               do mu=1,nprst
+                  zsq = z(mu+nprst,istate)*z(mu+nprst,jstate)
+                  dvdzp = dvdzp + zsq
+               enddo
+               coupzp(istate,jstate) = dvdzp/(fe(jstate)-fe(istate))
+               coupzp(jstate,istate) = -coupzp(istate,jstate)
+               coupze(istate,jstate) = real(iset-1)/(fe(jstate)-fe(istate))
+               coupze(jstate,istate) = -coupze(istate,jstate)
+            enddo
+         enddo
+         return
+
+      elseif (mode.eq.'ADIAB') then
+
+         !-- ADIAB - full adiabatic set
+         !   (1a/1b/2a/2b)
+
+         do istate=1,nstates
+            do jstate=istate+1,nstates
+
+               dvdzp = 0.d0
+               do mu=nprst+1,2*nprst
+                  zsq = z(mu,istate)*z(mu,jstate)
+                  dvdzp = dvdzp + zsq
+               enddo
+               do mu=3*nprst+1,ndabf
+                  zsq = z(mu,istate)*z(mu,jstate)
+                  dvdzp = dvdzp + zsq
+               enddo
+               coupzp(istate,jstate) = dvdzp/(fe(jstate)-fe(istate))
+               coupzp(jstate,istate) = -coupzp(istate,jstate)
+            
+               dvdze = 0.d0
+               do mu=2*nprst+1,ndabf
+                  zsq = z(mu,istate)*z(mu,jstate)
+                  dvdze = dvdze + zsq
+               enddo
+               coupze(istate,jstate) =  dvdze/(fe(jstate)-fe(istate))
+               coupze(jstate,istate) = -coupze(istate,jstate)
+
+            enddo
+         enddo
+         return
+
+      endif
+
+   end subroutine coupzz3
    !============================================================================!
 
 end module feszz_3d

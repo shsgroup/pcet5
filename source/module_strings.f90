@@ -1,22 +1,16 @@
 module strings
+
 !-------------------------------------------------------------------
 !  Routines working with character strings
 !-------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:36
-!  4.1
-!  Exp
-!  module_strings.f90,v 4.1 2010/06/25 20:02:36 souda Exp
-!  module_strings.f90,v
-!  Revision 4.1  2010/06/25 20:02:36  souda
-!  Release 4.1
-!
-!  Revision 1.1.1.1  2004/01/13 20:07:32  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:36 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !--------------------------------------------------------------------
+
    implicit none
    public
 
@@ -27,8 +21,8 @@ module strings
    character(52), parameter :: allow1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
    character(19), parameter :: allow2 = "1234567890()=,.:-_+"
 
-   !--------------------------------------------------------------------
-   contains
+!--------------------------------------------------------------------
+contains
 
    real*8 function digit(string,istart)
    !=======================================================================

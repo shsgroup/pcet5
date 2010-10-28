@@ -1,5 +1,7 @@
 subroutine wavef3
+
 !====================================================================
+!
 !  Calculates and writes out vibrational wavefunctions
 !  and potential energy profiles at specified values
 !  of solvent coordinates
@@ -25,27 +27,13 @@ subroutine wavef3
 !
 !--------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:37
-!  4.1
-!  Exp
-!  wavef3.f90,v 4.1 2010/06/25 20:02:37 souda Exp
-!  wavef3.f90,v
-!  Revision 4.1  2010/06/25 20:02:37  souda
-!  Release 4.1
-!
-!  Revision 1.3  2008/04/11 00:07:20  souda
-!  length of string OPTIONS increased to 1024
-!  to accomodate more options (not critical)
-!
-!  Revision 1.2  2004/01/23 19:15:56  souda
-!  Format descriptor fix
-!
-!  Revision 1.1.1.1  2004/01/13 20:13:05  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:37 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !====================================================================
+
    use pardim
    use keys
    use strings

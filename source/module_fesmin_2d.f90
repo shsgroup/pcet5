@@ -1,31 +1,16 @@
 module fesmin_2d
+
 !-------------------------------------------------------------------
 !  minimization on a 2D free energy surface
 !-------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:35
-!  4.1
-!  Exp
-!  module_fesmin_2d.f90,v 4.1 2010/06/25 20:02:35 souda Exp
-!  module_fesmin_2d.f90,v
-!  Revision 4.1  2010/06/25 20:02:35  souda
-!  Release 4.1
-!
-!  Revision 1.4  2007/11/06 22:20:00  souda
-!  new mmgen gas phase potential o-h o systems added
-!
-!  Revision 1.3  2007/03/12 23:08:03  souda
-!  Modifications related to using LBFGS minimization method.
-!
-!  Revision 1.2  2004/06/14 15:58:24  souda
-!  decrease amount of out put in verbose mode in rate*
-!
-!  Revision 1.1.1.1  2004/01/13 19:41:17  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:36 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !-------------------------------------------------------------------
+
    use pardim
    use cst
    use eispack

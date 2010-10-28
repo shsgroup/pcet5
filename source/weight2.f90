@@ -1,5 +1,7 @@
 subroutine weight2(nout,zp,ze,mode,iset,istate)
+
 !====================================================================
+!
 !  Prints out the weights of the wavefunction
 !
 !  ZP,ZE - values of solvent coordinates
@@ -7,22 +9,16 @@ subroutine weight2(nout,zp,ze,mode,iset,istate)
 !  MODE - type of the state (ADIAB/DIAB2/DIAB4)
 !  ISET - set of states (1 for ADIAB, 1/2 for DIAB2)
 !  ISTATE - state to analyze
+!
 !--------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:37
-!  4.1
-!  Exp
-!  weight2.f90,v 4.1 2010/06/25 20:02:37 souda Exp
-!  weight2.f90,v
-!  Revision 4.1  2010/06/25 20:02:37  souda
-!  Release 4.1
-!
-!  Revision 1.1.1.1  2004/01/13 20:13:16  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:37 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !====================================================================
+
    use pardim
    use control
    use quantum

@@ -1,28 +1,23 @@
 subroutine deinitmat
+
 !===================================================================
 !  Deinitializes the matrices on the grid
 !===================================================================
 !
-!  souda
-!  2010/06/25 20:02:35
-!  4.1
-!  Exp
-!  deinitmat.f90,v 4.1 2010/06/25 20:02:35 souda Exp
-!  deinitmat.f90,v
-!  Revision 4.1  2010/06/25 20:02:35  souda
-!  Release 4.1
-!
-!  Revision 1.1.1.1  2004/01/13 19:32:10  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:35 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !-------------------------------------------------------------------
+
    use pardim
    use gasmat
    use solmat
    use geogas
    use geosol
    use quantum
+   use feszz_3d, only: reset_feszz3_counter
 
    implicit none
 
@@ -35,6 +30,7 @@ subroutine deinitmat
    call dealloc_geosol
    call dealloc_pquant
    call dealloc_gquant
+   call reset_feszz3_counter
 
    return
 

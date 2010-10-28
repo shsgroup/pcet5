@@ -1,5 +1,7 @@
 subroutine wfn3prt(nout,zp,ze,mode,iset,nvibst)
+
 !===================================================================
+!
 !  Writes out the proton vibrational wavefunctions
 !  as two-dimensional functions of proton and gating coordinates
 !
@@ -23,20 +25,13 @@ subroutine wfn3prt(nout,zp,ze,mode,iset,nvibst)
 !
 !--------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:37
-!  4.1
-!  Exp
-!  wfn3prt.f90,v 4.1 2010/06/25 20:02:37 souda Exp
-!  wfn3prt.f90,v
-!  Revision 4.1  2010/06/25 20:02:37  souda
-!  Release 4.1
-!
-!  Revision 1.1.1.1  2004/01/13 20:13:52  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:37 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !======================================================================
+
    use pardim
    use cst
    use quantum

@@ -1,5 +1,7 @@
 subroutine rateb
+
 !=======================================================================
+!
 !     Calculates the nonadiabatic rate of the PCET reaction in solution
 !
 !     Reference:
@@ -125,55 +127,10 @@ subroutine rateb
 !
 !-----------------------------------------------------------------------
 !
-!     souda
-!     2010/06/25 20:02:37
-!     4.1
-!     Exp
-!     rateb.f90,v 4.1 2010/06/25 20:02:37 souda Exp
-!     rateb.f90,v
-!     Revision 4.1  2010/06/25 20:02:37  souda
-!     Release 4.1
-!
-!     Revision 1.13  2008/04/11 00:07:20  souda
-!     length of string OPTIONS increased to 1024
-!     to accomodate more options (not critical)
-!
-!     Revision 1.12  2007/03/12 23:08:04  souda
-!     Modifications related to using LBFGS minimization method.
-!
-!     Revision 1.11  2004/06/21 16:39:48  souda
-!     some beautification...
-!
-!     Revision 1.10  2004/06/14 17:36:16  souda
-!     testing loginfo
-!
-!     Revision 1.9  2004/06/14 16:07:19  souda
-!     testing loginfo
-!
-!     Revision 1.8  2004/06/11 23:20:58  souda
-!     fixed phase issue in alpha calculation in rateb
-!
-!     Revision 1.7  2004/06/09 21:44:40  souda
-!     output to Arrhenius changed
-!
-!     Revision 1.6  2004/06/07 17:33:05  souda
-!     changed output formats
-!
-!     Revision 1.5  2004/05/17 15:03:24  souda
-!     minor change in rateb...
-!
-!     Revision 1.4  2004/05/15 03:32:45  souda
-!     Added Borgis-Hynes rate routine
-!
-!     Revision 1.3  2004/05/13 18:32:01  souda
-!     finalized rateb. routine
-!
-!     Revision 1.2  2004/01/14 23:54:04  souda
-!     Start of modifying rate3
-!
-!     Revision 1.1.1.1  2004/01/05 00:31:12  souda
-!     Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:37 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !=======================================================================
 

@@ -1,4 +1,5 @@
 subroutine ugas(k, kg, hd, ha12, ha, hdes, ha12es, haes)
+
 !===================================================================C
 !
 !  Calculates the gas-phase and electronically solvated
@@ -8,23 +9,13 @@ subroutine ugas(k, kg, hd, ha12, ha, hdes, ha12es, haes)
 !
 !--------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:37
-!  4.1
-!  Exp
-!  ugas.f90,v 4.1 2010/06/25 20:02:37 souda Exp
-!  ugas.f90,v
-!  Revision 4.1  2010/06/25 20:02:37  souda
-!  Release 4.1
-!
-!  Revision 1.2  2004/06/05 01:04:59  souda
-!  ET diabatic energies added to prngas and ugas
-!
-!  Revision 1.1.1.1  2003/12/16 17:52:57  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:37 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !===================================================================C
+
    use pardim
    use gasmat
    use solmat

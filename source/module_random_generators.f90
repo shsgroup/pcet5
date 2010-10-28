@@ -1,5 +1,16 @@
 module random_generators
 
+!--------------------------------------------------------------------
+!  Random number generators
+!--------------------------------------------------------------------
+!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:36 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
+!
+!--------------------------------------------------------------------
+
    implicit none
    private
 
@@ -50,7 +61,7 @@ contains
       real(8), intent(out)   :: v
       integer :: irantype
       real(4) :: r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, rsum
-      real(8) :: duni, randum, rrr, rr2
+      real(8) :: randum, rrr, rr2
 
       !-- use different random number generator depending on value of irantype
       !   irantype=1 => ran2 from numerical recipes (from soo young)
@@ -111,7 +122,7 @@ contains
       real(8), save :: store
       integer :: irantype
       real(4) :: wr1, wr2
-      real(8) :: r, sqln, w1, w2, randum, duni
+      real(8) :: r, sqln, w1, w2, randum
 
       irantype=1
 

@@ -1,4 +1,5 @@
 module gasmat
+
 !=======================================================================
 !     Gas phase Hamiltonian matrices on the proton grid (kcal/mol)
 !-----------------------------------------------------------------------
@@ -13,20 +14,13 @@ module gasmat
 !             with respect to the gating coordinate
 !-----------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:36
-!  4.1
-!  Exp
-!  module_gasmat.f90,v 4.1 2010/06/25 20:02:36 souda Exp
-!  module_gasmat.f90,v
-!  Revision 4.1  2010/06/25 20:02:36  souda
-!  Release 4.1
-!
-!  Revision 1.1.1.1  2004/01/13 19:59:49  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:36 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !=======================================================================
+
    implicit none
    public
    save

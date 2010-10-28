@@ -1,5 +1,7 @@
 subroutine rate2
+
 !=======================================================================
+!
 !     Calculates the nonadiabatic rate of the PCET reaction in solution
 !
 !     Reference:
@@ -93,51 +95,13 @@ subroutine rate2
 !
 !-----------------------------------------------------------------------
 !
-!  souda
-!  2010/06/25 20:02:37
-!  4.1
-!  Exp
-!  rate2.f90,v 4.1 2010/06/25 20:02:37 souda Exp
-!  rate2.f90,v
-!  Revision 4.1  2010/06/25 20:02:37  souda
-!  Release 4.1
-!
-!  Revision 1.11  2008/04/11 00:07:20  souda
-!  length of string OPTIONS increased to 1024
-!  to accomodate more options (not critical)
-!
-!  Revision 1.10  2007/03/12 23:08:04  souda
-!  Modifications related to using LBFGS minimization method.
-!
-!  Revision 1.9  2004/06/14 15:58:24  souda
-!  decrease amount of out put in verbose mode in rate*
-!
-!  Revision 1.8  2004/06/07 17:33:05  souda
-!  changed output formats
-!
-!  Revision 1.7  2004/06/07 16:58:06  souda
-!  corrected filenames
-!
-!  Revision 1.6  2004/02/10 21:55:59  souda
-!  Added the temperature list specification
-!
-!  Revision 1.5  2004/02/04 16:09:59  souda
-!  Extended output to Arrhenius.dat
-!
-!  Revision 1.4  2004/01/21 22:45:34  souda
-!  innersphere contrib. added to output of reorg. energies
-!
-!  Revision 1.3  2004/01/16 17:27:07  souda
-!  Apparent activation energy and prefactor added
-!
-!  Revision 1.2  2004/01/15 23:30:24  souda
-!  minor bug fixes/formats
-!
-!  Revision 1.1.1.1  2004/01/13 19:09:42  souda
-!  Initial PCET-4.0 Release
-!
+!  $Author: souda $
+!  $Date: 2010-10-28 21:29:37 $
+!  $Revision: 5.2 $
+!  $Log: not supported by cvs2svn $
 !
 !=======================================================================
+
    use pardim
    use keys
    use strings
