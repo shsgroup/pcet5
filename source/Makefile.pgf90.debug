@@ -7,12 +7,12 @@
 #
 #############################################################
 
-ARCH = pgi-9.02-x86_64
+ARCH = pgi-9.02-x86_64-debug
 FC      = pgf90
 # Important: MODFLAG must have a trailing blank
 MODFLAG = -module 
 BACKSLASH = -Mbackslash
 NOBACKSLASH = -Mnobackslash
-F90FLAGS = -fast -Mipa=fast
-F77FLAGS = -fast -Mipa=fast
+F90FLAGS = -g -C
+F77FLAGS = -g -C
 LDFLAGS =

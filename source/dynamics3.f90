@@ -15,7 +15,9 @@ subroutine dynamics3
 !
 !  ADIAB - move on adiabatic electron/proton vibrational free energy surfaces
 !
-!  DIAB  - move on diabatic electron/proton vibrational free energy surfaces
+!  DIAB2 - move on the ET diabatic electron/proton vibrational free energy surfaces
+!
+!  DIAB4 - move on the diabatic electron/proton vibrational free energy surfaces
 !
 !  KG=<int> - index of the grid point along the gating coordinate
 !             (it is assumed that the gating coordinate is frozen
@@ -25,11 +27,25 @@ subroutine dynamics3
 !             from the input geometry). Otherwise KG must be smaller
 !             than NPNTSG.
 !
-!  ISTATE[/SET] - index of the occupied vibronic state (1 for ground state) at t=0.
-!                 If METHOD=1 then SET specifies one of the diabatic electronic
-!                 states ("1" for 1a, "2" for 1b, "3" for 2a, "4" for 2b).
-!                 If METHOD=2 then SET specifies one of the adiabatic electronic
-!                 states ("1" for ground, "2" for first excited, etc.).
+!  ISTATE=[STATE/SET] - index of the occupied vibronic state (1 for ground state) at t=0.
+!                       If ADIAB then SET specifies one of the adiabatic electronic
+!                       states ("1" for ground, "2" for first excited, etc.).
+!                       If DIAB2 then SET specifies one of the ET diabatic electronic
+!                       states ("1" for 1a/1b, "2" for 2a/2b).
+!                       If DIAB4 then SET specifies one of the diabatic electronic
+!                       states ("1" for 1a, "2" for 1b, "3" for 2a, "4" for 2b).
+!
+!  PUMP=<energy> - energy of the initial laser pulse
+!                 (center of the spectral lineshape, in eV)
+!
+!  PUMPWIDTH=<width> - full width at half maximum (FWHM) of the pump laser spectrum
+!
+!  PUMPSHAPE=<key> - spectral lineshape of the pump laser pulse
+!
+!            RECTANGULAR - rectangular lineshape
+!            LORENTZIAN  - Lorentzian lineshape   (default)
+!            GAUSSIAN    - GAUSSIAN lineshape
+!
 !
 !  NOWEIGHTS - do not calculate the evb weights along the trajectory (default is YES)
 !
@@ -40,7 +56,10 @@ subroutine dynamics3
 !
 !  ZE0=<float> - center of the initial distribution along ZE (or z2) coordinate
 !
-!  NSTATES=<int> - number of states to include in dynamics (for MDQT only)
+!  SPECTRUM=<string> - output vibronic spectrum to the external file
+!                      (default filename is vibronic_spectrum.dat)
+!
+!  NSTATES=<int> - number of states to include in dynamics
 !
 !  TRAJOUT=<string> - name of the output files with trajectory data
 !                     (default filename "trajectory_n.dat" where n is the
@@ -87,9 +106,12 @@ subroutine dynamics3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:35 $
-!  $Revision: 5.2 $
+!  $Date: 2010-11-04 22:43:08 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:35  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !  Revision 5.1  2010/10/26 21:06:20  souda
 !  new routines/modules
 !
@@ -106,6 +128,7 @@ subroutine dynamics3
    use quantum
    use geogas, only: iptgas, xyzgas
    use parsol
+   use laser
    use propagators_3d
    use feszz_3d, only: reset_feszz3_counter
 
@@ -113,24 +136,30 @@ subroutine dynamics3
 
    character(len=1024) :: options
    character(len=  40) :: fname
-   character(len=  15) :: zdim ="kcal/mol      "
-   character(len=  15) :: z1dim="(kcal/mol)^1/2"
+   character(len=  15) :: zpedim="kcal/mol      "
+   character(len=  15) :: z12dim="(kcal/mol)^1/2"
    character(len=   5) :: mode_dyn
    character(len=   5) :: traj_suffix
+   character(len=  20) :: str
 
    character(len=3), dimension(2) :: iset_char_diab2=(/"1ab","2ab"/)
    character(len=2), dimension(4) :: iset_char_diab4=(/"1a","1b","2a","2b"/)
 
    logical :: adiab, diab2, diab4, weights
    logical :: switch=.false.
+   logical :: success=.false.
    logical :: transform=.false.
+   logical :: pump=.false.
+   logical :: pure=.true.
 
-   integer :: nstates_dyn, nzdim_dyn, ielst_dyn, iseed_inp
-   integer :: istate, new_state, ndump6
+   integer :: nstates_dyn, nzdim_dyn, ielst_dyn, iseed_inp, iset_dyn
+   integer :: initial_state=1, iground=1
+   integer :: istate, new_state, ndump6, pump_s
 
-   integer :: ikey, ioption, islash, istart, kg0
-   integer :: ize1, nze, ioutput, lenf, ispa
+   integer :: ikey, ioption, ioption2, kg0, ifrom, ito
+   integer :: ioutput, lenf, ispa, idash
    integer :: itraj, istep, iqstep, k, itmp
+   integer :: number_of_switches=0, number_of_rejected=0
    integer :: itraj_channel=11
 
    real(8) :: sigma, sample, population_current, wf_norm
@@ -139,6 +168,7 @@ subroutine dynamics3
    real(8) :: zeitq, zeitq_prev
    real(8) :: z1, z2, zp, ze, vz1, vz2, vzp, vze, z10, z20, zp0, ze0, ekin, efes
    real(8) :: vz1_prev, vz2_prev
+   real(8) :: pump_e, pump_w
 
    adiab   = .true.
    diab2   = .false.
@@ -162,7 +192,7 @@ subroutine dynamics3
 
    if (ikey.eq.0) then
       write(*,'(/1x,"*** (in DYNAMICS3): You MUST specify options for DYNAMICS3 keyword ***"/)')
-      stop
+      call clean_exit
    else
       call getopt(keywrd,ikey+11,options)
    endif
@@ -188,7 +218,7 @@ subroutine dynamics3
          write(6,'(1x," The gating distance is fixed at the value: ",f8.3," A (grid point #",i3,")"/)') glist(kg0),kg0
       else
          write(6,'(1x," The specified gating grid point #",i3," is outside the allowed range (1,",i3,")"/)') kg0,npntsg
-         stop
+         call clean_exit
       endif
    endif
 
@@ -228,7 +258,7 @@ subroutine dynamics3
          write(6,'(1x,"(Solvent dynamics with two relaxation periods and effective solvent mass)")')
       else
          write(6,'(1x,"(UNKNOWN model: abort calculation)")')
-         stop
+         call clean_exit
       endif
 
    else
@@ -253,7 +283,7 @@ subroutine dynamics3
          taud = reada(options,ioption+6)
       else
          write(*,'(/1x,"*** (in DYNAMICS): You MUST specify TAUD= option for DEBYE model ***"/)')
-         stop
+         call clean_exit
       endif
       call set_debye_model_parameters()
       write(6,'(1x,"Debye relaxation time TAUD (ps):        ",f15.6)') taud
@@ -267,7 +297,7 @@ subroutine dynamics3
          tau1 = reada(options,ioption+6)
       else
          write(*,'(/1x,"*** (in DYNAMICS): You MUST specify TAU1= option for DEBYE2 model ***"/)')
-         stop
+         call clean_exit
       endif
 
       ioption = index(options,' TAU2=')
@@ -275,7 +305,7 @@ subroutine dynamics3
          tau2 = reada(options,ioption+6)
       else
          write(*,'(/1x,"*** (in DYNAMICS): You MUST specify TAU2= option for DEBYE2 model ***"/)')
-         stop
+         call clean_exit
       endif
 
       ioption = index(options,' EPS1=')
@@ -283,7 +313,7 @@ subroutine dynamics3
          eps1 = reada(options,ioption+6)
       else
          write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS1= option for DEBYE2 model ***"/)')
-         stop
+         call clean_exit
       endif
 
       call set_debye2_model_parameters()
@@ -299,7 +329,7 @@ subroutine dynamics3
          taud = reada(options,ioption+6)
       else
          write(*,'(/1x,"*** (in DYNAMICS): You MUST specify TAUD= option for ONODERA model ***"/)')
-         stop
+         call clean_exit
       endif
 
       ioption = index(options,' TAU0=')
@@ -307,7 +337,7 @@ subroutine dynamics3
          tau0 = reada(options,ioption+6)
       else
          write(*,'(/1x,"*** (in DYNAMICS): You MUST specify TAU0= option for ONODERA model ***"/)')
-         stop
+         call clean_exit
       endif
 
       call set_onodera_model_parameters()
@@ -345,40 +375,76 @@ subroutine dynamics3
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    if (index(options,' ADIAB').ne.0) then
+
       mode_dyn  = 'ADIAB'
       adiab = .true.
       diab2 = .false.
       diab4 = .false.
       ielst_dyn = nelst
+      iset_dyn = 1
       write(6,'(/1x,"Solvent dynamics on adiabatic free energy surface(s)."/)')
-   elseif (index(options,' DIAB2').ne.0) then
+
+   elseif (index(options,' DIAB2=').ne.0) then
+
+      ioption = index(options,' DIAB2=')
       mode_dyn  = 'DIAB2'
       adiab = .false.
       diab2 = .true.
       diab4 = .false.
       ielst_dyn = 2
-      write(6,'(/1x,"Solvent dynamics on ET adiabatic free energy surface(s)."/)')
-   elseif (index(options,' DIAB4').ne.0) then
+      iset_dyn = reada(options,ioption+7)
+
+      if (iset_dyn.eq.1) then
+         write(6,'(/1x,"Solvent dynamics on the (1a/1b) ET diabatic surface(s)")')
+      elseif (iset_dyn.eq.2) then
+         write(6,'(/1x,"Solvent dynamics on the (2a/2b) ET diabatic surface(s)")')
+      else
+         write(*,'(/1x,"*** (in DYNAMICS): subset in DIAB2 keyword must be 1 or 2 ***"/)')
+         call clean_exit
+      endif
+
+   elseif (index(options,' DIAB4=').ne.0) then
+
+      ioption = index(options,' DIAB4=')
       mode_dyn  = 'DIAB4'
       adiab = .false.
       diab2 = .false.
       diab4 = .true.
       ielst_dyn = 1
-      write(6,'(/1x,"Solvent dynamics on a single diabatic free energy surface."/)')
+      iset_dyn = reada(options,ioption+7)
+
+      if (iset_dyn.eq.1) then
+         write(6,'(/1x,"Solvent dynamics on the diabatic surface(s) within the 1a electronic set")')
+      elseif (iset_dyn.eq.2) then
+         write(6,'(/1x,"Solvent dynamics on the diabatic surface(s) within the 1b electronic set")')
+      elseif (iset_dyn.eq.3) then
+         write(6,'(/1x,"Solvent dynamics on the diabatic surface(s) within the 2a electronic set")')
+      elseif (iset_dyn.eq.4) then
+         write(6,'(/1x,"Solvent dynamics on the diabatic surface(s) within the 2b electronic set")')
+      else
+         write(*,'(/1x,"*** (in DYNAMICS3): subset in DIAB4 keyword must be 1 or 2 or 3 or 4 ***"/)')
+         call clean_exit
+      endif
+
       if (mdqt) then
          write(*,'(/1x,"MDQT in the diabatic representation is not implemented in the current version."/)')
-         stop
+         call clean_exit
       endif
+
    else
+
       mode_dyn  = 'ADIAB'
       adiab = .true.
       diab2 = .false.
       diab4 = .false.
       ielst_dyn = nelst
+      iset_dyn = 1
+      write(6,'(/1x,"Solvent dynamics on adiabatic free energy surface(s)."/)')
+
    endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   ! flag EVB weights
+   ! flag for EVB weights
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    if (index(options,' NOWEIGHTS').ne.0) then
       weights = .false.
@@ -386,92 +452,17 @@ subroutine dynamics3
    endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   ! Initial occupied state at time t=0
-   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-   ioption = index(options,' ISTATE=')
-
-   if (ioption.ne.0) then
-
-      istart = ioption + 8
-      ispa = index(options(ioption+1:),space)
-
-      if (mode_dyn.eq.'ADIAB') then
-
-         initial_state = reada(options,istart)
-         if (initial_state.le.0) initial_state = 1
-         initial_set = 1
-         write(6,'(1x,"At t=0: initial adiabatic state: ",i6)') initial_state
-
-      elseif (mode_dyn.eq.'DIAB2') then
-
-         islash = index(options(istart:istart+ispa+1),'/')
-         if (islash.eq.0) then
-            write(*,'(/1x,"For diabatic representation DIAB2 you must specify BOTH the initial state",/,&
-                      &1x," and the initial ET subset: two integers separated by a slash."/)')
-            stop
-         endif
-         initial_state = reada(options(istart:istart+islash-2),1)
-         initial_set = reada(options,istart+islash)
-         if (initial_set.eq.1) then
-            write(6,'(1x,"At t=0: initial ET diabatic state: ",i6," within the first (1a,1b) ET subset")') initial_state
-         elseif (initial_set.eq.2) then
-            write(6,'(1x,"At t=0: initial ET diabatic state: ",i6," within the second (2a,2b) ET subset")') initial_state
-         else
-            write(*,'(/1x,"*** (in DYNAMICS): subset in ISTATE keyword must be 1 or 2 ***"/)')
-            stop
-         endif
-
-      elseif (mode_dyn.eq.'DIAB4') then
-
-         islash = index(options(istart:istart+ispa+1),'/')
-         if (islash.eq.0) then
-            write(*,'(/1x,"For diabatic representation DIAB4 you must specify BOTH the initial state",/,&
-                      &1x," and the initial diabatic electronic state: two integers separated by a slash."/)')
-            stop
-         endif
-         initial_state = reada(options(istart:istart+islash-2),1)
-         initial_set = reada(options,istart+islash)
-         if (initial_set.eq.1) then
-            write(6,'(1x,"At t=0: initial diabatic state: ",i6," within the 1a electronic set")') initial_state
-         elseif (initial_set.eq.2) then
-            write(6,'(1x,"At t=0: initial diabatic state: ",i6," within the 1b electronic set")') initial_state
-         elseif (initial_set.eq.3) then
-            write(6,'(1x,"At t=0: initial diabatic state: ",i6," within the 2a electronic set")') initial_state
-         elseif (initial_set.eq.4) then
-            write(6,'(1x,"At t=0: initial diabatic state: ",i6," within the 2b electronic set")') initial_state
-         else
-            write(*,'(/1x,"*** (in DYNAMICS): subset in ISTATE keyword must be 1 or 2 or 3 or 4 ***"/)')
-            stop
-         endif
-
-      endif
-
-   else
-
-      initial_state = 1
-      initial_set = 1
-      write(6,'(1x,"(Default) At t=0: initial: ",i6," within the first electronic set")') initial_state
-
-   endif
-
-   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   ! Number of states in MDQT
+   ! Number of vibronic states
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    ioption = index(options," NSTATES=")
    
    if (ioption.ne.0) then
       nstates_dyn = reada(options,ioption+9)
-      write(6,'(/1x,"Number of vibronic states to include in MDQT dynamics: ",i4/)') nstates_dyn
+      write(6,'(/1x,"Number of vibronic states to include in dynamics: ",i4/)') nstates_dyn
    else
       nstates_dyn = nelst*nprst
-      write(6,'(/1x,"Number of vibronic states to include in MDQT dynamics (default): ",i4/)') nstates_dyn
-   endif
-
-   if (.not.mdqt) then
-      nstates_dyn = 1
-      write(6,'(/1x,"However, no MDQT keyword was found: number of states is reset to 1 (one)."/)')
+      write(6,'(/1x,"Number of vibronic states to include in dynamics (default): ",i4/)') nstates_dyn
    endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -552,11 +543,11 @@ subroutine dynamics3
 
          if (interpolation.eq."LINEAR") then
             write(6,'(1x,"(linear interpolation using the values at t and t+dt)")')
-         elseif (interpolation.eq."DEBYE2") then
+         elseif (interpolation.eq."QUADRATIC") then
             write(6,'(1x,"(quadratic interpolation using the values at t, t+dt/2, and t+dt)")')
          else
             write(6,'(1x,"(ERROR in DYNAMICS3: UNKNOWN interpolation scheme. Check your input file.)")')
-            stop
+            call clean_exit
          endif
 
       else
@@ -633,7 +624,7 @@ subroutine dynamics3
       zp0 = reada(options,ioption)
    else
       write(*,'(/1x,"*** (in DYNAMICS): You MUST specify ZP0= option for DYNAMICS keyword ***"/)')
-      stop
+      call clean_exit
    endif
 
    ioption = index(options,' ZE0=')
@@ -642,7 +633,7 @@ subroutine dynamics3
       ze0 = reada(options,ioption)
    else
       write(*,'(/1x,"*** (in DYNAMICS): You MUST specify ZE0= option for DYNAMICS keyword ***"/)')
-      stop
+      call clean_exit
    endif
 
    if (.not.transform) then
@@ -656,11 +647,202 @@ subroutine dynamics3
    write(6,'(/1x,"Center of the initial distribution of solvent coordinates:",/,&
    &" ZP(0) = ",F7.3,2X,A," and ZE(0) = ",F7.3,2X,A,/,&
    &" z1(0) = ",F7.3,2X,A," and z2(0) = ",F7.3,2X,A)')&
-   &  zp0,zdim,ze0,zdim,z10,z1dim,z20,z1dim
+   &  zp0,zpedim,ze0,zpedim,z10,z12dim,z20,z12dim
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Gating coordinate dynamics (not implemented yet)
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   !-- set control variables in the propagators module
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   nzdim_dyn = nprst*ielst_dyn
+   call set_mode(mode_dyn,iset_dyn,nstates_dyn,nzdim_dyn,ielst_dyn)
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   !-- Allocate arrays in propagators module
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   call allocate_vibronic_states
+   if (mdqt) call allocate_mdqt_arrays
+   if (weights) call allocate_evb_weights
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Type of the initial condition:
+   !
+   ! PURE - initial state is a pure vibronic state
+   !        specified by the ISTATE keyword
+   !
+   ! PUMP - initial state is chosen according to the
+   !        magnitude of the transition dipole moment
+   !        matrix element between the ground state
+   !        and the excited state
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   ioption = index(options,' PUMP=')
+
+   if (ioption.eq.0) then
+
+      write(6,'(/1x,"(Initial state is a pure vibronic state)")')
+
+      pump = .false.
+      pure = .true.
+
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      !-- specify the initial pure vibronic state
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      ioption2 = index(options,' ISTATE=')
+
+      if (ioption2.ne.0) then
+
+         initial_state = reada(options,ioption2+8)
+
+         if (mode_dyn.eq.'ADIAB') then
+
+            if (initial_state.le.0) initial_state = 1
+            write(6,'(1x,"At t=0: initial adiabatic state: ",i6)') initial_state
+
+         elseif (mode_dyn.eq.'DIAB2') then
+
+            if (iset_dyn.eq.1) then
+               write(6,'(1x,"At t=0: initial ET diabatic state: ",i6," within the first (1a/1b) ET subset")') initial_state
+            elseif (iset_dyn.eq.2) then
+               write(6,'(1x,"At t=0: initial ET diabatic state: ",i6," within the second (2a/2b) ET subset")') initial_state
+            endif
+
+         elseif (mode_dyn.eq.'DIAB4') then
+
+            if (iset_dyn.eq.1) then
+               write(6,'(1x,"At t=0: initial diabatic state: ",i6," within the 1a electronic set")') initial_state
+            elseif (iset_dyn.eq.2) then
+               write(6,'(1x,"At t=0: initial diabatic state: ",i6," within the 1b electronic set")') initial_state
+            elseif (iset_dyn.eq.3) then
+               write(6,'(1x,"At t=0: initial diabatic state: ",i6," within the 2a electronic set")') initial_state
+            elseif (iset_dyn.eq.4) then
+               write(6,'(1x,"At t=0: initial diabatic state: ",i6," within the 2b electronic set")') initial_state
+            endif
+
+         endif
+
+      else
+
+         initial_state = 1
+         write(6,'(1x,"(Default) At t=0: Ground vibronic adiabatic state ",i3)') initial_state
+
+      endif
+
+
+   else
+
+
+      write(6,'(/1x,"Initial condition corresponds to the laser pump experiment:",/,&
+      &         1x," the initial state for each trajectory is chosen according",/,&
+      &         1x," to the magnitude of the transition dipole moment for the",/,&
+      &         1x," for the transition from the ground vibronic state")')
+
+      pump = .true.
+      pure = .false.
+
+      pump_e = reada(options,ioption+6)
+      write(6,'(/1x,"Pump laser pulse energy: ",f12.6," eV")') pump_e
+
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      !-- specify the vibronic state from which the system
+      !   is photoexcited by the pump laser pulse
+      !   (in the future release we will add the option of
+      !   specifying an arbitrary prepared vibronic state)
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      ioption2 = index(options,' GROUND=')
+
+      if (ioption2.ne.0) then
+         iground = reada(options,ioption2+8)
+         write(6,'(1x,"The system is photoexcited from the adiabatic vibronic state ",i3)') iground
+      else
+         iground = 1
+         write(6,'(1x,"The system is photoexcited from the ground adiabatic vibronic state (default)")')
+      endif
+
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      ! Specify the laser pulse characteristics
+      ! - width
+      ! - lineshape
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      ioption2 = index(options,' PUMPWIDTH=')
+
+      if (ioption2.ne.0) then
+         pump_w = reada(options,ioption2+11)
+         write(6,'(1x,"Pump laser linewidth (full width at half maximum): ",f12.6)') pump_w
+      else
+         write(6,'(1x,"(From DYNAMICS3: You must specify the PUMPWIDTH keyword for this type of the initial condition)")')
+         call clean_exit
+      endif
+
+      ioption2 = index(options,' PUMPSHAPE=')
+
+      if (ioption2.ne.0) then
+
+         !-- extract the keyword for the PUMP line shape
+         ispa = index(options(ioption2+11:),space)
+         str = options(ioption2+11:ioption2+ispa+9)
+
+         if (str.eq."RECTANGULAR") then
+            pump_s = 0
+         elseif (str.eq."LORENTZIAN") then
+            pump_s = 1
+         elseif (str.eq."GAUSSIAN") then
+            pump_s = 2
+         else
+            write(6,'(/1x,"From DYNAMICS3: Unknown pump lineshape: ",a)') trim(str)
+            call clean_exit
+         endif
+
+         write(6,'(1x,"Pump laser lineshape: ",a)') trim(str)
+
+      else
+
+         write(6,'(1x,"(From DYNAMICS3: You must specify the PUMPSHAPE keyword for this type of the initial condition)")')
+         call clean_exit
+
+      endif
+
+      !-- set variables in the laser module
+      call set_laser(pump_s,pump_e,pump_w)
+
+   endif
+
+   !===DEBUG===
+   !call print_propagators_3d
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   !  Vibronic spectrum
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   ioption = index(options," SPECTRUM=")
+
+   if (ioption.eq.0) then
+
+      open(11,file=job(1:ljob)//"/vibronic_spectrum.dat")
+
+   else
+
+      ispa = index(options(ioption+10:),space)
+      open(11,file=job(1:ljob)//"/"//options(ioption+10:ioption+ispa+8))
+
+   endif
+
+   !-- first, calculate the absorption spectrum
+   !   (including oscillator strengths)
+
+   call calculate_absorption_prob(iground,kg0,z10,z20)
+
+   !-- print to an external file (11)
+   call print_vibronic_spectrum(11,iground)
+   close(11)
+
+   !-- print to the standard output as well
+   call print_vibronic_spectrum(6,iground)
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Output files for trajectories
@@ -675,7 +857,7 @@ subroutine dynamics3
 
    else
 
-      ispa = index(options(ioutput+9:),' ')
+      ispa = index(options(ioutput+9:),space)
       fname = options(ioutput+9:ioutput+ispa+9)
       lenf = ispa - 1
       call locase(fname,lenf)
@@ -691,31 +873,18 @@ subroutine dynamics3
    if (adiab) then
       fname = trim(fname)//"_adiab"
    elseif (diab2) then
-      fname = trim(fname)//"_diab2_"//iset_char_diab2(initial_set)
+      fname = trim(fname)//"_diab2_"//iset_char_diab2(iset_dyn)
    elseif (diab4) then
-      fname = trim(fname)//"_diab4_"//iset_char_diab4(initial_set)
+      fname = trim(fname)//"_diab4_"//iset_char_diab4(iset_dyn)
    endif
 
    write(6,'(/1x,"Trajectory data are written to the file(s) <",a,">"/)') trim(fname)//"_<NNNN>.dat"
 
-   !-- set some variables in propagators module
-   nzdim_dyn = nprst*ielst_dyn
-   call set_mode(mode_dyn,initial_set,nstates_dyn,nzdim_dyn,ielst_dyn)
-   istate = initial_state
-
-   !-- Allocate arrays in propagators module
-   call allocate_vibronic_states(nprst,npnts)
-   if (mdqt) call allocate_mdqt_arrays
-   if (weights) call allocate_evb_weights
-
-   !===DEBUG===
-   !call print_propagators_3d
-
-   zeit_start = second()
-
    !======================================!
    !      MAIN LOOP OVER TRAJECTORIES     !
    !======================================!
+
+   zeit_start = second()
 
    loop_over_trajectories: do itraj=1,ntraj
 
@@ -726,7 +895,7 @@ subroutine dynamics3
       open(itraj_channel,file=trim(fname)//"_"//traj_suffix//".dat")
 
       !-- pick the initial values of solvent coordinates
-      !   from gaussian distribution centered at ZP0,ZE0
+      !   from gaussian distribution centered at (z10,z20)
 
       sigma = sqrt(kb*temp/f0)
       call gaussdist_boxmuller(sample,iseed)
@@ -755,12 +924,41 @@ subroutine dynamics3
 
          !-- Other models are not implemented yet...
          write(6,'(1x,"(From DYNAMICS3: solvent model ",a10," is not implemented yet: abort calculation)")') solvent_model
-         stop
+         call clean_exit
 
       endif
 
-      !-- in case of MDQT trajectory assign the initial state based
-      !   on the quantum amplitudes of the initial wavefunction
+      !-- Assign the initial occupied state
+
+      if (pure) then
+
+         !-- always the same initial state
+         istate = initial_state
+
+      elseif (pump) then
+
+         !-- choose the initial state according to the magnitude
+         !   of the transition dipole matrix element
+         !   (choose randomly according to transition dipole
+         !   moment magnitude)
+
+         call calculate_absorption_prob(iground,kg0,z1,z2)
+         istate = assign_initial_state(iground)
+         
+         if (istate.eq.0) then
+            write(6,'(1x,"From DYNAMICS3: FAILURE to assign the initial vibronic state. Consider to include more states in NSTATES.")')
+            call clean_exit
+         endif
+
+      else
+
+         write(6,'(/1x,"From DYNAMICS3: For unknown reason (a bug?) no initial condition was chosen. Abort.")')
+         call clean_exit
+
+      endif
+
+      !-- in case of MDQT trajectory initialize the quantum
+      !   amplitudes of the initial wavefunction
 
       if (mdqt) then
 
@@ -774,9 +972,6 @@ subroutine dynamics3
          call set_initial_amplitudes(istate)
          call set_initial_density(istate)
 
-         !-- choose the initial occupied state randomly
-         !   according to the initial populations
-         !--> to be coded, for now it is just istate <--
 
       endif
 
@@ -801,9 +996,13 @@ subroutine dynamics3
          write(itraj_channel,'("#",141("-"))')
       endif
 
-      write(6,'(/1x,"===> Trajectory ",i5)') itraj
+      write(6,'(/1x,"===> Trajectory ",i5," starts on the vibronic state ",i3)') itraj, istate
+      write(6,'( 1x,"===> Initial solvent coordinates (z1,z2), (kcal/mol)^(1/2): ",2f12.6)') z1, z2
       write(6,*)
       write(6,'(137x,$)')
+
+      number_of_switches = 0
+      number_of_rejected = 0
 
       !===============================!
       !   MAIN LOOP OVER TIME STEPS   !
@@ -832,8 +1031,6 @@ subroutine dynamics3
          
             !-- overdamped Langevin equation (pure Debye model)
             call langevin_debye_2d(istate,kg0,z1,z2,vz1,vz2,tstep,temp,ekin,efes)
-            !write(*,'(/1x,"DYNAMICS3: Debye propagator is not coded yet...")')
-            !stop
 
          elseif (solvent_model.eq."DEBYE2") then
 
@@ -841,7 +1038,7 @@ subroutine dynamics3
             !   (Debye model with two relaxation periods)
             !call langevin_debye2_2d(istate,kg0,z1,z2,vz1,vz2,tstep,temp,ekin,efes)
             write(*,'(/1x,"DYNAMICS3: Debye2 propagator is not coded yet...")')
-            stop
+            call clean_exit
 
          elseif (solvent_model.eq."ONODERA") then
 
@@ -854,7 +1051,7 @@ subroutine dynamics3
             !   (Onodera model with two relaxation periods)
             !call langevin_onodera2_2d(istate,kg0,z1,z2,vz1,vz2,tstep,temp,ekin,efes)
             write(*,'(/1x,"DYNAMICS3: Onodera2 propagator is not coded yet...")')
-            stop
+            call clean_exit
 
          endif
 
@@ -863,11 +1060,6 @@ subroutine dynamics3
          !----------------!
 
          if (mdqt) then
-
-            !---------------------------------------------------------------------------------------------------
-            !write(*,'(/1x,"DYNAMICS3: MDQT is not coded yet... Be patient!")')
-            !stop
-            !---------------------------------------------------------------------------------------------------
 
             !-- calculate vibronic couplings at t+dt
             !---------------------------------------
@@ -928,8 +1120,7 @@ subroutine dynamics3
             wf_norm = tdwf_norm()
             if (abs(wf_norm-1.d0).gt.1.d-6) then
                write(*,*) "DYNAMICS3: Amplitudes are not normalized after timestep", istep
-               call deallocate_all_arrays
-               stop
+               call clean_exit
             endif
 
             !-- Normalize swithing probabilities by the current state population
@@ -944,11 +1135,12 @@ subroutine dynamics3
             !-- decision time: should we make a hop?
             !-------------------------------------------
             new_state = switch_state(istate)
+            switch = new_state.ne.istate
 
-            if (new_state.ne.istate) then
+            if (switch) then
                !-- attempt adjusting velocities
-               call adjust_velocities(istate,new_state,vz1,vz2,switch)
-               if (switch) then
+               call adjust_velocities(istate,new_state,vz1,vz2,success)
+               if (success) then
                   write(itraj_channel,'("#--------------------------------------------------------------------")')
                   write(itraj_channel,'("#  t  = ",f12.6," ps ==> switch ",i3,"  -->",i3)') zeit,istate,new_state
                   write(itraj_channel,'("#  d  = (",f20.6,",",f20.6,")")') &
@@ -957,6 +1149,9 @@ subroutine dynamics3
                   & sqrt(dot_product(get_vibronic_coupling(istate,new_state),get_vibronic_coupling(istate,new_state)))
                   write(itraj_channel,'("#--------------------------------------------------------------------")')
                   istate = new_state
+                  number_of_switches = number_of_switches + 1
+               else
+                  number_of_rejected = number_of_rejected + 1
                endif
             endif
 
@@ -989,14 +1184,25 @@ subroutine dynamics3
 
       enddo loop_over_time
 
-      write(itraj_channel,'("#",141("-"))')
+      if (weights) then
+         write(itraj_channel,'("#",168("-"))')
+      else
+         write(itraj_channel,'("#",141("-"))')
+      endif
+      write(itraj_channel,'("# Number of allowed  switches: ",i5)') number_of_switches
+      write(itraj_channel,'("# Number of rejected switches: ",i5)') number_of_rejected
+      if (weights) then
+         write(itraj_channel,'("#",168("-"))')
+      else
+         write(itraj_channel,'("#",141("-"))')
+      endif
       close(itraj_channel)
       
       write(6,*)
       write(6,*)
-
-      !-- reset the initial state
-      istate = initial_state
+      write(6,'("# Total number of allowed  switches: ",i5)') number_of_switches
+      write(6,'("# Total number of rejected switches: ",i5)') number_of_rejected
+      write(6,*)
 
    enddo loop_over_trajectories
 
@@ -1021,6 +1227,11 @@ contains
       if (mdqt) call deallocate_mdqt_arrays
       if (weights) call deallocate_evb_weights
    end subroutine deallocate_all_arrays
+
+   subroutine clean_exit
+      call deallocate_all_arrays
+      stop
+   end subroutine clean_exit
 
 end subroutine dynamics3
 

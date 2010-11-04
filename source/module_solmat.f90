@@ -20,12 +20,17 @@ module solmat
 !  ERX    - ET/PT cross-reorganization energy
 !  ER1    - lowest eigenvalue of the truncated reorganization energy matrix
 !  ER2    - highest eigenvalue of the truncated reorganization energy matrix
+!  DIPOLE_MOMENT_DIAB - matrix of the dipole moment in the basis of
+!                       electronic diabatic states
 !--------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:36 $
-!  $Revision: 5.2 $
+!  $Date: 2010-11-04 22:43:09 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:36  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !=======================================================================
 
@@ -39,6 +44,9 @@ module solmat
    real(8) :: cos_theta, sin_theta, delta_1, delta_2
    real(8), allocatable, dimension(:,:,:,:) :: t, tinf, tr, trinf, t1
    real(8), allocatable, dimension(:,:,:)   :: dt, dtr, dtinf, d2tinf
+   real(8), allocatable, dimension(:,:,:)   :: dipole_moment_diab_x
+   real(8), allocatable, dimension(:,:,:)   :: dipole_moment_diab_y
+   real(8), allocatable, dimension(:,:,:)   :: dipole_moment_diab_z
    real(8), allocatable, dimension(:,:)     :: ztmat, gtmat
 
 !=======================================================================
@@ -97,6 +105,13 @@ contains
          stop
       endif
 
+      allocate (dipole_moment_diab_x(4,4,ndim+1))
+      allocate (dipole_moment_diab_y(4,4,ndim+1))
+      allocate (dipole_moment_diab_z(4,4,ndim+1))
+      dipole_moment_diab_x = zero
+      dipole_moment_diab_y = zero
+      dipole_moment_diab_z = zero
+
       if ( .not.allocated(ztmat) ) then
          allocate (ztmat(2,2))
          ztmat = zero
@@ -151,6 +166,9 @@ contains
       if (allocated(dtr   )) deallocate (dtr   )
       if (allocated(dtinf )) deallocate (dtinf )
       if (allocated(d2tinf)) deallocate (d2tinf)
+      if (allocated(dipole_moment_diab_x)) deallocate (dipole_moment_diab_x)
+      if (allocated(dipole_moment_diab_y)) deallocate (dipole_moment_diab_y)
+      if (allocated(dipole_moment_diab_z)) deallocate (dipole_moment_diab_z)
       if (allocated(ztmat )) deallocate (ztmat)
       if (allocated(gtmat )) deallocate (gtmat)
    end subroutine dealloc_solmat

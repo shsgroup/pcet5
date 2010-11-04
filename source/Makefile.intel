@@ -9,11 +9,10 @@
 
 ARCH = intel_11.1-x86_64
 FC = ifort
-MODFLAG = -module
+# Important: MODFLAG must have a trailing blank
+MODFLAG = -module 
 BACKSLASH = -assume nobscc
 NOBACKSLASH = -assume bscc
-#F90FLAGS = -check -g -traceback
-#F90FLAGS = -fast -fast-transcendentals -axSSSE3,SSE2
 F90FLAGS = -fast -fast-transcendentals
 F77FLAGS = -fast -fast-transcendentals
 LDFLAGS	= 

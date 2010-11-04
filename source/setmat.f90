@@ -5,9 +5,12 @@ subroutine setmat
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:37 $
-!  $Revision: 5.2 $
+!  $Date: 2010-11-04 22:43:09 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:37  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !===================================================================C
 
@@ -51,6 +54,7 @@ subroutine setmat
    character(1024) :: options
    character(  40) :: fname
    logical :: tread, deriv, derivg
+   logical :: file_exists
 
    integer :: i, j, ndgas, nhgas, nagas, nkr, kr, kleft, krigh, k
    integer :: ikey, itread, ispa, lenf, kk, kg, npnts1, npnts2
@@ -469,7 +473,7 @@ subroutine setmat
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    do kgsol=1,ngsc
 
-      kg = 1+ (kgsol-1)*kgratio
+      kg = 1 + (kgsol-1)*kgratio
       rr = glist(kg)*bohr2a
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -858,6 +862,13 @@ subroutine setmat
       call locase(fname,lenf)
       write(6,'(/1x,''Reorganization energy matrices are dumped to the binary file <'',a,''>'')') fname(1:lenf)
 
+      inquire(file=fname(1:lenf),exist=file_exists)
+
+      if (file_exists) then
+         write(*,'(/1x,"File ",a," already exists and might be important. Consider changing the file name in TWRITE.")') fname(1:lenf)
+         stop
+      endif
+
       open(1,file=fname(1:lenf),status='new',form='unformatted')
       write(1) npnts, alim, blim, npntsg, aglim, bglim
       write(1) ((((    t(i,j,kk,kg),i=1,4),j=1,4),kk=1,npnts),kg=1,nkr)
@@ -874,61 +885,59 @@ subroutine setmat
 
       close(1)
 
-      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      !(HYD) CHANGED ABOVE SO THAT NICE TMATRICES WRITTEN AT NPNTS/2 and
-      !      NPNTS/2 +1 that is at either point around r_p=0.
-      !      NOTE that if NGRIDS=0 then all tmat elements have the
-      !      same value at all points along rp.  That is because in the
-      !      beginning, tmats are calculated once for r_p=0.
-      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      !(AVS) Gating coordinate point added...
-      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-      np2 = npnts/2
-      if (nkr.gt.1) then
-         ng2 = nkr/2
-      else
-         ng2 = 1
-      endif
-
-      open(72,file='tmat.nice',status='new',form='formatted')
-
-      write(72,'("Proton grid point: ",i4,";  Limits: from ",f8.3," to ",f8.3)') np2, alim, blim
-      write(72,'("Gating grid point: ",i4,";  Limits: from ",f8.3," to ",f8.3)') ng2, aglim, bglim
-      write(72,*)
-      write(72,*) '---------- TMAT INNERTIAL'
-      write(72,'(4(3x,f15.6))') (    t(1,j,np2,ng2),j=1,4)
-      write(72,'(4(3x,f15.6))') (    t(2,j,np2,ng2),j=1,4)
-      write(72,'(4(3x,f15.6))') (    t(3,j,np2,ng2),j=1,4)
-      write(72,'(4(3x,f15.6))') (    t(4,j,np2,ng2),j=1,4)
-      write(72,*)
-      write(72,*) '---------- REDUCED TMAT INNERTIAL'
-      write(72,'(4(3x,f15.6))') (   tr(1,j,np2,ng2),j=1,4)
-      write(72,'(4(3x,f15.6))') (   tr(2,j,np2,ng2),j=1,4)
-      write(72,'(4(3x,f15.6))') (   tr(3,j,np2,ng2),j=1,4)
-      write(72,'(4(3x,f15.6))') (   tr(4,j,np2,ng2),j=1,4)
-      write(72,*)
-      write(72,*) '---------- TMAT INFINITY'
-      write(72,'(4(3x,f15.6))') ( tinf(1,j,np2,ng2),j=1,4)
-      write(72,'(4(3x,f15.6))') ( tinf(2,j,np2,ng2),j=1,4)
-      write(72,'(4(3x,f15.6))') ( tinf(3,j,np2,ng2),j=1,4)
-      write(72,'(4(3x,f15.6))') ( tinf(4,j,np2,ng2),j=1,4)
-      write(72,*)
-      write(72,*) '---------- REDUCED TMAT INFINITY'
-      write(72,'(4(3x,f15.6))') (trinf(1,j,np2,ng2),j=1,4)
-      write(72,'(4(3x,f15.6))') (trinf(2,j,np2,ng2),j=1,4)
-      write(72,'(4(3x,f15.6))') (trinf(3,j,np2,ng2),j=1,4)
-      write(72,'(4(3x,f15.6))') (trinf(4,j,np2,ng2),j=1,4)
-      write(72,*)
-      write(72,*) '---------- TOTAL TMAT'
-      write(72,'(4(3x,f15.6))') ((t(1,j,np2,ng2) + tinf(1,j,np2,ng2)),j=1,4)
-      write(72,'(4(3x,f15.6))') ((t(2,j,np2,ng2) + tinf(2,j,np2,ng2)),j=1,4)
-      write(72,'(4(3x,f15.6))') ((t(3,j,np2,ng2) + tinf(3,j,np2,ng2)),j=1,4)
-      write(72,'(4(3x,f15.6))') ((t(4,j,np2,ng2) + tinf(4,j,np2,ng2)),j=1,4)
-
-      close(72)
-
    endif
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   !(HYD) CHANGED ABOVE SO THAT NICE TMATRICES WRITTEN AT NPNTS/2 and
+   !      NPNTS/2 +1 that is at either point around r_p=0.
+   !      NOTE that if NGRIDS=0 then all tmat elements have the
+   !      same value at all points along rp.  That is because in the
+   !      beginning, tmats are calculated once for r_p=0.
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   !(AVS) Gating coordinate point added...
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   np2 = npnts/2
+   if (nkr.gt.1) then
+      ng2 = nkr/2
+   else
+      ng2 = 1
+   endif
+
+   open(72,file=job(1:ljob)//'/tmat.dat',status='new',form='formatted')
+
+   write(72,'("Proton grid point: ",i4,";  Limits: from ",f8.3," to ",f8.3)') np2, alim, blim
+   write(72,'("Gating grid point: ",i4,";  Limits: from ",f8.3," to ",f8.3)') ng2, aglim, bglim
+   write(72,*)
+   write(72,*) '---------- TMAT INNERTIAL (kcal/mol)'
+   write(72,'(4(3x,f15.6))') (    t(1,j,np2,ng2),j=1,4)
+   write(72,'(4(3x,f15.6))') (    t(2,j,np2,ng2),j=1,4)
+   write(72,'(4(3x,f15.6))') (    t(3,j,np2,ng2),j=1,4)
+   write(72,'(4(3x,f15.6))') (    t(4,j,np2,ng2),j=1,4)
+   write(72,*)
+   write(72,*) '---------- REDUCED TMAT INNERTIAL (kcal/mol)'
+   write(72,'(4(3x,f15.6))') (   tr(1,j,np2,ng2),j=1,4)
+   write(72,'(4(3x,f15.6))') (   tr(2,j,np2,ng2),j=1,4)
+   write(72,'(4(3x,f15.6))') (   tr(3,j,np2,ng2),j=1,4)
+   write(72,'(4(3x,f15.6))') (   tr(4,j,np2,ng2),j=1,4)
+   write(72,*)
+   write(72,*) '---------- TMAT INFINITY (kcal/mol)'
+   write(72,'(4(3x,f15.6))') ( tinf(1,j,np2,ng2),j=1,4)
+   write(72,'(4(3x,f15.6))') ( tinf(2,j,np2,ng2),j=1,4)
+   write(72,'(4(3x,f15.6))') ( tinf(3,j,np2,ng2),j=1,4)
+   write(72,'(4(3x,f15.6))') ( tinf(4,j,np2,ng2),j=1,4)
+   write(72,*)
+   write(72,*) '---------- REDUCED TMAT INFINITY (kcal/mol)'
+   write(72,'(4(3x,f15.6))') (trinf(1,j,np2,ng2),j=1,4)
+   write(72,'(4(3x,f15.6))') (trinf(2,j,np2,ng2),j=1,4)
+   write(72,'(4(3x,f15.6))') (trinf(3,j,np2,ng2),j=1,4)
+   write(72,'(4(3x,f15.6))') (trinf(4,j,np2,ng2),j=1,4)
+   write(72,*)
+   write(72,*) '---------- TOTAL TMAT (kcal/mol)'
+   write(72,'(4(3x,f15.6))') ((t(1,j,np2,ng2) + tinf(1,j,np2,ng2)),j=1,4)
+   write(72,'(4(3x,f15.6))') ((t(2,j,np2,ng2) + tinf(2,j,np2,ng2)),j=1,4)
+   write(72,'(4(3x,f15.6))') ((t(3,j,np2,ng2) + tinf(3,j,np2,ng2)),j=1,4)
+   write(72,'(4(3x,f15.6))') ((t(4,j,np2,ng2) + tinf(4,j,np2,ng2)),j=1,4)
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Calculate partial reorganization energies for PT and ET
@@ -953,6 +962,11 @@ subroutine setmat
    write(6,'(10x,''Lambda_ET:  '',f15.6)') eret
    write(6,'(10x,''Coupling:   '',f15.6)') erx
 
+   write(72,'(/1x,''Partial reorganization energies (kcal/mol):'')')
+   write(72,'(10x,''Lambda_PT:  '',f15.6)') erpt
+   write(72,'(10x,''Lambda_ET:  '',f15.6)') eret
+   write(72,'(10x,''Coupling:   '',f15.6)') erx
+
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! calculate the eigenvalues of the truncated reorganization
    ! energy matrix
@@ -967,6 +981,14 @@ subroutine setmat
    ersq = sqrt(erdif*erdif + 4.d0*erx*erx)
    er1 = half*(ersum - ersq)
    er2 = half*(ersum + ersq)
+
+   write(6,'(/1x,''Eigenvalues of the truncated reorganization energy matrix (kcal/mol):'')')
+   write(6,'(10x,''Lambda_1:   '',f15.6)') er1
+   write(6,'(10x,''Lambda_2:   '',f15.6)') er2
+
+   write(72,'(/1x,''Eigenvalues of the truncated reorganization energy matrix (kcal/mol):'')')
+   write(72,'(10x,''Lambda_1:   '',f15.6)') er1
+   write(72,'(10x,''Lambda_2:   '',f15.6)') er2
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! calculate the transformation angle
@@ -1005,6 +1027,137 @@ subroutine setmat
    delta_1 =  cos_theta*tr1a1b/sq1 + sin_theta*tr1a2a/sq1
    delta_2 = -sin_theta*tr1a1b/sq2 + cos_theta*tr1a2a/sq2
 
-   return
+   !===================================================================
+   ! calculate the dipole moments of the diabatic charge distributions
+   ! with the origin placed at the center of 1a charge distribution.
+   ! (depends only on the proton coordinate)
+   !===================================================================
 
+   nhsol = iptsol(2)
+
+   do kp=1,npnts
+      xyzsol(1,nhsol) = rlist(k)*bohr2a
+      xyzsol(2,nhsol) = 0.d0
+      xyzsol(3,nhsol) = 0.d0
+      call calculate_dipole_moment_diab(kp)
+   enddo
+
+   write(6,'(/1x,"Dipole moments of the diabatic charge distributions (proton at the middle of the PT interface)")')
+   write(6,'( 1x,"   State  ","     d_x         d_y          d_z          |d|  ")')
+
+   write(6,'( 1x,"    1a    ",4f12.6)') dipole_moment_diab_x(1,1,npnts/2), &
+                                      & dipole_moment_diab_y(1,1,npnts/2), &
+                                      & dipole_moment_diab_z(1,1,npnts/2), &
+   &sqrt(dipole_moment_diab_x(1,1,npnts/2)**2 + dipole_moment_diab_y(1,1,npnts/2)**2 + dipole_moment_diab_z(1,1,npnts/2)**2)
+
+   write(6,'( 1x,"    1b    ",4f12.6)') dipole_moment_diab_x(2,2,npnts/2), &
+                                      & dipole_moment_diab_y(2,2,npnts/2), &
+                                      & dipole_moment_diab_z(2,2,npnts/2), &
+   &sqrt(dipole_moment_diab_x(2,2,npnts/2)**2 + dipole_moment_diab_y(2,2,npnts/2)**2 + dipole_moment_diab_z(2,2,npnts/2)**2)
+
+   write(6,'( 1x,"    2a    ",4f12.6)') dipole_moment_diab_x(3,3,npnts/2), &
+                                      & dipole_moment_diab_y(3,3,npnts/2), &
+                                      & dipole_moment_diab_z(3,3,npnts/2), &
+   &sqrt(dipole_moment_diab_x(3,3,npnts/2)**2 + dipole_moment_diab_y(3,3,npnts/2)**2 + dipole_moment_diab_z(3,3,npnts/2)**2)
+
+   write(6,'( 1x,"    2b    ",4f12.6)') dipole_moment_diab_x(4,4,npnts/2), &
+                                      & dipole_moment_diab_y(4,4,npnts/2), &
+                                      & dipole_moment_diab_z(4,4,npnts/2), &
+   &sqrt(dipole_moment_diab_x(4,4,npnts/2)**2 + dipole_moment_diab_y(4,4,npnts/2)**2 + dipole_moment_diab_z(4,4,npnts/2)**2)
+
+
+   write(72,'(/1x,"Dipole moments of the diabatic charge distributions (proton at the middle of the PT interface)")')
+   write(72,'( 1x,"   State  ","     d_x         d_y          d_z          |d|  ")')
+
+   write(72,'( 1x,"    1a    ",4f12.6)') dipole_moment_diab_x(1,1,npnts/2), &
+                                      & dipole_moment_diab_y(1,1,npnts/2), &
+                                      & dipole_moment_diab_z(1,1,npnts/2), &
+   &sqrt(dipole_moment_diab_x(1,1,npnts/2)**2 + dipole_moment_diab_y(1,1,npnts/2)**2 + dipole_moment_diab_z(1,1,npnts/2)**2)
+
+   write(72,'( 1x,"    1b    ",4f12.6)') dipole_moment_diab_x(2,2,npnts/2), &
+                                      & dipole_moment_diab_y(2,2,npnts/2), &
+                                      & dipole_moment_diab_z(2,2,npnts/2), &
+   &sqrt(dipole_moment_diab_x(2,2,npnts/2)**2 + dipole_moment_diab_y(2,2,npnts/2)**2 + dipole_moment_diab_z(2,2,npnts/2)**2)
+
+   write(72,'( 1x,"    2a    ",4f12.6)') dipole_moment_diab_x(3,3,npnts/2), &
+                                      & dipole_moment_diab_y(3,3,npnts/2), &
+                                      & dipole_moment_diab_z(3,3,npnts/2), &
+   &sqrt(dipole_moment_diab_x(3,3,npnts/2)**2 + dipole_moment_diab_y(3,3,npnts/2)**2 + dipole_moment_diab_z(3,3,npnts/2)**2)
+
+   write(72,'( 1x,"    2b    ",4f12.6)') dipole_moment_diab_x(4,4,npnts/2), &
+                                      & dipole_moment_diab_y(4,4,npnts/2), &
+                                      & dipole_moment_diab_z(4,4,npnts/2), &
+   &sqrt(dipole_moment_diab_x(4,4,npnts/2)**2 + dipole_moment_diab_y(4,4,npnts/2)**2 + dipole_moment_diab_z(4,4,npnts/2)**2)
+   
+   write(72,*)
+   close(72)
+
+
+!===================================================================
+contains
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! calculates the dipole moments of the diabatic charge distributions
+   ! (the origin is placed at the center of charge)
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   subroutine calculate_dipole_moment_diab(kp)
+
+      integer, intent(in) :: kp
+
+      integer :: i, k, nhsol
+      real(8) :: cocx, cocy, cocz, q_total
+      real(8) :: dix, diy, diz
+      real(8), dimension(natsol) :: xxx, yyy, zzz
+
+      !-- move the origin to the center of charge distribution
+      !   for the first (1a) diabatic state (with the proton excluded)
+      
+      cocx = 0.d0
+      cocy = 0.d0
+      cocz = 0.d0
+      q_total = charge
+      
+      nhsol = iptsol(2)
+
+      !do k=1,natsol
+      !   if (k.eq.nhsol) cycle
+      !   cocx = cocx + chrsol(1,k)*xyzsol(1,k)
+      !   cocy = cocy + chrsol(1,k)*xyzsol(2,k)
+      !   cocz = cocz + chrsol(1,k)*xyzsol(3,k)
+      !enddo
+      
+      !if (q_total.ne.0.d0) then
+      !   cocx = cocx/q_total
+      !   cocy = cocy/q_total
+      !   cocz = cocz/q_total
+      !endif
+      
+      do k=1,natsol
+         xxx(k) = xyzsol(1,k) - cocx
+         yyy(k) = xyzsol(2,k) - cocy
+         zzz(k) = xyzsol(3,k) - cocz
+      enddo
+
+      do i=1,nelst
+
+         dix = 0.d0
+         diy = 0.d0
+         diz = 0.d0
+         
+         do k=1,natsol
+            dix = dix + chrsol(i,k)*xxx(k)
+            diy = diy + chrsol(i,k)*yyy(k)
+            diz = diz + chrsol(i,k)*zzz(k)
+         enddo
+
+         dipole_moment_diab_x(i,i,kp) = dix
+         dipole_moment_diab_y(i,i,kp) = diy
+         dipole_moment_diab_z(i,i,kp) = diz
+
+      enddo
+
+   end subroutine calculate_dipole_moment_diab
+
+
+!===================================================================
 end subroutine setmat

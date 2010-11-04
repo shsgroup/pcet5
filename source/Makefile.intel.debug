@@ -1,18 +1,18 @@
 #############################################################
 #
-# Makefile for PGI fortran compiler
+# Makefile for intel x86_64 compilers
 #
 # Alexander Soudackov, The Pennsylvania State University
-# December 5, 2003
+# July 1, 2010
 #
 #############################################################
 
-ARCH = pgi-9.02-x86_64
-FC      = pgf90
+ARCH = intel_11.1-x86_64-debug
+FC = ifort
 # Important: MODFLAG must have a trailing blank
 MODFLAG = -module 
-BACKSLASH = -Mbackslash
-NOBACKSLASH = -Mnobackslash
-F90FLAGS = -fast -Mipa=fast
-F77FLAGS = -fast -Mipa=fast
-LDFLAGS =
+BACKSLASH = -assume nobscc
+NOBACKSLASH = -assume bscc
+F90FLAGS = -check -g -traceback
+F77FLAGS = -check -g -traceback
+LDFLAGS	= 

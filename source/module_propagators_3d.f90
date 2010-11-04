@@ -5,9 +5,12 @@ module propagators_3d
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2010-10-28 21:29:36 $
-   !  $Revision: 5.2 $
+   !  $Date: 2010-11-04 22:43:08 $
+   !  $Revision: 5.3 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.2  2010/10/28 21:29:36  souda
+   !  First (working and hopefully bug-free) source of PCET 5.x
+   !
    !  Revision 5.1  2010/10/26 21:06:21  souda
    !  new routines/modules
    !
@@ -17,9 +20,11 @@ module propagators_3d
    use cst
    use parsol
    use solmat
+   use quantum, only: nprst, npnts
    use feszz_3d
    use random_generators
    use rk_parameters
+   use laser
 
    !---------------------------------------------------------------------
    implicit none
@@ -38,6 +43,10 @@ module propagators_3d
    real(8), allocatable, dimension(:,:)   :: z_prev
    real(8), allocatable, dimension(:,:,:) :: psiel, psipr
    real(8), allocatable, dimension(:,:)   :: enel, envib
+
+   !-- array for absorption probabilities (vibronic spectrum)
+   !---------------------------------------------------------
+   real(8), allocatable, dimension(:) :: absorption_prob
 
    !-- array for EVB weights
    !---------------------------------------------
@@ -64,7 +73,7 @@ module propagators_3d
    !---------------------------------------------------------
    complex(8), allocatable, dimension(:,:) :: density_matrix
 
-   !-- arrays for the transition probabilities for current state (b_jk)
+   !-- arrays for the MDQT transition probabilities for current state (b_jk)
    !---------------------------------------------------------------------
    real(8), allocatable, dimension(:) :: b_prob
 
@@ -82,10 +91,13 @@ module propagators_3d
    public :: allocate_evb_weights, deallocate_evb_weights
    public :: allocate_mdqt_arrays, deallocate_mdqt_arrays
    public :: calculate_vibronic_states
+   public :: calculate_absorption_prob
+   public :: print_vibronic_spectrum
    public :: calculate_vibronic_couplings
    public :: calculate_v_dot_d
    public :: interpolate_vdotd
    public :: interpolate_energy
+   public :: assign_initial_state
    public :: set_initial_amplitudes
    public :: set_initial_density
    public :: calculate_v_dot_d_mid
@@ -138,18 +150,18 @@ contains
    ! array allocation routines
    !---------------------------------------------------------------------
 
-   subroutine allocate_vibronic_states(nprst_,npnts_)
-      integer, intent(in) :: nprst_, npnts_
+   subroutine allocate_vibronic_states
       integer :: nz
-      nz = ielst*nprst_
+      nz = ielst*nprst
       allocate (fe(nstates))
       allocate (fe_prev(nstates))
+      allocate (absorption_prob(nstates))
       allocate (z(nz,nz))
       allocate (z_prev(nz,nz))
-      allocate (psiel(ielst,npnts_,ielst))
-      allocate (psipr(ielst,nprst_,npnts_))
-      allocate (enel(ielst,npnts_))
-      allocate (envib(ielst,nprst_))
+      allocate (psiel(ielst,npnts,ielst))
+      allocate (psipr(ielst,nprst,npnts))
+      allocate (enel(ielst,npnts))
+      allocate (envib(ielst,nprst))
    end subroutine allocate_vibronic_states
 
    subroutine allocate_evb_weights
@@ -179,37 +191,198 @@ contains
    !---------------------------------------------------------------------
 
    subroutine deallocate_vibronic_states
-      deallocate (fe)
-      deallocate (fe_prev)
-      deallocate (z)
-      deallocate (z_prev)
-      deallocate (psiel)
-      deallocate (psipr)
-      deallocate (enel)
-      deallocate (envib)
+      if (allocated(fe))      deallocate (fe)
+      if (allocated(fe_prev)) deallocate (fe_prev)
+      if (allocated(z))       deallocate (z)
+      if (allocated(z_prev))  deallocate (z_prev)
+      if (allocated(psiel))   deallocate (psiel)
+      if (allocated(psipr))   deallocate (psipr)
+      if (allocated(enel))    deallocate (enel)
+      if (allocated(envib))   deallocate (envib)
+      if (allocated(absorption_prob)) deallocate (absorption_prob)
    end subroutine deallocate_vibronic_states
 
    subroutine deallocate_evb_weights
-      deallocate (wght)
+      if (allocated(wght)) deallocate (wght)
    end subroutine deallocate_evb_weights
 
    subroutine deallocate_mdqt_arrays
-      deallocate (coupz1)
-      deallocate (coupz2)
-      deallocate (coupz1_prev)
-      deallocate (coupz2_prev)
-      deallocate (amplitude)
-      deallocate (density_matrix)
-      deallocate (b_prob)
-      deallocate (switch_prob)
-      deallocate (v_dot_d)
-      deallocate (v_dot_d_mid)
-      deallocate (v_dot_d_prev)
-      deallocate (a0_fe,a1_fe,a2_fe)
-      deallocate (a0_vdotd)
-      deallocate (a1_vdotd)
-      deallocate (a2_vdotd)
+      if (allocated(coupz1))            deallocate (coupz1)
+      if (allocated(coupz2))            deallocate (coupz2)
+      if (allocated(coupz1_prev))       deallocate (coupz1_prev)
+      if (allocated(coupz2_prev))       deallocate (coupz2_prev)
+      if (allocated(amplitude))         deallocate (amplitude)
+      if (allocated(density_matrix))    deallocate (density_matrix)
+      if (allocated(b_prob))            deallocate (b_prob)
+      if (allocated(switch_prob))       deallocate (switch_prob)
+      if (allocated(v_dot_d))           deallocate (v_dot_d)
+      if (allocated(v_dot_d_mid))       deallocate (v_dot_d_mid)
+      if (allocated(v_dot_d_prev))      deallocate (v_dot_d_prev)
+      if (allocated(a0_fe))             deallocate (a0_fe)
+      if (allocated(a1_fe))             deallocate (a1_fe)
+      if (allocated(a2_fe))             deallocate (a2_fe)
+      if (allocated(a0_vdotd))          deallocate (a0_vdotd)
+      if (allocated(a1_vdotd))          deallocate (a1_vdotd)
+      if (allocated(a2_vdotd))          deallocate (a2_vdotd)
    end subroutine deallocate_mdqt_arrays
+
+
+   !--------------------------------------------------------------------
+   !-- calculate absorption spectrum
+   !   (oscillator strengths of vibronic transitions)
+   !--------------------------------------------------------------------
+   subroutine calculate_absorption_prob(iground,kg,z1,z2)
+
+      integer, intent(in) :: iground, kg
+      real(8), intent(in) :: z1, z2
+
+      integer :: ndabf, k, i, j, mu, nu, imu, jnu, kp, i0, j0
+      real(4) :: r
+      real(8) :: zp, ze, s, dx, dy, dz, davx, davy, davz
+      real(8) :: pnorm
+
+      absorption_prob = 0
+
+      !-- transform to zp,ze frame
+      call z1z2_to_zpze(z1,z2,zp,ze)
+
+      !-- calculate vibronic states
+      call feszz3(mode,iset,kg,zp,ze,nstates,fe,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
+
+      !-- calculate transition dipole moments between the state iground and the higher states
+
+      absorption_prob = 0.d0
+      pnorm = 0.d0
+
+      do k=iground+1,nstates
+
+         dx = 0.d0
+         dy = 0.d0
+         dz = 0.d0
+
+         imu = 0
+         do i=1,ielst
+            i0 = i + 2*iset - 2
+            do mu=1,nprst
+
+               imu = imu + 1
+
+               jnu = 0
+               do j=1,ielst
+                  j0 = j + 2*iset - 2
+                  do nu=1,nprst
+
+                     jnu = jnu + 1
+
+                     !-- here we assume that the dipole moment might have non-zero off-diagonal elements
+                     !   even in the basis of the diabatic electronic states
+
+                     davx = 0.d0
+                     davy = 0.d0
+                     davz = 0.d0
+                     do kp=1,npnts
+                        davx = davx + dipole_moment_diab_x(i0,j0,kp)*psipr(i,mu,kp)*psipr(j,nu,kp)
+                        davy = davy + dipole_moment_diab_y(i0,j0,kp)*psipr(i,mu,kp)*psipr(j,nu,kp)
+                        davz = davz + dipole_moment_diab_z(i0,j0,kp)*psipr(i,mu,kp)*psipr(j,nu,kp)
+                     enddo
+
+                     dx = dx + z(imu,iground)*z(jnu,k)*davx
+                     dy = dy + z(imu,iground)*z(jnu,k)*davy
+                     dz = dz + z(imu,iground)*z(jnu,k)*davz
+
+                  enddo 
+               enddo
+
+            enddo
+         enddo
+
+         absorption_prob(k) = dx*dx + dy*dy + dz*dz
+         pnorm = pnorm + absorption_prob(k)
+
+      enddo
+
+      !-- normalization
+      absorption_prob = absorption_prob/pnorm
+
+   end subroutine calculate_absorption_prob
+
+   !--------------------------------------------------------------------
+   !-- Output the vibronic spectrum (energies and oscillator strength)
+   !--------------------------------------------------------------------
+   subroutine print_vibronic_spectrum(ichannel,iground)
+
+      integer, intent(in) :: ichannel, iground
+
+      integer :: i
+      real(8) :: excitation_energy, pnorm
+
+      !-- print the header of the table
+
+      write(ichannel,'("#",71("="))')
+      write(ichannel,'("#","     Vibronic spectrum: excitations from state ",i3," to ",i3," higher states")') iground, nstates-iground
+      write(ichannel,'("#",71("-"))')
+      write(ichannel,'("#",t7,"Excitation energy (eV)",t35,"Normalized intensity")')
+      write(ichannel,'("#",71("-"))')
+
+      pnorm = 0.d0
+      do i=iground+1,nstates
+         write(ichannel,'(i5,f20.6,t35,f15.6)') i-1, (fe(i) - fe(iground))*cal2ev, absorption_prob(i)
+         pnorm = pnorm + absorption_prob(i)
+      enddo
+
+      write(ichannel,'("#",71("-"))')
+      write(ichannel,'("#",t30,"Norm:",f15.6)') pnorm
+      write(ichannel,'("#",71("="))')
+
+   end subroutine print_vibronic_spectrum
+
+   !--------------------------------------------------------------------
+   !-- Assign initial state according to the normalized magnitude
+   !   of the transition dipole moment matrix element multiplied
+   !   by the laser pulse intensity
+   !--------------------------------------------------------------------
+   function assign_initial_state(iground) result(istate)
+
+      integer, intent(in) :: iground
+      integer :: istate
+
+      integer :: i
+      real(4) :: r
+      real(8) :: s, excitation_energy, pnorm
+      real(8), dimension(nstates) :: p
+
+      istate = 0
+
+      p = 0.d0
+      pnorm = 0.d0
+
+      do i=iground+1,nstates
+         excitation_energy = (fe(i) - fe(iground))*cal2ev
+         p(i) = absorption_prob(i)*spectral_shape(excitation_energy)
+         pnorm = pnorm + p(i)
+      enddo
+
+      !-- normalize p
+      p = p/pnorm
+
+      !-- generate a random number between 0 and 1
+      !   from a uniform distribution
+      call ran2nr(r,iseed)
+
+      s = 0.d0
+      
+      do i=iground+1,nstates
+
+         s = s + p(i)
+
+         if (s.gt.r) then
+            istate = i
+            exit
+         endif
+
+      enddo
+
+   end function assign_initial_state
 
    !--------------------------------------------------------------------
    !-- Set initial amplitudes to correspond to a pure adiabatic state
@@ -906,15 +1079,19 @@ contains
       real(8), intent(in) :: t_, qtstep
 
       complex(8), dimension(nstates) :: y, dy1, dy2, dy3, dy4
+      complex(8), dimension(nstates) :: y2, y3, y4
 
       !-- initial amplitudes
       y = amplitude
 
       !-- Runge-Kutta steps
       call tdse_derivatives(t_,y,dy1)
-      call tdse_derivatives(t_+0.5d0*qtstep,y+0.5d0*qtstep*dy1,dy2)
-      call tdse_derivatives(t_+0.5d0*qtstep,y+0.5d0*qtstep*dy2,dy3)
-      call tdse_derivatives(t_+qtstep,y+qtstep*dy3,dy4)
+      y2 = y + 0.5d0*qtstep*dy1
+      call tdse_derivatives(t_+0.5d0*qtstep,y2,dy2)
+      y3 = y + 0.5d0*qtstep*dy2
+      call tdse_derivatives(t_+0.5d0*qtstep,y3,dy3)
+      y4 = y + qtstep*dy3
+      call tdse_derivatives(t_+qtstep,y4,dy4)
 
       !-- final amplitude (array operation)
       amplitude = y + qtstep*(dy1 + 2.d0*dy2 + 2.d0*dy3 + dy4)/6.d0

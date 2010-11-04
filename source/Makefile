@@ -14,7 +14,7 @@ include Makefile.machine
 VERSION = 5.1
 
 MODDIR  = mod
-MODOPT  = $(MODFLAG) $(MODDIR)
+MODOPT  = $(MODFLAG)$(MODDIR)
 OBJDIR  = obj
 EXEDIR  = ../bin
 PROGRAM = pcet_$(VERSION)_$(ARCH)
@@ -123,6 +123,7 @@ MODOBJ  = $(OBJDIR)/module_control.o     \
           $(OBJDIR)/module_geometry.o    \
           $(OBJDIR)/module_geosol.o      \
           $(OBJDIR)/module_keys.o        \
+          $(OBJDIR)/module_laser.o       \
           $(OBJDIR)/module_monte_carlo.o \
           $(OBJDIR)/module_msevb_water.o \
           $(OBJDIR)/module_pardim.o      \
@@ -155,6 +156,7 @@ MODMOD  = $(MODDIR)/control.mod     \
           $(MODDIR)/geometry.mod    \
           $(MODDIR)/geosol.mod      \
           $(MODDIR)/keys.mod        \
+          $(MODDIR)/laser.mod       \
           $(MODDIR)/monte_carlo.mod \
           $(MODDIR)/msevb_water.mod \
           $(MODDIR)/pardim.mod      \
@@ -186,6 +188,7 @@ MODSRC  = module_control.f90     \
           module_geometry.f90    \
           module_geosol.f90      \
           module_keys.f90        \
+          module_laser.f90       \
           module_monte_carlo.f90 \
           module_msevb_water.f90 \
           module_pardim.f90      \
@@ -229,7 +232,7 @@ all:    build
 	@echo "---------------------------------------------------------------------------------------"
 
 clean:
-	rm -f *.o $(OBJDIR)/*.o *.mod $(MODDIR)/*.mod *.stb *.dll *.a
+	rm -f *.o $(OBJDIR)/*.o* *.mod $(MODDIR)/*.mod *.stb *.dll *.a
 
 #############################
 # source files dependencies

@@ -2,23 +2,26 @@ module laser
 
    !---------------------------------------------------------------------
    !
-   ! Contains the data and routines for pump laser characteristics
+   !  Contains the data and routines for pump laser characteristics
    !
-   ! PUMP_SHAPE - spectral shape of the pump laser pulse
-   !              0 - rectangular shape
-   !              1 - Lorentzian shape
-   !              2 - Gaussian shape
+   !  PUMP_SHAPE - spectral shape of the pump laser pulse
+   !               0 - rectangular shape
+   !               1 - Lorentzian shape
+   !               2 - Gaussian shape
    !
-   ! PUMP_ENERGY - energy at the center of the laser pulse (eV)
+   !  PUMP_ENERGY - energy at the center of the laser pulse (eV)
    !
-   ! PUMP_WIDTH - full width at half maximum (FWHM) (eV)
+   !  PUMP_WIDTH - full width at half maximum (FWHM) (eV)
    !
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2010-11-03 06:22:16 $
-   !  $Revision: 5.1 $
+   !  $Date: 2010-11-04 22:43:08 $
+   !  $Revision: 5.2 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.1  2010/11/03 06:22:16  souda
+   !  New module for laser pump characteristics
+   !
    !
    !---------------------------------------------------------------------
 

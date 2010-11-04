@@ -6,9 +6,12 @@ module control_dynamics
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-26 21:06:20 $
-!  $Revision: 5.1 $
+!  $Date: 2010-11-04 22:43:08 $
+!  $Revision: 5.2 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.1  2010/10/26 21:06:20  souda
+!  new routines/modules
+!
 !
 !=======================================================================
    implicit none
@@ -18,9 +21,6 @@ module control_dynamics
    character(len=10) :: solvent_model
    character(len=10) :: interpolation="LINEAR"
    logical :: mdqt=.false.     ! flag for MDQT dynamics
-   integer :: initial_state=1  ! initial state
-   integer :: initial_set=1    ! initial set of states
-   integer :: nstates          ! number of states in MDQT
    integer :: nsteps=100       ! number of steps
    integer :: ndump=1          ! dump trajectory every ndump steps
    integer :: ntraj=1          ! number of trajectories

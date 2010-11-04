@@ -5,9 +5,12 @@ module strings
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:36 $
-!  $Revision: 5.2 $
+!  $Date: 2010-11-04 22:43:09 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:36  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !--------------------------------------------------------------------
 
@@ -16,6 +19,8 @@ module strings
 
    character( 1), parameter :: space = " "
    character( 1), parameter :: comma = ","
+   character( 1), parameter :: dash  = "-"
+   character( 1), parameter :: slash = "/"
    character( 1), parameter :: tab   = char(9)
 
    character(52), parameter :: allow1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -194,7 +199,7 @@ contains
 
       integer :: i, icount
       logical :: curr, next
-      character(80) ::  string
+      character(len=length) ::  string
 
       icount = 0
       
@@ -230,7 +235,7 @@ contains
       character(*), intent(inout) :: string
       integer,      intent(inout) :: length
 
-      character(160) :: temp
+      character(len=length) :: temp
       integer :: i, ilen
 
       ilen = 0

@@ -21,6 +21,7 @@ $(OBJDIR)/module_solmat.o \
 $(OBJDIR)/module_strings.o \
 $(OBJDIR)/module_cst.o \
 $(OBJDIR)/module_keys.o \
+$(OBJDIR)/module_laser.o \
 $(OBJDIR)/module_pardim.o 
 
 $(OBJDIR)/et2.o : et2.f90 \
@@ -167,7 +168,12 @@ $(OBJDIR)/module_random_generators.o \
 $(OBJDIR)/module_feszz_3d.o \
 $(OBJDIR)/module_solmat.o \
 $(OBJDIR)/module_parsol.o \
+$(OBJDIR)/module_laser.o \
 $(OBJDIR)/module_rk_parameters.o \
+$(OBJDIR)/module_cst.o
+
+$(OBJDIR)/module_laser.o : module_laser.f90 \
+$(OBJDIR)/module_solmat.o \
 $(OBJDIR)/module_cst.o
 
 $(OBJDIR)/module_rk_parameters.o : module_rk_parameters.f90
