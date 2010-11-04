@@ -5,9 +5,12 @@ subroutine setmat
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-11-04 22:43:09 $
-!  $Revision: 5.3 $
+!  $Date: 2010-11-04 22:49:28 $
+!  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.3  2010/11/04 22:43:09  souda
+!  Next iteration... and two additional Makefiles for building the code with debug options.
+!
 !  Revision 5.2  2010/10/28 21:29:37  souda
 !  First (working and hopefully bug-free) source of PCET 5.x
 !
@@ -404,6 +407,14 @@ subroutine setmat
       lenf = ispa - 1
       call locase(fname,lenf)
       write(6,'(/1x,''Reorganization energy matrices from the binary file <'',a,''>'')') fname(1:lenf)
+
+      inquire(file=fname(1:lenf),exist=file_exists)
+
+      if (.not.file_exists) then
+         write(*,'(/1x,"File ",a," does not exist. Check the file name in TREAD option.")') fname(1:lenf)
+         stop
+      endif
+
       open(1,file=fname(1:lenf),status='old',form='unformatted')
 
       read(1) npnts1, alim1, blim1, npnts2, alim2, blim2
