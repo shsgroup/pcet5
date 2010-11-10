@@ -79,9 +79,12 @@ program pcet
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:36 $
-!  $Revision: 5.2 $
+!  $Date: 2010-11-10 21:14:21 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:36  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !======================================================================!
 
@@ -93,13 +96,15 @@ program pcet
 
    implicit none
 
-   character( 8) :: cdum
-   character(10) :: curdat, curtim
-   character(160) :: input, line
-   
-   real*8  :: tstart, time_s, time0, time1, time2
-   real*8  :: telapsed, tend, ttotal
-   integer :: n1, lfile, ijob, ijobn, ispa
+   character(len=  8) :: cdum
+   character(len= 10) :: curdat, curtim
+   character(len=160) :: input, line, lsline
+
+   logical :: dir_exists=.false.
+
+   real(8) :: tstart, time_s, time0, time1, time2
+   real(8) :: telapsed, tend, ttotal
+   integer :: n1, lfile, ijob, ijobn, ispa, io_status
 
    interface
       function second() result(tic)
@@ -107,6 +112,12 @@ program pcet
       real(8) :: tic
       end function second
    end interface
+
+
+
+   !---(AVS)---> add interface statements for all called routines
+
+
 
    !---------------------------------------------------
    ! Uncomment two lines below for debugging
@@ -140,9 +151,9 @@ program pcet
    lfile = nblen(input)
 
    if (lfile.eq.0) then
-      write(*,'(/''*** Please specify the name of the input'',&
+      write(*,'(/''*** Please specify the name of the main input'',&
                    &'' file as the command line argument ***''/)')
-      stop 'Sorry...'
+      stop
    endif
 
    !---------------------------------------------
@@ -155,11 +166,12 @@ program pcet
    !-----------------------------------------------------
    ! MAIN LOOP OVER THE JOBS SPECIFIED IN THE INPUT FILE
    !-----------------------------------------------------
-   do
+
+   loop_over_jobs: do
 
       read(5,'(a)') line
 
-      if (index(line,'END').ne.0.or.index(line,'end').ne.0) exit
+      if (index(line,'END').ne.0.or.index(line,'end').ne.0) exit loop_over_jobs
 
       !-------------------------------------------------
       ! Extract the name of the job from the first line
@@ -183,11 +195,56 @@ program pcet
       ! Create a subdirectory for the current job.
       ! The name is given in the string JOB.
       !
-      ! ATTENTION!!! The following line is machine
-      !              dependent and is a call to a
+      ! ATTENTION!!! The following lines are machine
+      !              dependent and are calls to a
       !              system routine. It might be
       !              different on different platforms.
       !---------------------------------------------
+
+      !-- check if directory already exists
+
+      call system('ls -p > ls.scr')
+      open(1,file='ls.scr')
+
+      io_status = 0
+      dir_exists = .false.
+
+      loop_over_ls: do while (io_status.eq.0)
+         read(1,'(a)',iostat=io_status) lsline
+         if (index(trim(lsline),job(1:ljob)//slash).ne.0) then
+            dir_exists = .true.
+            exit loop_over_ls
+         endif
+      enddo loop_over_ls
+
+      close(1)
+      call system('rm -f ls.scr')
+
+      if (dir_exists) then
+
+         write(*,'(/1x,"****************************** W A R N I N G !!! *******************************")')
+         write(*,'( 1x,"The output directory for the current job <",a,"> already exists.")') job(1:ljob)
+         write(*,'( 1x,"It might be too important to be overwritten and thus the job wil be skipped.")')
+         write(*,'( 1x,"Rename or remove the existing directory and resubmit the job.")')
+         write(*,'( 1x,"****************************** W A R N I N G !!! *******************************")')
+
+         !-- skip to the next job
+
+         loop_over_lines: do
+            read(5,'(a)',iostat=io_status) line
+            if (line.eq."") exit loop_over_lines
+            if (io_status.ne.0) then
+               write(*,'(/1x,"Something is wrong with the input file: I/O error or EOF encountered")')
+               exit loop_over_jobs
+            endif
+         enddo loop_over_lines
+
+         cycle loop_over_jobs
+
+      endif
+
+      !-- create the output directory and copy the input files
+
       call system('mkdir '//job(1:ljob))
       call system('cp '//input(1:lfile)//' '//job(1:ljob))
 
@@ -357,7 +414,7 @@ program pcet
       !-------------------------------------------------
       call deinitmat
 
-   enddo
+   enddo loop_over_jobs
    !---------------------------------------------------------------
    ! END OF THE MAIN LOOP OVER THE JOBS SPECIFIED IN THE INPUT FILE
    !---------------------------------------------------------------

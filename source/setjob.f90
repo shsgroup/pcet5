@@ -6,9 +6,12 @@ subroutine setjob
 !---------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:37 $
-!  $Revision: 5.2 $
+!  $Date: 2010-11-10 21:14:21 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:37  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !====================================================================C
 
@@ -804,16 +807,16 @@ subroutine setjob
    ! ELLIPSE - Simple electrostatic model with ellipsoidal cavity
    !==============================================================
 
-   ikey = index(keywrd,' SOLVENT(')
+   ikey = index(keywrd,' SOLV(')
 
    if (ikey.eq.0) then
 
-      write(*,'(/1x,"*** (in SETJOB): You MUST specify the SOLVENT keyword with options ***"/)')
+      write(*,'(/1x,"*** (in SETJOB): You MUST specify the SOLV keyword with options ***"/)')
       stop
 
    else
 
-      call getopt(keywrd,ikey+9,options)
+      call getopt(keywrd,ikey+6,options)
 
    endif
 

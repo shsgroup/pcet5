@@ -5,9 +5,12 @@ module propagators_3d
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2010-11-04 22:43:08 $
-   !  $Revision: 5.3 $
+   !  $Date: 2010-11-10 21:14:21 $
+   !  $Revision: 5.4 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.3  2010/11/04 22:43:08  souda
+   !  Next iteration... and two additional Makefiles for building the code with debug options.
+   !
    !  Revision 5.2  2010/10/28 21:29:36  souda
    !  First (working and hopefully bug-free) source of PCET 5.x
    !
@@ -93,6 +96,7 @@ module propagators_3d
    public :: calculate_vibronic_states
    public :: calculate_absorption_prob
    public :: print_vibronic_spectrum
+   public :: print_vibronic_spectrum_conv
    public :: calculate_vibronic_couplings
    public :: calculate_v_dot_d
    public :: interpolate_vdotd
@@ -335,6 +339,83 @@ contains
       write(ichannel,'("#",71("="))')
 
    end subroutine print_vibronic_spectrum
+
+   !--------------------------------------------------------------------
+   !-- Output the convoluted vibronic spectrum
+   !--------------------------------------------------------------------
+   subroutine print_vibronic_spectrum_conv(ichannel,iground,iconv,width)
+
+      integer, intent(in) :: ichannel, iground, iconv
+      real(8), intent(in) :: width
+
+      character(len=10), parameter, dimension(2) :: conv=(/"Lorentzian","Gaussian"/)
+      integer, parameter :: npoints = 1000
+
+      integer :: i, k
+      real(8) :: energy, exc_en_min, exc_en_max, range, den, p
+      real(8), dimension(nstates) :: excitation_energy
+
+      if (iconv.lt.1.or.iconv.gt.2) then
+         write(ichannel,'("#  Unknown convoluting function: no output")')
+         return
+      endif
+
+      !-- print the header of the table
+
+      write(ichannel,'("#",71("="))')
+      write(ichannel,'("#","     Vibronic spectrum: ",a," convolution")') trim(conv(iconv))
+      write(ichannel,'("#",71("-"))')
+      write(ichannel,'("#",t7,"Excitation energy (eV)",t35,"Normalized intensity")')
+      write(ichannel,'("#",71("-"))')
+
+      !-- set the excitation energy range
+
+      exc_en_min = cal2ev*(fe(iground+1) - fe(iground))
+      exc_en_max = cal2ev*(fe(nstates) - fe(iground))
+
+      range = exc_en_max - exc_en_min
+      exc_en_min = exc_en_min - 5.d0*width
+      if (exc_en_min.lt.0.d0) exc_en_min = 0.d0
+      exc_en_max = exc_en_max + 5.d0*width
+      range = exc_en_max - exc_en_min
+      den = range/(npoints-1)
+
+      !-- precompute excitation energies (in eV)
+      do i=iground+1,nstates
+         excitation_energy(i) = (fe(i) - fe(iground))*cal2ev
+      enddo
+
+      !-- Loop over energy grid points
+      
+      do k=1,npoints
+
+         energy = exc_en_min + (k-1)*den
+         
+         !-- evaluate convolution
+         
+         p = 0.d0
+
+         select case(iconv)
+
+            case(1)
+            do i=iground+1,nstates
+               p = p + absorption_prob(i)*lorentzian(energy,excitation_energy(i),width)
+            enddo
+
+            case(2)
+            do i=iground+1,nstates
+               p = p + absorption_prob(i)*gaussian(energy,excitation_energy(i),width)
+            enddo
+
+         end select
+
+         write(ichannel,'(f20.6,t35,f15.6)') energy, p
+
+      enddo
+
+      write(ichannel,'("#",71("="))')
+
+   end subroutine print_vibronic_spectrum_conv
 
    !--------------------------------------------------------------------
    !-- Assign initial state according to the normalized magnitude
@@ -1172,7 +1253,7 @@ contains
 
          !=== DEBUG ===================================================================
          write(*,*)
-         write(*,'(137("-"))')
+         write(*,'(141("-"))')
          write(*,*) "Switch: ",istate," --->", new_state
          write(*,*) "Nonadiabatic coupling: d_z1 = ", dkl_z1
          write(*,*) "                       d_z2 = ", dkl_z2
@@ -1181,7 +1262,7 @@ contains
          write(*,*) "Kinetic energy gain (loss if negative): ", ekl, " kcal/mol"
          !write(*,*) "Velocity adjustments: vz1 = vz1 + ", -gamma*dkl_z1
          !write(*,*) "                      vz2 = vz2 + ", -gamma*dkl_z2
-         write(*,'(137("-"))')
+         write(*,'(141("-"))')
          !=== end DEBUG ===============================================================
 
       endif

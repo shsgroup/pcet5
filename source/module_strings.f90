@@ -5,9 +5,12 @@ module strings
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-11-04 22:43:09 $
-!  $Revision: 5.3 $
+!  $Date: 2010-11-10 21:14:21 $
+!  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.3  2010/11/04 22:43:09  souda
+!  Next iteration... and two additional Makefiles for building the code with debug options.
+!
 !  Revision 5.2  2010/10/28 21:29:36  souda
 !  First (working and hopefully bug-free) source of PCET 5.x
 !
@@ -17,19 +20,21 @@ module strings
    implicit none
    public
 
-   character( 1), parameter :: space = " "
-   character( 1), parameter :: comma = ","
-   character( 1), parameter :: dash  = "-"
-   character( 1), parameter :: slash = "/"
-   character( 1), parameter :: tab   = char(9)
+   character(len= 1), parameter :: space = " "
+   character(len= 1), parameter :: comma = ","
+   character(len= 1), parameter :: dash  = "-"
+   character(len= 1), parameter :: slash = "/"
+   character(len= 1), parameter :: tab   = char(9)
 
-   character(52), parameter :: allow1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-   character(19), parameter :: allow2 = "1234567890()=,.:-_+"
+   character(len=52), parameter :: allow1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+   character(len=19), parameter :: allow2 = "1234567890()=,.:-_+"
+
+   character(len=2), parameter, dimension(4) :: diab_symb=(/"1a","1b","2a","2b"/)
 
 !--------------------------------------------------------------------
 contains
 
-   real*8 function digit(string,istart)
+   function digit(string,istart) result(value)
    !=======================================================================
    ! Fortran function to convert numeric field to double precision
    ! number.  the string is assumed to be clean (no invalid digit
@@ -40,6 +45,7 @@ contains
 
       character(*), intent(in) :: string
       integer,      intent(in) :: istart
+      real(8) :: value
 
       real*8  :: c1,c2,deciml
       logical :: sign
@@ -82,8 +88,8 @@ contains
 
          else
 
-            digit = c1 + c2
-            if (.not.sign) digit = -digit
+            value = c1 + c2
+            if (.not.sign) value = -value
             return
 
          endif
@@ -105,8 +111,8 @@ contains
 
       ! put the pieces together
 
-      digit = c1 + c2
-      if (.not.sign) digit = -digit
+      value = c1 + c2
+      if (.not.sign) value = -value
       return
 
    end function digit
@@ -274,24 +280,29 @@ contains
 
    end subroutine clnopt
 
-   character*3 function th(i)
+   function th(i) result(suffix)
+   !=======================================================================
+   !     Suffix for 1-st, 2-nd, 3-rd, etc.
+   !=======================================================================
 
-      integer :: i
+      integer, intent(in) :: i
+      character(len=3) :: suffix
       integer :: lastdigit
 
       lastdigit = mod(i,10)
 
       if (lastdigit.eq.1) then
-         th = '-st'
+         suffix = '-st'
       elseif (lastdigit.eq.2) then
-         th = '-nd'
+         suffix = '-nd'
       elseif (lastdigit.eq.3) then
-         th = '-rd'
+         suffix = '-rd'
       else
-         th = '-th'
+         suffix = '-th'
       endif
 
    end function th
+
 
    subroutine upcase(string,length)
    !======================================================================
@@ -320,7 +331,7 @@ contains
 
    end subroutine upcase
 
-   real*8 function reada(string,istart)
+   function reada(string,istart) result(value)
    !======================================================================
    ! FORTRAN FUNCTION TO EXTRACT NUMBER FROM STRING (from MOPAC)
    !======================================================================
@@ -328,6 +339,7 @@ contains
 
       character(*), intent(in) :: string
       integer,      intent(in) :: istart
+      real(8) :: value
 
       logical :: defalt, expnnt
 
@@ -427,16 +439,16 @@ contains
       n = n + index(string(i:j-1),'D')
 
       if (n.eq.0) then
-         reada = digit(string(i:j-1),1)
+         value = digit(string(i:j-1),1)
       else
-         reada = digit(string(:i+n-2),i)*1.d1**digit(string(:j-1),i+n)
+         value = digit(string(:i+n-2),i)*1.d1**digit(string(:j-1),i+n)
       endif
       defalt = .false.
 
       return
 
       ! default value returned because no numeric field found
-   50 reada = 0.d0
+   50 value = 0.d0
       defalt = .true.
       return
 

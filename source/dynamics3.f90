@@ -59,6 +59,15 @@ subroutine dynamics3
 !  SPECTRUM=<string> - output vibronic spectrum to the external file
 !                      (default filename is vibronic_spectrum.dat)
 !
+!  CONVOLUTION=<key> - calculate and output the convoluted vibronic spectrum
+!                      (external file name is vibronic_spectrum_Xconv.dat
+!                       where X is "l" for Lorentzian and "g" for Gaussian)
+!
+!              LORENTZIAN - Lorentzian convolution
+!              GAUSSIAN   - Gaussian convolution
+!
+!  LINEWIDTH=<float> - vibronic linewidth in eV (default is 0.05 eV)
+!
 !  NSTATES=<int> - number of states to include in dynamics
 !
 !  TRAJOUT=<string> - name of the output files with trajectory data
@@ -106,9 +115,12 @@ subroutine dynamics3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-11-04 22:43:08 $
-!  $Revision: 5.3 $
+!  $Date: 2010-11-10 21:14:21 $
+!  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.3  2010/11/04 22:43:08  souda
+!  Next iteration... and two additional Makefiles for building the code with debug options.
+!
 !  Revision 5.2  2010/10/28 21:29:35  souda
 !  First (working and hopefully bug-free) source of PCET 5.x
 !
@@ -135,7 +147,7 @@ subroutine dynamics3
    implicit none
 
    character(len=1024) :: options
-   character(len=  40) :: fname
+   character(len=  80) :: fname
    character(len=  15) :: zpedim="kcal/mol      "
    character(len=  15) :: z12dim="(kcal/mol)^1/2"
    character(len=   5) :: mode_dyn
@@ -168,7 +180,7 @@ subroutine dynamics3
    real(8) :: zeitq, zeitq_prev
    real(8) :: z1, z2, zp, ze, vz1, vz2, vzp, vze, z10, z20, zp0, ze0, ekin, efes
    real(8) :: vz1_prev, vz2_prev
-   real(8) :: pump_e, pump_w
+   real(8) :: pump_e, pump_w, vib_linewidth
 
    adiab   = .true.
    diab2   = .false.
@@ -824,11 +836,20 @@ subroutine dynamics3
    if (ioption.eq.0) then
 
       open(11,file=job(1:ljob)//"/vibronic_spectrum.dat")
+      write(6,'(/1x,"Vibronic spectrum is written to the external file ",a)') &
+      &job(1:ljob)//"/vibronic_spectrum.dat"
 
    else
 
       ispa = index(options(ioption+10:),space)
-      open(11,file=job(1:ljob)//"/"//options(ioption+10:ioption+ispa+8))
+      fname = options(ioption+10:ioption+ispa+8)
+      lenf = ispa - 1
+      call locase(fname,lenf)
+      fname = job(1:ljob)//'/'//fname(1:lenf)
+      lenf = lenf + ljob + 1
+
+      open(11,file=fname(1:lenf))
+      write(6,'(/1x,"Vibronic spectrum is written to the external file ",a)') fname(1:lenf)
 
    endif
 
@@ -844,6 +865,77 @@ subroutine dynamics3
    !-- print to the standard output as well
    call print_vibronic_spectrum(6,iground)
 
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   !  Convoluted vibronic spectrum
+   !  (Lorentzian and Gaussian convolutions are implemented)
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   ioption = index(options," CONVOLUTION=")
+
+   if (ioption.ne.0) then
+
+      !-- extract the keyword for the convoluting function
+      ispa = index(options(ioption+13:),space)
+      str = options(ioption+13:ioption+ispa+11)
+
+      !-- extract the vibronic linewidth (eV)
+      ioption2 = index(options," LINEWIDTH=")
+      if (ioption2.ne.0) then
+         vib_linewidth = reada(options,ioption2+11)
+      else
+         vib_linewidth = 0.05
+      endif
+
+      if (str.eq."LORENTZIAN") then
+
+         write(6,'(/1x,"Vibronic spectrum with Lorentzian convolution will be written to the external file ",a)') &
+         &job(1:ljob)//"/vibronic_spectrum_conv.dat"
+         write(6,'(1x,"Vibronic linewidth: ",f12.6," eV")') vib_linewidth
+
+         open(11,file=job(1:ljob)//"/vibronic_spectrum_lconv.dat")
+         call print_vibronic_spectrum_conv(11,iground,1,vib_linewidth)
+
+      elseif (str.eq."GAUSSIAN") then
+
+         write(6,'(/1x,"Vibronic spectrum with Gaussian convolution will be written to the external file ",a)') &
+         &job(1:ljob)//"/vibronic_spectrum_conv.dat"
+         write(6,'(1x,"Vibronic linewidth: ",f12.6," eV")') vib_linewidth
+
+         open(11,file=job(1:ljob)//"/vibronic_spectrum_gconv.dat")
+         call print_vibronic_spectrum_conv(11,iground,2,vib_linewidth)
+
+      else
+
+         write(6,'(/1x,"(WARNING) Unknown convolution type: ",a)') trim(str)
+         write(6,'( 1x,"Vibronic spectrum with Lorentzian (default) convolution will be written to the external file ",a)') &
+         &job(1:ljob)//"/vibronic_spectrum_conv.dat"
+         write(6,'(1x,"Vibronic linewidth: ",f12.6," eV")') vib_linewidth
+
+         open(11,file=job(1:ljob)//"/vibronic_spectrum_lconv.dat")
+         call print_vibronic_spectrum_conv(11,iground,1,vib_linewidth)
+
+      endif
+
+      close(11)
+      
+   endif
+
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   !  Output the laser pulse shape to the external file
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   if (pump) then
+
+      write(6,'(/1x,"Pump laser spectrum will be written to the external file ",a)') &
+      & job(1:ljob)//"/pump_laser_spectrum.dat"
+
+      open(11,file=job(1:ljob)//"/pump_laser_spectrum.dat")
+      call print_laser_spectrum(11)
+      close(11)
+
+   endif
+
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Output files for trajectories
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -858,7 +950,7 @@ subroutine dynamics3
    else
 
       ispa = index(options(ioutput+9:),space)
-      fname = options(ioutput+9:ioutput+ispa+9)
+      fname = options(ioutput+9:ioutput+ispa+7)
       lenf = ispa - 1
       call locase(fname,lenf)
       fname = job(1:ljob)//'/'//fname(1:lenf)
@@ -998,7 +1090,12 @@ subroutine dynamics3
 
       write(6,'(/1x,"===> Trajectory ",i5," starts on the vibronic state ",i3)') itraj, istate
       write(6,'( 1x,"===> Initial solvent coordinates (z1,z2), (kcal/mol)^(1/2): ",2f12.6)') z1, z2
+
       write(6,*)
+      write(6,'(141("-"))')
+      write(6,'(t6,"t(ps)",t20,"z1",t32,"z2",t44,"vz1",t56,"vz2",t68,"zp",t80,"ze",t92,"vzp",t103,"vze",t115,"Ekin",t126,"Efe",t135,"occ.")')
+      write(6,'(141("-"))')
+
       write(6,'(137x,$)')
 
       number_of_switches = 0
@@ -1199,9 +1296,10 @@ subroutine dynamics3
       close(itraj_channel)
       
       write(6,*)
-      write(6,*)
+      write(6,'(141("-"))')
       write(6,'("# Total number of allowed  switches: ",i5)') number_of_switches
       write(6,'("# Total number of rejected switches: ",i5)') number_of_rejected
+      write(6,'(141("-"))')
       write(6,*)
 
    enddo loop_over_trajectories

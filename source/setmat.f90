@@ -5,9 +5,12 @@ subroutine setmat
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-11-04 22:49:28 $
-!  $Revision: 5.4 $
+!  $Date: 2010-11-10 21:14:21 $
+!  $Revision: 5.5 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.4  2010/11/04 22:49:28  souda
+!  aditional check when opening the files for reading/writing
+!
 !  Revision 5.3  2010/11/04 22:43:09  souda
 !  Next iteration... and two additional Makefiles for building the code with debug options.
 !
@@ -63,7 +66,7 @@ subroutine setmat
    integer :: ikey, itread, ispa, lenf, kk, kg, npnts1, npnts2
    integer :: ndsol, nhsol, nasol, kratio, nsc, kgratio, ngsc
    integer :: kgsol, ksol, l, kp, it, np2, ng2, kpoint, kgpoint
-   integer :: ii, jj, itwrite
+   integer :: ii, jj, itwrite, iread
 
    real(8) :: xint, xgint, rminv, totm, rr, q, rdh, rah
    real(8) :: h0fill, dh0fill, d2h0fill, dgh0fill, dg2h0fill
@@ -392,11 +395,11 @@ subroutine setmat
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Read external file with the reorganization energy matrices
-   ! if TREAD option is specified for the keyword SOLVENT()
+   ! if TREAD option is specified for the keyword SOLV()
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   ikey = index(keywrd,' SOLVENT(')
-   call getopt(keywrd,ikey,options)
+   ikey = index(keywrd,' SOLV(')
+   call getopt(keywrd,ikey+6,options)
 
    itread = index(options,' TREAD=')
 
@@ -860,7 +863,7 @@ subroutine setmat
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Write the reorganization energy matrices into an external file
-   ! if TWRITE= option is specified for the keyword SOLVENT()
+   ! if TWRITE= option is specified for the keyword SOLV()
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    itwrite = index(options,' TWRITE=')
@@ -1038,68 +1041,110 @@ subroutine setmat
    delta_1 =  cos_theta*tr1a1b/sq1 + sin_theta*tr1a2a/sq1
    delta_2 = -sin_theta*tr1a1b/sq2 + cos_theta*tr1a2a/sq2
 
+
    !===================================================================
-   ! calculate the dipole moments of the diabatic charge distributions
-   ! with the origin placed at the center of 1a charge distribution.
+   ! Initialize the dipole moment matrix along the proton grid.
    ! (depends only on the proton coordinate)
    !===================================================================
 
-   nhsol = iptsol(2)
+   ikey = index(keywrd,' TRDIPOLE(')
 
-   do kp=1,npnts
-      xyzsol(1,nhsol) = rlist(k)*bohr2a
-      xyzsol(2,nhsol) = 0.d0
-      xyzsol(3,nhsol) = 0.d0
-      call calculate_dipole_moment_diab(kp)
-   enddo
-
-   write(6,'(/1x,"Dipole moments of the diabatic charge distributions (proton at the middle of the PT interface)")')
-   write(6,'( 1x,"   State  ","     d_x         d_y          d_z          |d|  ")')
-
-   write(6,'( 1x,"    1a    ",4f12.6)') dipole_moment_diab_x(1,1,npnts/2), &
-                                      & dipole_moment_diab_y(1,1,npnts/2), &
-                                      & dipole_moment_diab_z(1,1,npnts/2), &
-   &sqrt(dipole_moment_diab_x(1,1,npnts/2)**2 + dipole_moment_diab_y(1,1,npnts/2)**2 + dipole_moment_diab_z(1,1,npnts/2)**2)
-
-   write(6,'( 1x,"    1b    ",4f12.6)') dipole_moment_diab_x(2,2,npnts/2), &
-                                      & dipole_moment_diab_y(2,2,npnts/2), &
-                                      & dipole_moment_diab_z(2,2,npnts/2), &
-   &sqrt(dipole_moment_diab_x(2,2,npnts/2)**2 + dipole_moment_diab_y(2,2,npnts/2)**2 + dipole_moment_diab_z(2,2,npnts/2)**2)
-
-   write(6,'( 1x,"    2a    ",4f12.6)') dipole_moment_diab_x(3,3,npnts/2), &
-                                      & dipole_moment_diab_y(3,3,npnts/2), &
-                                      & dipole_moment_diab_z(3,3,npnts/2), &
-   &sqrt(dipole_moment_diab_x(3,3,npnts/2)**2 + dipole_moment_diab_y(3,3,npnts/2)**2 + dipole_moment_diab_z(3,3,npnts/2)**2)
-
-   write(6,'( 1x,"    2b    ",4f12.6)') dipole_moment_diab_x(4,4,npnts/2), &
-                                      & dipole_moment_diab_y(4,4,npnts/2), &
-                                      & dipole_moment_diab_z(4,4,npnts/2), &
-   &sqrt(dipole_moment_diab_x(4,4,npnts/2)**2 + dipole_moment_diab_y(4,4,npnts/2)**2 + dipole_moment_diab_z(4,4,npnts/2)**2)
-
-
-   write(72,'(/1x,"Dipole moments of the diabatic charge distributions (proton at the middle of the PT interface)")')
-   write(72,'( 1x,"   State  ","     d_x         d_y          d_z          |d|  ")')
-
-   write(72,'( 1x,"    1a    ",4f12.6)') dipole_moment_diab_x(1,1,npnts/2), &
-                                      & dipole_moment_diab_y(1,1,npnts/2), &
-                                      & dipole_moment_diab_z(1,1,npnts/2), &
-   &sqrt(dipole_moment_diab_x(1,1,npnts/2)**2 + dipole_moment_diab_y(1,1,npnts/2)**2 + dipole_moment_diab_z(1,1,npnts/2)**2)
-
-   write(72,'( 1x,"    1b    ",4f12.6)') dipole_moment_diab_x(2,2,npnts/2), &
-                                      & dipole_moment_diab_y(2,2,npnts/2), &
-                                      & dipole_moment_diab_z(2,2,npnts/2), &
-   &sqrt(dipole_moment_diab_x(2,2,npnts/2)**2 + dipole_moment_diab_y(2,2,npnts/2)**2 + dipole_moment_diab_z(2,2,npnts/2)**2)
-
-   write(72,'( 1x,"    2a    ",4f12.6)') dipole_moment_diab_x(3,3,npnts/2), &
-                                      & dipole_moment_diab_y(3,3,npnts/2), &
-                                      & dipole_moment_diab_z(3,3,npnts/2), &
-   &sqrt(dipole_moment_diab_x(3,3,npnts/2)**2 + dipole_moment_diab_y(3,3,npnts/2)**2 + dipole_moment_diab_z(3,3,npnts/2)**2)
-
-   write(72,'( 1x,"    2b    ",4f12.6)') dipole_moment_diab_x(4,4,npnts/2), &
-                                      & dipole_moment_diab_y(4,4,npnts/2), &
-                                      & dipole_moment_diab_z(4,4,npnts/2), &
-   &sqrt(dipole_moment_diab_x(4,4,npnts/2)**2 + dipole_moment_diab_y(4,4,npnts/2)**2 + dipole_moment_diab_z(4,4,npnts/2)**2)
+   if (ikey.ne.0) then
    
+      !===================================================================
+      ! Read the dipole moment matrix along the proton grid from disk.
+      !===================================================================
+
+      call getopt(keywrd,ikey+10,options)
+      iread = index(options,' FILE=')
+
+
+
+
+
+
+      !------ to be coded....
+      write(*,'(/1x,"from SETMAT: the keyword TRDIPOLE for reading dipole moments from disk")')
+      write(*,'( 1x,"             is not implemented yet. Coming soon.")')
+      stop
+
+
+
+
+
+
+
+
+
+   else
+
+      !===================================================================
+      ! calculate the dipole moments of the diabatic charge distributions
+      ! Off-diagonal elements, i.e. transition moments between diabatic
+      ! states, are assumed to be zero. This is consistent with the
+      ! assumption of negligible off-diagonal densities in the diabatic
+      ! basis (GMH-like diabatic states).
+      !===================================================================
+
+      nhsol = iptsol(2)
+
+      do kp=1,npnts
+         xyzsol(1,nhsol) = rlist(k)*bohr2a
+         xyzsol(2,nhsol) = 0.d0
+         xyzsol(3,nhsol) = 0.d0
+         call calculate_dipole_moment_diab(kp)
+      enddo
+
+      write(6,'(/1x,"Dipole moments of the diabatic charge distributions (proton at the middle of the PT interface)")')
+      write(6,'( 1x,"   State  ","      d_x         d_y         d_z          |d|  ")')
+
+      write(6,'( 1x,"    1a    ",4f12.6)') dipole_moment_diab_x(1,1,npnts/2), &
+                                         & dipole_moment_diab_y(1,1,npnts/2), &
+                                         & dipole_moment_diab_z(1,1,npnts/2), &
+      &sqrt(dipole_moment_diab_x(1,1,npnts/2)**2 + dipole_moment_diab_y(1,1,npnts/2)**2 + dipole_moment_diab_z(1,1,npnts/2)**2)
+
+      write(6,'( 1x,"    1b    ",4f12.6)') dipole_moment_diab_x(2,2,npnts/2), &
+                                         & dipole_moment_diab_y(2,2,npnts/2), &
+                                         & dipole_moment_diab_z(2,2,npnts/2), &
+      &sqrt(dipole_moment_diab_x(2,2,npnts/2)**2 + dipole_moment_diab_y(2,2,npnts/2)**2 + dipole_moment_diab_z(2,2,npnts/2)**2)
+
+      write(6,'( 1x,"    2a    ",4f12.6)') dipole_moment_diab_x(3,3,npnts/2), &
+                                         & dipole_moment_diab_y(3,3,npnts/2), &
+                                         & dipole_moment_diab_z(3,3,npnts/2), &
+      &sqrt(dipole_moment_diab_x(3,3,npnts/2)**2 + dipole_moment_diab_y(3,3,npnts/2)**2 + dipole_moment_diab_z(3,3,npnts/2)**2)
+
+      write(6,'( 1x,"    2b    ",4f12.6)') dipole_moment_diab_x(4,4,npnts/2), &
+                                         & dipole_moment_diab_y(4,4,npnts/2), &
+                                         & dipole_moment_diab_z(4,4,npnts/2), &
+      &sqrt(dipole_moment_diab_x(4,4,npnts/2)**2 + dipole_moment_diab_y(4,4,npnts/2)**2 + dipole_moment_diab_z(4,4,npnts/2)**2)
+
+
+      write(72,'(/1x,"Dipole moments of the diabatic charge distributions (proton at the middle of the PT interface)")')
+      write(72,'( 1x,"   State  ","      d_x         d_y         d_z          |d|  ")')
+   
+      write(72,'( 1x,"    1a    ",4f12.6)') dipole_moment_diab_x(1,1,npnts/2), &
+                                         & dipole_moment_diab_y(1,1,npnts/2), &
+                                         & dipole_moment_diab_z(1,1,npnts/2), &
+      &sqrt(dipole_moment_diab_x(1,1,npnts/2)**2 + dipole_moment_diab_y(1,1,npnts/2)**2 + dipole_moment_diab_z(1,1,npnts/2)**2)
+
+      write(72,'( 1x,"    1b    ",4f12.6)') dipole_moment_diab_x(2,2,npnts/2), &
+                                         & dipole_moment_diab_y(2,2,npnts/2), &
+                                         & dipole_moment_diab_z(2,2,npnts/2), &
+      &sqrt(dipole_moment_diab_x(2,2,npnts/2)**2 + dipole_moment_diab_y(2,2,npnts/2)**2 + dipole_moment_diab_z(2,2,npnts/2)**2)
+
+      write(72,'( 1x,"    2a    ",4f12.6)') dipole_moment_diab_x(3,3,npnts/2), &
+                                         & dipole_moment_diab_y(3,3,npnts/2), &
+                                         & dipole_moment_diab_z(3,3,npnts/2), &
+      &sqrt(dipole_moment_diab_x(3,3,npnts/2)**2 + dipole_moment_diab_y(3,3,npnts/2)**2 + dipole_moment_diab_z(3,3,npnts/2)**2)
+
+      write(72,'( 1x,"    2b    ",4f12.6)') dipole_moment_diab_x(4,4,npnts/2), &
+                                         & dipole_moment_diab_y(4,4,npnts/2), &
+                                         & dipole_moment_diab_z(4,4,npnts/2), &
+      &sqrt(dipole_moment_diab_x(4,4,npnts/2)**2 + dipole_moment_diab_y(4,4,npnts/2)**2 + dipole_moment_diab_z(4,4,npnts/2)**2)
+
+
+   endif
+
    write(72,*)
    close(72)
 
