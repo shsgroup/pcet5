@@ -5,9 +5,12 @@ module geometry
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:36 $
-!  $Revision: 5.2 $
+!  $Date: 2010-11-24 22:37:40 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:36  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !-----------------------------------------------------------------------
 
@@ -142,17 +145,27 @@ contains
    !
    !  Card N+1: empty line
    !
-   !  Card N+2: Title for EVB charges
+   !  Card N+2: optional line with RADIUS keyword (custom VdW radii)
    !
-   !  Cards N+3..M: charges on atoms for EVB states 1a, 1b, 2a, and 2b
+   !  Cards N+3..M: VdW radii for FRCM
    !
    !  Card M+1: empty line
    !
-   !  Card M+2: Title for PT interface
+   !  Card M+2: Title for EVB charges (with CHARGES keyword)
    !
-   !  Card M+3: three integers identifying the atoms in the PT interface
+   !  Cards M+3..L: charges on atoms for EVB states 1a, 1b, 2a, and 2b
    !
-   !  Card M+4..: empty lines
+   !  Card L+1: empty line
+   !
+   !  Card L+2: Title for PT interface (with PT keyword)
+   !
+   !  Card L+3: three integers identifying the atoms in the PT interface
+   !
+   !  Card L+4..: empty line
+   !
+   !  Card L+5: Title for ET interface (with ET keyword)
+   !
+   !  Card L+6: two integers identifying the ET donor and acceptor atoms
    !
    !--------------------------------------------------------------------
       implicit none
@@ -173,7 +186,7 @@ contains
       real(8), dimension(3,nat_) ::  geo
       real(8), dimension(nat_)   :: qatom
 
-      integer :: length, i, j, natom, nchr, ndp, nda
+      integer :: length, i, j, natom, nchr, ndp, nda, io_status
       real(8) :: tach, dif, totm, xdp, ydp, zdp, xda, yda, zda
       real(8) :: xcntr, ycntr, zcntr
 
@@ -272,6 +285,30 @@ contains
       call convrt(geo,xyz,labels_,nai,nbi,nci,natom,xyzkey)
       nat = natom
 
+      !-- skip optional sections read by FRCM routines
+
+      do
+
+         read(in,'(a)',iostat=io_status) line
+
+         if (io_status.gt.0) then
+            write(6,'(/" ERROR during reading geometry input file")')
+            stop 'in the GEOIN routine...'
+         endif
+
+         if (index(line,"CHARGES").ne.0) then
+            backspace in
+            exit
+         endif
+
+         if (io_status.lt.0) then
+            write(6,'(/" Unexpected end of the geometry input file: CHARGES section is missing.")')
+            stop 'in the GEOIN routine...'
+         endif
+
+      enddo
+
+
       ! Read in EVB charges on atoms
       ! (Note that dummy atoms are not in the list!!!)
 
@@ -340,12 +377,24 @@ contains
       read(in,'(a)') line
       read(in,*) (ipt(i),i=1,3)
 
+      !-- check if indices are within atom range
+      if (.not.check_range(nat,ipt)) then
+         write(6,'(/" The indices of atoms in the PT interface are outside the range of atoms")')
+         stop 'in the GEOIN routine...'
+      endif
+
       ! Read in two integers identifying the atoms
       ! in the ET interface
       ! (Electron Donor, Electron Acceptor)
 
       read(in,'(a)') line
       read(in,*) (iet(i),i=1,2)
+
+      !-- check if indices are within atom range
+      if (.not.check_range(nat,iet)) then
+         write(6,'(/" The indices of atoms in the ET interface are outside the range of atoms")')
+         stop 'in the GEOIN routine...'
+      endif
 
       ! Put the coordinat system origin at the center of mass
       ! of the proton transfer interface
@@ -1338,6 +1387,30 @@ contains
       return
 
    end subroutine xyzout
+
+   !---------------------------------------------------------------------
+   ! check if elements of iarr are within the range ( < n )
+   !---------------------------------------------------------------------
+   function check_range(n,iarr) result(flag)
+
+      integer, intent(in) :: n
+      integer, intent(in), dimension(:) :: iarr
+      logical :: flag
+
+      integer :: i, isize
+
+      flag = .true.
+      isize = size(iarr)
+
+      do i=1,isize
+         if (iarr(i).lt.1.or.iarr(i).gt.n) then
+            flag = .false.
+            exit
+         endif
+      enddo
+
+   end function check_range
+
 
    !---------------------------------------------------------------------
 end module geometry
