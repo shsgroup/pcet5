@@ -15,9 +15,12 @@ module gasmat
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:36 $
-!  $Revision: 5.2 $
+!  $Date: 2010-12-15 21:24:55 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:36  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !=======================================================================
 
@@ -27,10 +30,10 @@ module gasmat
 
    real*8, allocatable, dimension(:,:,:,:) :: h0, dh0, d2h0, dgh0, dg2h0
 
-   !=======================================================================
-   ! member subroutines and functions
-   !=======================================================================
-   contains
+!=======================================================================
+! member subroutines and functions
+!=======================================================================
+contains
 
    subroutine alloc_gasmat(ndim,ngdim,deriv,derivg)
    

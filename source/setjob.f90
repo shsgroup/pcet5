@@ -6,9 +6,12 @@ subroutine setjob
 !---------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-11-10 21:14:21 $
-!  $Revision: 5.3 $
+!  $Date: 2010-12-15 21:24:56 $
+!  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.3  2010/11/10 21:14:21  souda
+!  Last addition/changes. IMPORTANT: Solvation keyword is back to SOLV( for compatibility reasons
+!
 !  Revision 5.2  2010/10/28 21:29:37  souda
 !  First (working and hopefully bug-free) source of PCET 5.x
 !
@@ -1014,7 +1017,7 @@ subroutine setjob
       ! DELTA - the width of the layer between two cavities
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-      if (index(options,' H2O').ne.0) then
+      if (index(options,' H2O').ne.0.or.index(options,' WATER').ne.0) then
          kappa = 0.9d0
          delta = 1.0d0
       elseif (index(options,' CH2CL2').ne.0) then

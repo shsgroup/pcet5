@@ -60,9 +60,12 @@ subroutine et2
 !----------------------------------------------------------------------C
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:35 $
-!  $Revision: 5.2 $
+!  $Date: 2010-12-15 21:24:55 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:35  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !======================================================================C
    use pardim
@@ -267,6 +270,11 @@ subroutine et2
       ! MM5 potential for general O-H...O systems
       call h0mat_mm5gen(h0k)
 
+   elseif (igas.eq.7) then
+
+      ! Harmonic potential for general PT systems
+      call h0mat_harm(h0k)
+
    else
 
       write(*,'(/1x,'' error in et2: igas='',i2)')
@@ -349,7 +357,8 @@ subroutine et2
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    er = tk(ireac,ireac) + tk(iprod,iprod) - 2.d0*tk(ireac,iprod)
    er = er/2.d0 + alin
-   write(6,'(/1x,''ET reorganization energy: '',T35,F12.6,'' kcal/mol'')') er
+   write(6,'(/1x,"ET reorganization energy      : ",T35,F12.6," kcal/mol")') er
+   write(6,'( 1x,"Stokes shift (linear response): ",T35,F12.6," cm^-1")') 2.d0*er*cal2ev*ev2cm
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Free energy curves

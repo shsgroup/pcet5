@@ -5,9 +5,12 @@ module geometry
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-11-24 22:37:40 $
-!  $Revision: 5.3 $
+!  $Date: 2010-12-15 21:24:55 $
+!  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.3  2010/11/24 22:37:40  souda
+!  workaround for optional input of custom VdW radii for FRCM calculation
+!
 !  Revision 5.2  2010/10/28 21:29:36  souda
 !  First (working and hopefully bug-free) source of PCET 5.x
 !
@@ -136,6 +139,7 @@ contains
    !  Card 1: Keyword string specifying the geometry format
    !          XYZ - cartesian coordinates;
    !          INT - internal coordinates (default);
+   !          <...> - any FRCM keywords.
    !
    !  Card 2: Title (up to 80 characters)
    !

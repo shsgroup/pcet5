@@ -79,9 +79,12 @@ program pcet
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-11-10 21:14:21 $
-!  $Revision: 5.3 $
+!  $Date: 2010-12-15 21:24:56 $
+!  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.3  2010/11/10 21:14:21  souda
+!  Last addition/changes. IMPORTANT: Solvation keyword is back to SOLV( for compatibility reasons
+!
 !  Revision 5.2  2010/10/28 21:29:36  souda
 !  First (working and hopefully bug-free) source of PCET 5.x
 !
@@ -281,7 +284,10 @@ program pcet
       !---------------------------------------------
       if (index(keywrd,' ET2').ne.0) then
          call et2
-         if (index(keywrd,' QUANTUM').eq.0) cycle
+         if (index(keywrd,' QUANTUM').eq.0) then
+            call deinitmat
+            cycle
+         endif
       endif
 
       !-------------------------------------------------

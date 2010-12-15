@@ -18,12 +18,17 @@ module cst
 !  EV2AU  - electron volts to atomic units
 !  HZ2CM  - Hertz to inverse centimeters
 !  CM2HZ  - inverse centimeters to Hertz
+!  DEBYE2AU - Debye to atomic units (electric dipole moment)
+!  AU2DEBYE - atomic units to Debye (electric dipole moment)
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-11-04 22:43:08 $
-!  $Revision: 5.3 $
+!  $Date: 2010-12-15 21:24:55 $
+!  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.3  2010/11/04 22:43:08  souda
+!  Next iteration... and two additional Makefiles for building the code with debug options.
+!
 !  Revision 5.2  2010/10/28 21:29:36  souda
 !  First (working and hopefully bug-free) source of PCET 5.x
 !
@@ -45,6 +50,7 @@ module cst
    real(8) :: pi, kb, hbar, hbarps, dalton, hmass, dmass
    real(8) :: bohr2a, a2bohr, au2cal, cal2au, ev2cm, cm2ev
    real(8) :: au2ev, ev2au, hz2cm, cm2hz, e2, ev2cal, cal2ev, pico
+   real(8) :: debye2au, au2debye
 
    public :: init_cst
 
@@ -92,6 +98,8 @@ module cst
       ev2cal =   23.04512014d0
       cal2ev =   one/ev2cal
       pico   =    1.d12
+      debye2au = 0.3934303d0
+      au2debye = one/debye2au
 
    end subroutine init_cst
 
