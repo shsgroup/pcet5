@@ -13,9 +13,12 @@
       !----------------------------------------------------------------|
       !
       !  $Author: souda $
-      !  $Date: 2010-10-28 21:29:36 $
-      !  $Revision: 5.2 $
+      !  $Date: 2011-01-04 19:56:42 $
+      !  $Revision: 5.3 $
       !  $Log: not supported by cvs2svn $
+      !  Revision 5.2  2010/10/28 21:29:36  souda
+      !  First (working and hopefully bug-free) source of PCET 5.x
+      !
       !
       !----------------------------------------------------------------|
 
@@ -30,16 +33,16 @@
       !----------------------------------------------------------------|
       ! Format, data, parameter, type, e.t.c. statements
       !----------------------------------------------------------------|
-      implicit real*8 (a-h,o-z)
+      implicit real(8) (a-h,o-z)
       private
       save
 
       !============================================
       ! Parameters for the FRCM portion of the code
       !--------------------------------------------
-      real*8,  PARAMETER :: GATINC = 2.0D0
-      real*8,  PARAMETER :: RTFQ   = 1.1D0
-      real*8,  PARAMETER :: GSAV   = 0.9D0
+      real(8),  PARAMETER :: GATINC = 2.0D0
+      real(8),  PARAMETER :: RTFQ   = 1.1D0
+      real(8),  PARAMETER :: GSAV   = 0.9D0
 
       integer, PARAMETER :: MAXHEV=300, MAXLIT=300
       integer, PARAMETER :: NUMATM=MAXHEV+MAXLIT
@@ -67,7 +70,7 @@
       integer, PARAMETER :: NDNBMX=500
       integer, PARAMETER :: NDFMAX=5000
       integer, PARAMETER :: MXRAS=100
-      integer, PARAMETER :: MSZSV=NTQ*NFQ*0.5*GSAV+28*NB+4*NBS
+      integer, PARAMETER :: MSZSV=NTQ*NFQ*GSAV/2+28*NB+4*NBS
 
 
 C=======================================================================
@@ -98,81 +101,81 @@ C-----------------------------------------------------------------------
 
       integer :: NDLATS(NSF),NDNEB(NDNBMX)                ! /CURLEN/
 
-      real*8 :: CORE(107)                                 ! /CORE/
-      real*8 :: QATOM(NUMATM)                             ! /QATOM/
+      real(8) :: CORE(107)                                 ! /CORE/
+      real(8) :: QATOM(NUMATM)                             ! /QATOM/
 
-      real*8 :: TSF1,TSF2,TSF3,TSFE,TCOLA,TCOLE,TCONNU    ! /TIMSF/
-      real*8 :: TIME0                                     ! /TIMING/
+      real(8) :: TSF1,TSF2,TSF3,TSFE,TCOLA,TCOLE,TCONNU    ! /TIMSF/
+      real(8) :: TIME0                                     ! /TIMING/
 
-      real*8, public :: XX(NSF),YY(NSF),ZZ(NSF)           ! /PR/
-      real*8 :: RV(NSF),QSFE(NSF)                         ! /PR/
-      real*8 :: COL2,COL1,COIN,COEL                       ! /PECAR/
+      real(8), public :: XX(NSF),YY(NSF),ZZ(NSF)           ! /PR/
+      real(8) :: RV(NSF),QSFE(NSF)                         ! /PR/
+      real(8) :: COL2,COL1,COIN,COEL                       ! /PECAR/
 
-      real*8 :: X0(NS),Y0(NS),Z0(NS),
+      real(8) :: X0(NS),Y0(NS),Z0(NS),
      ,          AS(NS),QS(NS),QCOR(NS)                    ! /SOLMAT/
 
-      real*8 :: X0EL(NS),Y0EL(NS),Z0EL(NS),
+      real(8) :: X0EL(NS),Y0EL(NS),Z0EL(NS),
      ,          ASEL(NS),QSEL(NS),QCOREL(NS)              ! /SOLMAEL/
 
-      real*8 :: RVEL(NSF),QSFEEL(NSF)                     ! /PREL/
-      real*8 :: FACTOR,FACTOR2                            ! /FACTSF/
+      real(8) :: RVEL(NSF),QSFEEL(NSF)                     ! /PREL/
+      real(8) :: FACTOR,FACTOR2                            ! /FACTSF/
 
-      real*8,  public :: COORD(3,NUMATM)                  !
+      real(8),  public :: COORD(3,NUMATM)                  !
       integer, public :: NHB(3)                           ! /GEOMXYZ/
 
-      real*8  :: EPS,EPSEL                                ! /EPSS
+      real(8)  :: EPS,EPSEL                                ! /EPSS
 
-      real*8  :: CHARGE,QA(NMECI,NUMATM)                  !
+      real(8)  :: CHARGE,QA(NMECI,NUMATM)                  !
       integer :: N                                        ! /CHARGE/
 
-      real*8  :: RADD(NSF),NADD(NSF)                      !
+      real(8)  :: RADD(NSF),NADD(NSF)                      !
       integer :: NUMADD                                   ! /ADDSF/
 
-      real*8  :: CON,VSOLV,RSOLV,SELFCR,CHDIFF            !
+      real(8)  :: CON,VSOLV,RSOLV,SELFCR,CHDIFF            !
       integer :: ITSE                                     ! /VOL/
 
-      real*8 :: RADDEL(NSF)                               ! /ADDSFEL/
+      real(8) :: RADDEL(NSF)                               ! /ADDSFEL/
 
-      real*8  :: DATTE0(MXRAS),DPRAM(MXRAS),DRASD,DSMIN   !
+      real(8)  :: DATTE0(MXRAS),DPRAM(MXRAS),DRASD,DSMIN   !
       integer :: ITMA                                     ! /RESINF/
 
-      real*8 :: COTETM(NTQ),SITETM(NTQ)
-      real*8 :: COFIM(NFQ),SIFIM(NFQ),FIM(NFQ)            ! /SICO/
+      real(8) :: COTETM(NTQ),SITETM(NTQ)
+      real(8) :: COFIM(NFQ),SIFIM(NFQ),FIM(NFQ)            ! /SICO/
 
-      real*8 :: COSBT,RAT,COSBT1,RNE,RR,RDS,RDS1         ! /SCHCON/
+      real(8) :: COSBT,RAT,COSBT1,RNE,RR,RDS,RDS1         ! /SCHCON/
 
-      real*8 :: SITET0(NB),COTET0(NB),FI0(NB),SIFI0(NB),  !
+      real(8) :: SITET0(NB),COTET0(NB),FI0(NB),SIFI0(NB),  !
      ,          COFI0(NB),COTECR(NB),SITECR(NB),          !
      ,          TETECR(NB),RRECR(NB),DATTET(MXRAS)        ! /RESCON/
 
       integer :: NSQRD,NSQDUM                             !
-      real*8  :: SQRMAS(1001)                             ! /SQRMS/
+      real(8)  :: SQRMAS(1001)                             ! /SQRMS/
 
       integer :: NNBNEB(NDNBMX)
-      real*8  :: COTNB(NDNBMX), SITNB(NDNBMX),            !
+      real(8)  :: COTNB(NDNBMX), SITNB(NDNBMX),            !
      ,           COFNB(NDNBMX), SIFNB(NDNBMX),            !
      ,           COECNB(NDNBMX),SIECNB(NDNBMX)            ! /NEBCOR/
 
-      real*8 :: XXOLD(NSF),YYOLD(NSF),ZZOLD(NSF),         !
+      real(8) :: XXOLD(NSF),YYOLD(NSF),ZZOLD(NSF),         !
      ,          RVOLD(NSF),QSFOLD(NSF)                    ! /PROLD/
 
-      real*8  :: X01(NS),Y01(NS),Z01(NS),                 !
+      real(8)  :: X01(NS),Y01(NS),Z01(NS),                 !
      ,           AS1(NS),QCOR1(NS)                        !
       integer :: IJ0,NW0(NSF)                             ! /SOLMT1/
 
-      real*8  :: X01EL(NS),Y01EL(NS),Z01EL(NS),           !
+      real(8)  :: X01EL(NS),Y01EL(NS),Z01EL(NS),           !
      ,           AS1EL(NS),QCOR1EL(NS)                    !
       integer :: IJ0EL, NW0EL(NSF)                        ! /SOLMT1EL/
 
-      real*8 :: CHARC, CHARE                              ! /CHH/
-      real*8 :: EN, EPO, EVAC, ESCFOL                     ! /ENUCL/
+      real(8) :: CHARC, CHARE                              ! /CHH/
+      real(8) :: EN, EPO, EVAC, ESCFOL                     ! /ENUCL/
       
-      real*8 :: STIME, STIM0, STIM3
+      real(8) :: STIME, STIM0, STIM3
 
 C     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 C     Van der Waals radii
 C     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      real*8, dimension(108) :: RVDW =                    ! /RVDWS/
+      real(8), dimension(108) :: RVDW =                    ! /RVDWS/
      + (/
      +     1.20D0, 1.50D0, 1.50D0, 1.50D0, 1.50D0, 1.60D0, 1.50D0,
      +     1.40D0, 1.30D0, 1.50D0, 1.50D0, 1.50D0, 1.50D0, 1.50D0,
@@ -195,7 +198,7 @@ C     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 C     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 C     Standard atomic masses
 C     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      real*8, dimension(108) :: AMS =                     ! /ISTOPE/
+      real(8), dimension(108) :: AMS =                     ! /ISTOPE/
      + (/
      +    1.00790D0,   4.00260D0,   6.94000D0,   9.01218D0,
      +   10.81000D0,  12.01100D0,  14.00670D0,  15.99940D0,  18.99840D0,
@@ -223,9 +226,9 @@ C     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
      +  /)
 
 
-      !-------------------------------------------------------------------|
+      !----------------------------------------------------------------|
       ! Member subprograms
-      !-------------------------------------------------------------------|
+      !----------------------------------------------------------------|
       public :: frcminit, solint
 
       contains
@@ -255,13 +258,13 @@ C     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       !
       !=================================================================
 
-      IMPLICIT REAL*8 (A-H,O-Z)
-      real*8, PARAMETER :: EV2KCAL = 23.061D0
+      IMPLICIT REAL(8) (A-H,O-Z)
+      real(8), PARAMETER :: EV2KCAL = 23.061D0
 
       !include 'SIZES'
       !include 'parsol.h'
 
-      real*8, intent(out), dimension(4,4) :: TK,TINFK,TRK,TRINFK
+      real(8), intent(out), dimension(4,4) :: TK,TINFK,TRK,TRINFK
       logical, save :: FIRST=.true., PRNT, S12DR
 
       !COMMON /EPSS/ EPS,EPSEL
@@ -276,8 +279,8 @@ C     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       !COMMON /GEOMXYZ/COORD(3,NUMATM)
       !COMMON /CHARGE/CHARGE,QA(NMECI,NUMATM),N
 
-      real*8, dimension(NMI,NMI) :: TIN,TEL,T
-      real*8, dimension(4,4) :: TKBACK,TINFKBACK
+      real(8), dimension(NMI,NMI) :: TIN,TEL,T
+      real(8), dimension(4,4) :: TKBACK,TINFKBACK
 
       !SAVE PRNT,S12DR
       !DATA FIRST /.TRUE./
@@ -318,7 +321,7 @@ C         N1=1
             WRITE(6,'(7x,''Dielectric permittivity in Volume 2 ='',
      *      F7.3)')EPSEL
             WRITE(6,'(36x,'' KAPPA ='',F7.3)')FACTOR
-            WRITE(6,'(35x,'' LAMBDA ='',F7.3)')FACTOR2
+            WRITE(6,'(35x,'' DELTA ='',F7.3)')FACTOR2
             WRITE(6,'(/,24X,''The integral RO('',I2,'')*FI('',I2,'') =''
      *      ,F8.4,'' eV'')')J,J,T(J,J)
             WRITE(6,'(/81(''-''))')
@@ -383,7 +386,7 @@ C         N1=1
                WRITE(6,'(7x,''Dielectric permittivity in Volume 2 ='',
      *         F7.3)')EPS2
                WRITE(6,'(36x,'' KAPPA ='',F7.3)')FACTOR
-               WRITE(6,'(35x,'' LAMBDA ='',F7.3)')FACTOR2
+               WRITE(6,'(35x,'' DELTA ='',F7.3)')FACTOR2
                WRITE(6,'(/,24X,''The integral RO('',I2,'')*FI_el('',I2,
      *         '') ='',F8.4,'' eV'')')J,J,TEL(J,J)
                WRITE(6,'(/81(''-''))')
@@ -536,8 +539,8 @@ C============USING A SET OF REDUCED DENSITIES===========================
      ;             + 2.D0*(TINFK(2,3)-TINFK(1,2)-TINFK(1,3))
       ENDIF
 C==========(HYD) END SOLVATION MATRIX OPTIONS===========================
- 
-                                                                         
+
+
 C============(HYD) NOW SYMMETRIZING RELATIVE TO DIAGONAL================
 C============MUST ALWAYS BE DONE ELSE WHOLE APPROACH NOT VALIDATED======
 C======NOSYMD SHOULD BE USED TO CHECK ONLY TO SEE HOW VALID APPROACH IS
@@ -602,17 +605,17 @@ C     - initializes internal COMMON-blocks used in FRCM
 C       calculations of the reorganization energy matrices
 C======================================================================C
 
-      IMPLICIT DOUBLE PRECISION (A-H, O-Z)
+      IMPLICIT REAL(8) (A-H, O-Z)
       !include 'SIZES'
       !include 'pardim.h'
       !include 'elmnts.h'
 
       integer, intent(in)                     :: ISFILE, NAT
       integer, intent(in), dimension(:)       :: IPT, LAB
-      real*8,  intent(in)                     :: EPS0,EPS8,KAPPA,DELTA
-      real*8,  intent(inout), dimension(:,:)  :: XYZ
-      real*8,  intent(in), dimension(:,:)     :: CHR
-      real*8,  intent(in)                     :: CHRTOT
+      real(8), intent(in)                     :: EPS0,EPS8,KAPPA,DELTA
+      real(8), intent(inout), dimension(:,:)  :: XYZ
+      real(8), intent(in), dimension(:,:)     :: CHR
+      real(8), intent(in)                     :: CHRTOT
 
       !DIMENSION IPT(*),LAB(*),XYZ(3,*),CHR(NELST,*)
       !CHARACTER KEYWRD*241, KOMENT*81, TITLE*81
@@ -807,12 +810,12 @@ C    COOR(NUMATM,3)  = COORDINATE OF  ATOMS (IN ANGSTROMS).
 C
 ************************************************************************
 *
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
       !INCLUDE 'SIZES'
 
       integer, intent(inout) :: NITER_
-      real*8, intent(in), dimension(3,NUMATM) :: COORD_
-      real*8, intent(inout) :: EPO_, EPOEL_, EPOIN_
+      real(8), intent(in), dimension(3,NUMATM) :: COORD_
+      real(8), intent(inout) :: EPO_, EPOEL_, EPOIN_
 
       LOGICAL, save :: FIRST=.true., TIMES, PRNT
       LOGICAL :: BIGPRT
@@ -944,16 +947,16 @@ C*---------------------------------------------------------------------
 C*     CONN CALCULATES ADDING ENEGY TO TOTAL ONES FROM CORES - TESERA
 C*          INTERACTION (  IN EV  ).
 C*----------------------------------------------------------------------
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
       !INCLUDE 'SIZES'
 
-      real*8,  intent(in), dimension(:,:) :: COORD_
-      real*8,  intent(in), dimension(:) :: X0_, Y0_, Z0_, QS_
+      real(8),  intent(in), dimension(:,:) :: COORD_
+      real(8),  intent(in), dimension(:) :: X0_, Y0_, Z0_, QS_
       integer, intent(in) :: IJ_
-      real*8,  intent(inout) :: EPO_
+      real(8),  intent(inout) :: EPO_
 
       LOGICAL, save :: FIRST=.true.,PRINT
-      real*8,  save :: second = 0.529167D00
+      real(8),  save :: second = 0.529167D00
 
       !COMMON /KEYWRD/ KEYWRD
       !COMMON /QATOM/ QATOM(NUMATM)
@@ -1007,16 +1010,16 @@ C*---------------------------------------------------------------------
 C*     THE PROGRAM CALCULATES POTENTIAL FROM ATOMS AS POINT
 C*     CHARGES POTENTIALS IS CALCULATED IN  A. U.
 C*---------------------------------------------------------------------
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
       !INCLUDE 'SIZES'
 
-      real*8, intent(in), dimension(:,:) :: COORD_
-      real*8, intent(in), dimension(:) :: X0_,Y0_,Z0_,AS_,
+      real(8), intent(in), dimension(:,:) :: COORD_
+      real(8), intent(in), dimension(:) :: X0_,Y0_,Z0_,AS_,
      ,                                    XX_,YY_,ZZ_,RV_
-      real*8, intent(in) :: CON_
+      real(8), intent(in) :: CON_
       integer, intent(in), dimension(:) :: NW_
 
-      real*8, intent(inout), dimension(:) :: QCOR_
+      real(8), intent(inout), dimension(:) :: QCOR_
 
       !DIMENSION X0_(*),Y0_(*),Z0_(*),QCOR_(*),AS_(*),NW_(*)
       !DIMENSION XX_(*),YY_(*),ZZ_(*),RV_(*)
@@ -1029,7 +1032,7 @@ C*---------------------------------------------------------------------
       !COMMON /TIMING/ TIME0
 
       !DATA THRE/0.00001D0/,FIRST /.TRUE./
-      real*8,  save :: THRE = 0.00001D0
+      real(8),  save :: THRE = 0.00001D0
       logical, save :: FIRST=.true.
 
       IF (FIRST ) THEN
@@ -1078,13 +1081,13 @@ C                  QCOR_(IL)=QCOR_(IL)+CORE(NAT(IBT))/RA2*COF
 
 !======================================================================!
       SUBROUTINE GETRAD(IREAD,NRAD,LABRAD,RADRAD)
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
       !INCLUDE 'SIZES'
       
       integer, intent(in) :: IREAD
       integer, intent(out) :: NRAD
       integer, intent(inout), dimension(:) :: LABRAD
-      real*8,  intent(inout), dimension(:) :: RADRAD
+      real(8),  intent(inout), dimension(:) :: RADRAD
 
       !DIMENSION RADRAD(*),LABRAD(*)
 ************************************************************************
@@ -1233,9 +1236,9 @@ C
 C    'COLEND'  THE POLARIZATION PERTURBATION WILL BE PRINTED AT EACH
 C              SCF CYCLE BY SUBPROGRAM COLEND
 C
-C    'CONN'    NUCLEAR ENERGY AND CONTRIBUTION OF CORES IN POLARIZATION ENERGY
-C              WILL BE WRITTEN AFTER SFERE HAS BEEN IMPLEMENTED AT
-C              EACH SCF CYCLE.
+C    'CONN'    NUCLEAR ENERGY AND CONTRIBUTION OF CORES IN POLARIZATION
+C              ENERGY WILL BE WRITTEN AFTER SFERE HAS BEEN IMPLEMENTED
+C              AT EACH SCF CYCLE.
 C
 C    ' SF1'    WRITING INFORMATION ABOUT SPHERES IN SUBPROGRAM SFERA1
 C              ( RV, XX, YY, ZZ ) ON FORMAT 4F10.6
@@ -1282,10 +1285,10 @@ C   LABEL(I) = THE ATOMIC NUMBER OF ATOM\I\.
 C            = 99, THEN THE I-TH ATOM IS A DUMMY ATOM USED ONLY TO
 C              SIMPLIFY THE DEFINITION OF THE MOLECULAR GEOMETRY.
       
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
 
       integer, intent(in) :: ISFILE, NUMAT_
-      real*8, intent(inout), dimension(:,:) :: COORD_
+      real(8), intent(inout), dimension(:,:) :: COORD_
 
       !INCLUDE 'SIZES'
       !CHARACTER*241 KEYWRD, LINE *241,ELEMNT*2
@@ -1312,7 +1315,7 @@ C              SIMPLIFY THE DEFINITION OF THE MOLECULAR GEOMETRY.
       character(241) :: LINE
       logical :: MERT
       integer, dimension(107) :: LABRAD
-      real*8,  dimension(107) :: RADRAD
+      real(8),  dimension(107) :: RADRAD
 C
 C
 C     INPUT VdW ATOMIC RADII
@@ -1464,7 +1467,7 @@ C***      ALL  IN ANGSTROMS .
 CR         RV(I)=RVDW(LABELS(LW))*FACTOR
 CR   70    RVEL(I)=RVDW(LABELS(LW))*FACTOR2
          DO 95 I=1,NN
-          IF (RV(I).LT.0.08)  THEN
+          IF (RV(I).LT.0.08D0)  THEN
              WRITE (6,'( //6X,''THE MAGNITUDE OF THE RADIUS OF ATOM '',
      *       ''NUMBER '',I3/6X,''IS LESS THAN 0.08 A'',
      *       ''  STOP IN GETSFE (LABEL 70) '' )') I
@@ -1543,7 +1546,7 @@ C  120 FORMAT(    4F10.6)
 
       IF (FACTOR2.EQ.0.0D0) THEN
          WRITE(6,'(/''!!!'')')
-         WRITE(6,'('' THE CASE WITH LAMBDA=0.0 CAN NOT BE TREATED IN'',
+         WRITE(6,'('' THE CASE WITH DELTA=0.0 CAN NOT BE TREATED IN'',
      *  '' FRCM MODEL''/'' FOR THIS CASE ONE-CAVITY BKO MODEL WILL BE'',
      *  '' APPLIED '')')
          WRITE(6,'(''!!!''/)')
@@ -1619,7 +1622,7 @@ C  120 FORMAT(    4F10.6)
 !======================================================================!
       SUBROUTINE GETTXT(ISFILE)
 
-      implicit real*8 (a-h,o-z)
+      implicit real(8) (a-h,o-z)
       integer, intent(in) :: ISFILE
 
       !COMMON /KEYWRD/ KEYWRD
@@ -1740,15 +1743,15 @@ C
 
 !======================================================================!
       SUBROUTINE MERTU(K,L,NN_,XX_,YY_,ZZ_,RV_,NW_,X0_,Y0_,Z0_,AS_,IJ_)
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
 
       !INCLUDE 'SIZES'
 
       integer, intent( in) :: K, L, NN_
       integer, intent(out) :: IJ_
 
-      real*8,  intent(in),    dimension(:) :: XX_,YY_,ZZ_,RV_
-      real*8,  intent(inout), dimension(:) :: X0_,Y0_,Z0_,AS_
+      real(8),  intent(in),    dimension(:) :: XX_,YY_,ZZ_,RV_
+      real(8),  intent(inout), dimension(:) :: X0_,Y0_,Z0_,AS_
       integer, intent(inout), dimension(:) :: NW_
 
       !DIMENSION XX_(*),YY_(*),ZZ_(*),RV_(*),NW_(*)
@@ -1825,7 +1828,7 @@ C ***
 
 !======================================================================!
       SUBROUTINE MODFE(ITE,NCFINR)
-      IMPLICIT REAL *8 (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
 
       integer, intent(inout) :: ITE
       integer, intent(in) :: NCFINR
@@ -1841,8 +1844,8 @@ C ***
       !CHARACTER*241 KEYWRD
       !DIMENSION DATTE0(MXRAS),DPRAM(MXRAS)
 
-      real*8, DIMENSION(MXRAS) :: DDTET
-      real*8, DIMENSION(MXRAS) :: DIND
+      real(8), DIMENSION(MXRAS) :: DDTET
+      real(8), DIMENSION(MXRAS) :: DIND
       LOGICAL, save :: PRNT, FIRST=.true.
 
       !SAVE PRNT,FIRST
@@ -1859,12 +1862,12 @@ C ***
       PI=ATAN(1.0D0)*4.0D0
       DO 2 I=1,MXRAS
     2 DPRAM(I)=DIND(I)
-      DPRAM(1)=1.33*DIND(1)
-      DPRAM(2)=1.28*DIND(2)
+      DPRAM(1)=1.33D0*DIND(1)
+      DPRAM(2)=1.28D0*DIND(2)
       DO 3 I=1,MXRAS
    3  DPRAM(I)=DPRAM(I)/DIND(I)
-      DRASD=1.
-      DSMIN=0.75
+      DRASD=1.D0
+      DSMIN=0.75D0
       NTETS=60*NCFINR
       NFIS=120*NCFINR
       NTETS=MIN(NTETS,NTQ)
@@ -1876,7 +1879,7 @@ C ***
       IF(ITE.EQ.0) ITE=MXRAS
       COF=40.0D0/3.0D0/ITE*PI/180.D0
       ITMA=0
-      SS=0.
+      SS=0.D0
       DO 1 I=1,MXRAS
       SS=SS+DIND(I)*COF
       IF(SS.GT.PI) GOTO 4
@@ -1954,9 +1957,9 @@ C
 
 C  WRITING OF MATRIX A(IK,IK) INTO UNIT IU
 
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
       integer, intent(in) :: IU, NDIM, IK
-      real*8, intent(in), dimension(NDIM,NDIM) :: A
+      real(8), intent(in), dimension(NDIM,NDIM) :: A
 
       WRITE (IU,'(2X,8I10)') (I,I=1,IK)
       DO I=1,IK
@@ -1967,7 +1970,7 @@ C  WRITING OF MATRIX A(IK,IK) INTO UNIT IU
 
 !======================================================================!
       SUBROUTINE PRSHOR(LSECT_,NTETM_,NFIM_,NTQ_,NFQ_,N3_)
-      IMPLICIT REAL *8 (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
 
       integer, intent(in) :: NTETM_, NFIM_, NTQ_, NFQ_, N3_
       integer, intent(in) :: LSECT_(NTQ_,NFQ_,3)
@@ -2062,7 +2065,7 @@ C  WRITING OF MATRIX A(IK,IK) INTO UNIT IU
 *
 ***********************************************************************
 *
-      IMPLICIT REAL *8 (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
       !INCLUDE 'SPHSIZES'
 C
 C     NSRM - NUMBER OF ELEMENTS OF THE SMALL SECTOR
@@ -2073,34 +2076,35 @@ C
 C     PARAMETER GRTN INCREASES MEMORY FOR THE ARRAYS NSET,NSEF
 C     INCREASING THIS PARAMETER SPEEDS UP THE REMOVAL OF SMALL SECTORS
 C
-      real*8, PARAMETER :: GRTN=1.1D0
+      real(8), PARAMETER :: GRTN=1.1D0
       integer, PARAMETER :: NTFQ1=NTFQ*GRTN
 
-      real*8,    intent(inout) :: SSECT(NBGEN)
+      real(8),    intent(inout) :: SSECT(NBGEN)
       integer,   intent(inout) :: KSECT(NBGEN)
       integer,   intent(inout) :: ISCFI(NB,NT)
       integer,   intent(inout) :: ITMX(NB), IFMX(NB,NT)
       integer,   intent(inout) :: LSECTK(NTQ,NFQ),LSECTI(NTQ,NFQ),
      ,                            LSECTJ(NTQ,NFQ)
-      real*8,    intent(inout) :: DFSTI
-      real*8,    intent(inout) :: RAT_
+      real(8),    intent(inout) :: DFSTI
+      real(8),    intent(inout) :: RAT_
       integer,   intent(inout) :: NNEB
-      real*8,    intent(inout) :: SPL
+      real(8),    intent(inout) :: SPL
 
       ! ARRAYS FOR THE ELEMENTS OF A SMALL SECTOR,
       ! WHICH HAVE TO BE DISTRIBUTED
       integer, dimension(NSRM) :: MZK0,MZI0,MZJ0,MZTET,MZFI
 
       LOGICAL, save :: PRINT, FIRST=.true.
+      logical :: flag
 C
-      !real*8 :: SITETM(NTQ), COTETM(NTQ)
-      !real*8 :: FIM(NFQ),SIFIM(NFQ),COFIM(NFQ)
+      !real(8) :: SITETM(NTQ), COTETM(NTQ)
+      !real(8) :: FIM(NFQ),SIFIM(NFQ),COFIM(NFQ)
 C
 C     ARRAYS FOR THE DISTRIBUTION OF SMALL SECTORS WITHIN SECTORS
 C
       integer :: LS(NBS)
       integer :: LSNM(NBGEN), LLS(NBS), LIS(NBS)
-      real*8  :: SECDL(NBS), SEDDS(MXRAS)
+      real(8)  :: SECDL(NBS), SEDDS(MXRAS)
 C
 C     ARRAYS FOR THE INTERMEDIATE STORAGE OF INFORMATION ABOUT SECTORS
 C     WHICH ARE TOO LARGE
@@ -2110,7 +2114,7 @@ C
 C     ARRAYS FOR DEBUGGING PRINTING INFORMATION
 C
       integer :: KOTL(NBGEN)
-      real*8  :: SOTL(NBGEN)
+      real(8)  :: SOTL(NBGEN)
       integer, dimension(48) :: INNBIT=(/
      , 1,0,1,0,1,-1,-1,-1,2,0,2,1,2,0,2,1,2,-2,-2,-1,-2,-2,
      ,-1,-2,3,0,3,1,3,2,3,0,3,1,3,2,3,-3,-3,-1,-3,-2,-3,-3,-1,-3,-2,-3/)
@@ -2139,8 +2143,8 @@ C
          FIRST=.FALSE.
          PRINT=(INDEX(KEYWRD,'SECEXL').NE.0)
       ENDIF
-      DSMAX=1.2
-      DFMAXX=1.35
+      DSMAX=1.2D0
+      DFMAXX=1.35D0
       DSAM=DFSTI*RAT_*RAT_*DSMIN
       DO 5 I=1,20
     5 SEDDS(I)=DATTE0(I)*DATTE0(I)*DPRAM(I)*DSAM
@@ -2201,7 +2205,21 @@ C
 C     IF THE TRANFER HAS BEEN COMPLETED OR THE SECTOR BEING CONSIDERED
 C     HAS BEEN EXCLUDED
 C
-      IF(KDDM.EQ.0.OR.SECDL(KDDM).LE.1.D-6) THEN
+
+C(AVS)
+      flag = .false.
+      if (kddm.eq.0) then
+         flag=.true.
+      elseif (secdl(kddm).le.1.d-6) then
+         flag = .true.
+      else
+         flag = .false.
+      endif
+C(AVS)
+
+
+C     IF(KDDM.EQ.0.OR.SECDL(KDDM).LE.1.D-6) THEN
+      if (flag) then
 C
 C        SEPARATING OUT THE SMALLEST SECTOR WHICH HAS TO BE REMOVED
 C
@@ -2329,7 +2347,7 @@ C     WILL NOT BE ANALYSED IN THE FUTURE
 C
       IF(INLL.EQ.0) THEN
          KSECT(KIJT)=-ABS(KSECT(KIJT))
-         SECDL(KDDM)=0.
+         SECDL(KDDM)=0.D0
          GOTO 20
       ENDIF
 C
@@ -2419,8 +2437,8 @@ C
          K1=0
          K2=0
          KK=0
-         SXA=0.
-         SXB=0.
+         SXA=0.D0
+         SXB=0.D0
          DO 15 K=1,NNEB
          DO 15 I=1,ITMX(K)
          DDS=DATTE0(I)*DATTE0(I)*DPRAM(I)*DSAM
@@ -2484,25 +2502,25 @@ C
 *
 ***********************************************************************
 *
-      IMPLICIT REAL *8 (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
 
       ! input
-      real*8,  intent(in) :: SECTTE(NB,NT),SECTFI(NBGEN)
+      real(8),  intent(in) :: SECTTE(NB,NT),SECTFI(NBGEN)
       integer, intent(in) :: ISCFI(NB,NT)
       integer, intent(in) :: ITMX(NB),IFMX(NB,NT)
       integer, intent(in) :: NNEB
       integer, intent(in) :: NMSBR(NB)
-      real*8,  intent(in) :: SPL
+      real(8),  intent(in) :: SPL
 
       ! output
       integer, intent(inout) :: LSECTK(NTQ,NFQ),LSECTI(NTQ,NFQ),
      ,                          LSECTJ(NTQ,NFQ)
       integer, intent(inout) :: KSECT(NBGEN)
-      real*8,  intent(inout) :: SSECT(NBGEN)
+      real(8),  intent(inout) :: SSECT(NBGEN)
       integer, intent(inout) :: LNUSEC_(NTQ,NFQ)
 
       ! local variables
-      real*8 :: COTALL(NB)
+      real(8) :: COTALL(NB)
 
       !INCLUDE 'SPHSIZES'
       !integer LSECTK,LSECTI,LSECTJ
@@ -2528,7 +2546,7 @@ C
 
       PI = DATAN(1.0D0)*4.0D0
       STIME=SECOND()
-      STIM0=0.
+      STIM0=0.D0
 C
 C          LOOP OVER TETA
 C
@@ -2593,17 +2611,17 @@ C
                       GOTO 63
   61                  CONTINUE
                       IFMN=IFMX(KNEB,I)
-                      IF(DABS(COT0).LT.1.-1.D-5) GOTO 64
+                      IF(DABS(COT0).LT.1.D0-1.D-5) GOTO 64
                       CFF=COF
-                      IF(FIM(IFIM).GT.PI) CFF=-CFF-2.
+                      IF(FIM(IFIM).GT.PI) CFF=-CFF-2.D0
                       GOTO 66
    64                 STT=SIMX
                       CFF=(COT*SIT0-SIT*COT0*(COF*COF0+SIF*SIF0))/STT
                       FIF=FIM(IFIM)-FI0(KNEB)
-                      IF((FIF.GE.0..AND.FIF.LE.PI.AND.FI0(KNEB).LE.PI).
-     *                OR.
-     *                ((FIF.GE.0..OR.FIF.LE.-PI).AND.FI0(KNEB).GT.PI))
-     *                CFF=-CFF-2.
+                      IF((FIF.GE.0.D0.AND.FIF.LE.PI.AND.FI0(KNEB).LE.PI)
+     *                .OR.
+     *                ((FIF.GE.0.D0.OR.FIF.LE.-PI).AND.FI0(KNEB).GT.PI))
+     *                CFF=-CFF-2.D0
    66                 CONTINUE
                       ISFDL=ISCFI(KNEB,I)
                       DO 62 J=1,IFMN
@@ -2657,14 +2675,14 @@ C
 *     NATNEW - THE NEW NUMBER OF SPHERES
 *
 ***********************************************************************
-      IMPLICIT REAL *8 (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
 
       integer, intent(in) :: NAT
-      real*8,  intent(inout), dimension(NSF) :: XA, YA, ZA, RA
-      real*8,  intent(inout), dimension(NSF) :: COFACT
+      real(8),  intent(inout), dimension(NSF) :: XA, YA, ZA, RA
+      real(8),  intent(inout), dimension(NSF) :: COFACT
       integer, intent(out) :: NATNEW
 
-      real*8,  dimension(NSF) :: TET0,SITET0_,COTET0_,FI0_,
+      real(8),  dimension(NSF) :: TET0,SITET0_,COTET0_,FI0_,
      ,                           SIFI0_,COFI0_,RDIS,RUP
       integer, dimension(NSF) :: NMNI, INMB
       
@@ -2839,7 +2857,7 @@ C              Check, if additional sphere really need
 C
                IF(VEXC.LT.VSOLV) GOTO 5
 
-               COSGM=COSBT*COSAL+SINBT*SQRT(1.-COSAL*COSAL)
+               COSGM=COSBT*COSAL+SINBT*SQRT(1.0D0-COSAL*COSAL)
                XX_=DLENF(RAT+RSOLV,RAT,COSGM)
                XXX=SQRT(XX_)
                COSDL=COSFN(XXX,RAT+RSOLV,RAT)
@@ -2992,23 +3010,23 @@ C     DRASD  - COEFFICIENT OF THE SMALLEST DISTANCE
 C              BETWEEN SECTIONS IN FI
 C     DSMIN  - COEFFICIENT OF THE MINIMUM SIZE OF THE BIGGEST SECTOR
 C
-      IMPLICIT REAL *8 (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
 
       integer, intent(in) :: NAT, IAT
-      real*8,  intent(in) :: XA(NAT),YA(NAT),ZA(NAT),RA(NAT)
+      real(8),  intent(in) :: XA(NAT),YA(NAT),ZA(NAT),RA(NAT)
 
-      real*8,  intent(out) :: SECTTE(NB,NT),SECTFI(NBGEN)
+      real(8),  intent(out) :: SECTTE(NB,NT),SECTFI(NBGEN)
       integer, intent(out) :: ISCFI(NB,NT)
 
       integer, intent(inout) :: ITMX(NB),IFMX(NB,NT)
 
-      real*8,  intent(out) :: DFSTI
+      real(8),  intent(out) :: DFSTI
       integer, intent(out) :: NNEB
       integer, intent(out) :: NMSBR(NB),NMSABS(NB)
 
       ! local variables
-      real*8 :: FRES(NB), SECT00(NF)
-      real*8, save :: PI
+      real(8) :: FRES(NB), SECT00(NF)
+      real(8), save :: PI
       LOGICAL, save :: PRINT, FIRST=.true.
 c
       !INCLUDE 'SPHSIZES'
@@ -3041,584 +3059,644 @@ C
       YAT=YA(IAT)
       ZAT=ZA(IAT)
       RAT_=RA(IAT)
-      DO 5 I=1,NAT
-    5 NMSABS(I)=0
+      DO I=1,NAT
+         NMSABS(I)=0
+      ENDDO
 C
-C          DEFINITION OF NEIGHBOURS
-C          NNEI - VARYING NUMBER OF THE NEIGHBOUR
+C     DEFINITION OF NEIGHBOURS
+C     NNEI - VARYING NUMBER OF THE NEIGHBOUR
 C
-           NNEI=0
+      NNEI=0
 C
-C          FIRST PASS - DEFINING THE ANGLE OF INTERSECTION OF SPHERES
-C          FOR ARRANGING THEM IN ORDER
+C     FIRST PASS - DEFINING THE ANGLE OF INTERSECTION OF SPHERES
+C     FOR ARRANGING THEM IN ORDER
 C
-           DO 15 INEB=1,NAT
-                IF(INEB.EQ.IAT) GOTO 15
-                XNE=XA(INEB)
-                YNE=YA(INEB)
-                ZNE=ZA(INEB)
-                RNE_=RA(INEB)
-                XR=XNE-XAT
-                YR=YNE-YAT
-                ZR=ZNE-ZAT
-                RR_=SQRT(XR*XR+YR*YR+ZR*ZR)
+      DO 15 INEB=1,NAT
+
+         IF(INEB.EQ.IAT) GOTO 15
+         XNE=XA(INEB)
+         YNE=YA(INEB)
+         ZNE=ZA(INEB)
+         RNE_=RA(INEB)
+         XR=XNE-XAT
+         YR=YNE-YAT
+         ZR=ZNE-ZAT
+         RR_=SQRT(XR*XR+YR*YR+ZR*ZR)
 C
-C               IF THE ATOMS DO NOT INTERSECT
+C        IF THE ATOMS DO NOT INTERSECT
 C
-                IF(RR_.GE.RAT_+RNE_) GOTO 15
-                IF(RR_+RNE_.LE.RAT_) GOTO 15
+         IF(RR_.GE.RAT_+RNE_) GOTO 15
+         IF(RR_+RNE_.LE.RAT_) GOTO 15
 C
-C               IF THE GIVEN ATOM LIES INSIDE ANOTHER
+C        IF THE GIVEN ATOM LIES INSIDE ANOTHER
 C
-                IF(RR_+RAT_.LE.RNE_) THEN
-                   NNEB=-1
-                   RETURN
-                ENDIF
-                NNEI=NNEI+1
-                NMSBR(NNEI)=INEB
+         IF(RR_+RAT_.LE.RNE_) THEN
+            NNEB=-1
+            RETURN
+         ENDIF
+         NNEI=NNEI+1
+         NMSBR(NNEI)=INEB
 C
-C               CALCULATING THE ANGLE OF INTERSECTION OF SPHERES
+C        CALCULATING THE ANGLE OF INTERSECTION OF SPHERES
 C
-                RRECR(NNEI)=RR_
-                COTECR(NNEI)=(RAT_*RAT_-RNE_*RNE_+RR_*RR_)/
-     ,                       (2.D0*RAT_*RR_)
-   15      CONTINUE
-           JMAXF=1
-           DO 50 INEB=1,NNEI-1
-                COTR=2.
-                DO 55 JNEB=INEB,NNEI
-                     IF(COTR.LE.COTECR(JNEB)) GOTO 55
-                     COTR=COTECR(JNEB)
-                     JTR=JNEB
-   55           CONTINUE
-                COTECR(JTR)=COTECR(INEB)
-                COTECR(INEB)=COTR
-                RR_=RRECR(INEB)
-                RRECR(INEB)=RRECR(JTR)
-                RRECR(JTR)=RR_
-                NN_=NMSBR(INEB)
-                NMSBR(INEB)=NMSBR(JTR)
-                NMSBR(JTR)=NN_
-                IF(INEB.EQ.1) JMAXF=JTR
-   50      CONTINUE
-           DO 60 INEB=1,NNEI
-                INEV=NMSBR(INEB)
-                XNE=XA(INEV)
-                YNE=YA(INEV)
-                ZNE=ZA(INEV)
-                RNE_=RA(INEV)
-                XR=XNE-XAT
-                YR=YNE-YAT
-                ZR=ZNE-ZAT
-                RR_=RRECR(INEB)
+         RRECR(NNEI)=RR_
+         COTECR(NNEI)=(RAT_*RAT_-RNE_*RNE_+RR_*RR_)/(2.D0*RAT_*RR_)
+
+   15 CONTINUE
+      JMAXF=1
+
+      DO 50 INEB=1,NNEI-1
+         COTR=2.D0
+         DO 55 JNEB=INEB,NNEI
+            IF(COTR.LE.COTECR(JNEB)) GOTO 55
+            COTR=COTECR(JNEB)
+            JTR=JNEB
+   55    CONTINUE
+         COTECR(JTR)=COTECR(INEB)
+         COTECR(INEB)=COTR
+         RR_=RRECR(INEB)
+         RRECR(INEB)=RRECR(JTR)
+         RRECR(JTR)=RR_
+         NN_=NMSBR(INEB)
+         NMSBR(INEB)=NMSBR(JTR)
+         NMSBR(JTR)=NN_
+         IF(INEB.EQ.1) JMAXF=JTR
+   50 CONTINUE
+
+      DO 60 INEB=1,NNEI
+
+         INEV=NMSBR(INEB)
+         XNE=XA(INEV)
+         YNE=YA(INEV)
+         ZNE=ZA(INEV)
+         RNE_=RA(INEV)
+         XR=XNE-XAT
+         YR=YNE-YAT
+         ZR=ZNE-ZAT
+         RR_=RRECR(INEB)
 C
-C               DEFINING THE COORDINATES OF THE NEIGHBOUR
+C        DEFINING THE COORDINATES OF THE NEIGHBOUR
 C
-                COTET0(INEB)=ZR/RR_
-                XSQRT=1.-COTET0(INEB)**2
-                IF(XSQRT.LT.0.D0) XSQRT=0.D0
-                SITET0(INEB)=SQRT(XSQRT)
-                IF(DABS(XR)+DABS(YR).GE.1.D-5) THEN
-                FI00=DATAN2(YR,XR)
-                IF(FI00.LT.0) FI00=FI00+2.*PI
-                ELSE
-                FI00=PI/2.
-                ENDIF
-                FI0(INEB)=FI00
-                DRD=XR*XR+YR*YR
-                IF(DRD.GE.1.D-10) THEN
-                   DRS=SQRT(DRD)
-                   COF=XR/DRS
-                   SIF=YR/DRS
-                ELSE
-                   COF=0.D0
-                   SIF=1.D0
-                ENDIF
-                COFI0(INEB)=COF
-                SIFI0(INEB)=SIF
+         COTET0(INEB)=ZR/RR_
+         XSQRT=1.D0-COTET0(INEB)**2
+         IF(XSQRT.LT.0.D0) XSQRT=0.D0
+         SITET0(INEB)=SQRT(XSQRT)
+         IF(DABS(XR)+DABS(YR).GE.1.D-5) THEN
+            FI00=DATAN2(YR,XR)
+            IF(FI00.LT.0.D0) FI00=FI00+2.D0*PI
+         ELSE
+            FI00=PI/2.D0
+         ENDIF
+         FI0(INEB)=FI00
+         DRD=XR*XR+YR*YR
+         IF(DRD.GE.1.D-10) THEN
+            DRS=SQRT(DRD)
+            COF=XR/DRS
+            SIF=YR/DRS
+         ELSE
+            COF=0.D0
+            SIF=1.D0
+         ENDIF
+         COFI0(INEB)=COF
+         SIFI0(INEB)=SIF
 C
-C               CALCULATING THE ANGLE OF INTERSECTION OF SPHERES
+C        CALCULATING THE ANGLE OF INTERSECTION OF SPHERES
 C
-                TETECR(INEB)=ACOS(COTECR(INEB))
-                XSQRT=1.-COTECR(INEB)*COTECR(INEB)
-                IF(XSQRT.LT.0.D0) XSQRT=0.D0
-                SITECR(INEB)=SQRT(XSQRT)
-                IF(PRINT)
-     *             WRITE (6,'('' NEIGBBOUR #'',I3,''  ATOM #'',I3,
+         TETECR(INEB)=ACOS(COTECR(INEB))
+         XSQRT=1.D0-COTECR(INEB)*COTECR(INEB)
+         IF(XSQRT.LT.0.D0) XSQRT=0.D0
+         SITECR(INEB)=SQRT(XSQRT)
+         IF(PRINT) WRITE (6,'('' NEIGBBOUR #'',I3,''  ATOM #'',I3,
      *                ''  TETA='',F6.1)') INEB,INEV,R2D(TETECR(INEB))
-   60      CONTINUE
+   60 CONTINUE
 C
-C          THE NUMBER OF NEIGHBOURS NNEB
+C     THE NUMBER OF NEIGHBOURS NNEB
 C
-           NNEB=NNEI
-           IF(NNEI.GT.NB) THEN
-              WRITE (6,'(/'' THE NUMBER OF NEIGHBOURS TO ATOM #'',I3,
+      NNEB=NNEI
+      IF(NNEI.GT.NB) THEN
+         WRITE (6,'(/'' THE NUMBER OF NEIGHBOURS TO ATOM #'',I3,
      *           '' IS TOO LARGE''/'' NNEB='',I3,'' > NB='',I3,
      *           ''  INCREASE PARAMETER NB'')') IAT,NNEB,NB
-              STOP
-           ENDIF
+         STOP
+      ENDIF
 C
-C          EXCLUDING SPHERES, THE INTERSECTION OF WHICH LIES INSIDE
-C          ANOTHER INTERSECTION
+C     EXCLUDING SPHERES, THE INTERSECTION OF WHICH LIES INSIDE
+C     ANOTHER INTERSECTION
 C
-           DO INEB=1,NNEI
+      DO INEB=1,NNEI
 
-              IF(INEB.GT.NNEB) cycle
-              COT=COTET0(INEB)
-              SIT=SITET0(INEB)
-              COF=COFI0(INEB)
-              SIF=SIFI0(INEB)
-              COTEF=COTECR(INEB)
-              INEI=INEB
+         IF(INEB.GT.NNEB) cycle
+         COT=COTET0(INEB)
+         SIT=SITET0(INEB)
+         COF=COFI0(INEB)
+         SIF=SIFI0(INEB)
+         COTEF=COTECR(INEB)
+         INEI=INEB
 
-              DO INEV=INEB+1,NNEI
+         DO INEV=INEB+1,NNEI
 
-                 INEI=INEI+1
-                 IF (INEI.GT.NNEB) cycle
-                 COT0=COTET0(INEI)
-                 SIT0=SITET0(INEI)
-                 COF0=COFI0(INEI)
-                 SIF0=SIFI0(INEI)
-                 COTEF0=COTECR(INEI)
-                 SITEF0=SITECR(INEI)
-                 COTAL=SIT*SIT0*(COF*COF0+SIF*SIF0)+COT*COT0
-                 XSQRT=1.-COTAL*COTAL
-                 IF (XSQRT.LT.0.D0) XSQRT=0.D0
-                 COTS=COTAL*COTEF0-SQRT(XSQRT)*SITEF0
-                 IF (COTS.LT.COTEF) cycle
+            INEI=INEI+1
+            IF (INEI.GT.NNEB) cycle
+            COT0=COTET0(INEI)
+            SIT0=SITET0(INEI)
+            COF0=COFI0(INEI)
+            SIF0=SIFI0(INEI)
+            COTEF0=COTECR(INEI)
+            SITEF0=SITECR(INEI)
+            COTAL=SIT*SIT0*(COF*COF0+SIF*SIF0)+COT*COT0
+            XSQRT=1.D0-COTAL*COTAL
+            IF (XSQRT.LT.0.D0) XSQRT=0.D0
+            COTS=COTAL*COTEF0-SQRT(XSQRT)*SITEF0
+            IF (COTS.LT.COTEF) cycle
 C
-C                SPHERE IS EXCLUDED
+C           SPHERE IS EXCLUDED
 C
-                 NNEB=NNEB-1
+            NNEB=NNEB-1
 
-                 DO I=INEI,NNEB
+            DO I=INEI,NNEB
 
-                    COTET0(I)=COTET0(I+1)
-                    SITET0(I)=SITET0(I+1)
-                    COFI0(I)=COFI0(I+1)
-                    SIFI0(I)=SIFI0(I+1)
-                    FI0(I)=FI0(I+1)
-                    RRECR(I)=RRECR(I+1)
-                    COTECR(I)=COTECR(I+1)
-                    TETECR(I)=TETECR(I+1)
-                    SITECR(I)=SITECR(I+1)
-                    NMSBR(I)=NMSBR(I+1)
+               COTET0(I)=COTET0(I+1)
+               SITET0(I)=SITET0(I+1)
+               COFI0(I)=COFI0(I+1)
+               SIFI0(I)=SIFI0(I+1)
+               FI0(I)=FI0(I+1)
+               RRECR(I)=RRECR(I+1)
+               COTECR(I)=COTECR(I+1)
+               TETECR(I)=TETECR(I+1)
+               SITECR(I)=SITECR(I+1)
+               NMSBR(I)=NMSBR(I+1)
 
-                 enddo
+            ENDDO
 
-                 INEI=INEI-1
+            INEI=INEI-1
 
-              enddo
+         ENDDO
 
-           enddo
+      ENDDO
 
 C
-C          CONSTRUCTING THE RAYS OF SECTORS, CORRESPONDING
-C          TO EACH OF THE NEIGHBOURS
-C          SECTORS WRT TETA - I - SECTTE(INEB,I)
-C          SECTORS WRT FI - J - SECFI(INEB,I,J)
+C     CONSTRUCTING THE RAYS OF SECTORS, CORRESPONDING
+C     TO EACH OF THE NEIGHBOURS
+C     SECTORS WRT TETA - I - SECTTE(INEB,I)
+C     SECTORS WRT FI - J - SECFI(INEB,I,J)
 C
-           IONEAT=0
-           IF(NNEB.EQ.0) THEN
+      IONEAT=0
+
+      IF(NNEB.EQ.0) THEN
 C
-C             THE ATOM HAS NO NEIGHBOURS - EMULATE ONE NEIGHBOUR
+C        THE ATOM HAS NO NEIGHBOURS - EMULATE ONE NEIGHBOUR
 C
-              IONEAT=1
-              NNEB=1
-              RRECR(1)=2.*RAT_
-              COTECR(1)=1.
-              SITECR(1)=0.
-              TETECR(1)=0.
-              COTET0(1)=0.
-              SITET0(1)=1.
-              FI0(1)=0.
-              COFI0(1)=1.
-              SIFI0(1)=0.
-           ENDIF
-           STFIMS=0.
-           NTFIMS=0
-           ISFDL=0
-           DO 20 INEB=1,NNEB
+         IONEAT=1
+         NNEB=1
+         RRECR(1)=2.D0*RAT_
+         COTECR(1)=1.D0
+         SITECR(1)=0.D0
+         TETECR(1)=0.D0
+         COTET0(1)=0.D0
+         SITET0(1)=1.D0
+         FI0(1)=0.D0
+         COFI0(1)=1.D0
+         SIFI0(1)=0.D0
+      ENDIF
+
+      STFIMS=0.D0
+      NTFIMS=0
+      ISFDL=0
+
+      DO 20 INEB=1,NNEB
 C
+C        CALCULATING THE SECTORS OF ATOM INEB
 C
-C               CALCULATING THE SECTORS OF ATOM INEB
+C        MAKING THE SECTORS A WHOLE NUMBER, BY FACTOR AA
 C
-C               MAKING THE SECTORS A WHOLE NUMBER, BY FACTOR AA
-C
-                TETERR=TETECR(INEB)
-                TETOS= PI-TETERR
-                PD2=1./SQRT(PI)
-                TESS=0.
-                IF(IONEAT.NE.1) THEN
-                   DO 31 I=1,ITMA
-                        TT=DATTE0(I)*PD2
-                        IF(TESS+TT.GT.TETOS) GOTO 32
-   31              TESS=TESS+DATTE0(I)
-   32              A2=TETOS/(TESS+TT)
-                   TT2=TT
-                   II=I
-                   IF(I.GT.1) THEN
-                        TESS=TESS-DATTE0(I-1)
-                        TT=DATTE0(I-1)*PD2
-                        TT1=TT
-                        A1=TETOS/(TESS+TT)
-                        IF(DABS(A2-1.).LT.DABS(1.-A1)) THEN
-                             AA=A2
-                             TT=TT2
-                             II=I
-                        ELSE
-                             AA=A1
-                             TT=TT1
-                             II=I-1
-                        ENDIF
-                   ELSE
-                        AA=A2
-                   ENDIF
-                   AA=AA*1.01
-                   DO 33 J=1,ITMA
-   33              DATTET(J)=DATTE0(J)*AA
-                   DATTET(II)=TT*AA
-                ELSE
-C
-C                 NO NEIGHBOURS - EMULATE
-C
-                  PD=PI/DATTE0(3)
-                  I=PD-2.*PD2
-                  A1=PD/(2.*PD2+I)
-                  A2=PD/(2.*PD2+I+1)
-                  TT=PD2*DATTE0(3)
-                  IF(ABS(1.-A2).LT.ABS(A1-1.)) THEN
-                     AA=A2
-                     II=I+3
-                  ELSE
-                     AA=A1
-                     II=I+2
-                  ENDIF
-                  AA=AA*1.01
-                  DO 44 J=2,ITMA
-   44             DATTET(J)=DATTE0(3)*AA
-                  DATTET(1)=TT
-                  DATTET(II)=TT
+         TETERR=TETECR(INEB)
+         TETOS= PI-TETERR
+         PD2=1.0D0/SQRT(PI)
+         TESS=0.D0
+
+         IF(IONEAT.NE.1) THEN
+
+            DO 31 I=1,ITMA
+               TT=DATTE0(I)*PD2
+               IF(TESS+TT.GT.TETOS) GOTO 32
+   31       TESS=TESS+DATTE0(I)
+   32       A2=TETOS/(TESS+TT)
+
+            TT2=TT
+            II=I
+
+            IF(I.GT.1) THEN
+               TESS=TESS-DATTE0(I-1)
+               TT=DATTE0(I-1)*PD2
+               TT1=TT
+               A1=TETOS/(TESS+TT)
+               IF(DABS(A2-1.D0).LT.DABS(1.D0-A1)) THEN
+                  AA=A2
+                  TT=TT2
+                  II=I
+               ELSE
+                  AA=A1
+                  TT=TT1
+                  II=I-1
                ENDIF
-               IF(PRINT) THEN
-                  WRITE (6,'('' NEIGHBOUR #'',I4,''  AA='',F8.3,
-     *               ''  NO. OF SECTORS WRT TETA'',I4)') INEB,AA,II
-                  WRITE (6,'('' TETOS,TESS,TT,A1,A2,AA'',6F8.2/
-     *            '' DATTET(J)'',9F8.2)') R2D(TETOS),R2D(TESS),R2D(TT),
-     *            A1,A2,AA,(R2D(DATTET(J)),J=1,II)
-               ENDIF
-                ITMXX=0
-                DTTE=0.
+            ELSE
+               AA=A2
+            ENDIF
+
+            AA=AA*1.01D0
+
+            DO 33 J=1,ITMA
+   33       DATTET(J)=DATTE0(J)*AA
+            DATTET(II)=TT*AA
+
+         ELSE
+
 C
-C               IF THERE IS ONLY ONE NEIGHBOUR
+C           NO NEIGHBOURS - EMULATE
 C
-                IF(NNEB.EQ.1) THEN
-                     ISTSEC=1
-                     GOTO 22
-                ENDIF
-                COT0=COTET0(INEB)
-                SIT0=SITET0(INEB)
-                COF0=COFI0(INEB)
-                SIF0=SIFI0(INEB)
-                STIM=SECOND()-STIME
-                STIME=SECOND()
-                STIM0=STIM0+STIM
+            PD=PI/DATTE0(3)
+            I=PD-2.D0*PD2
+            A1=PD/(2.D0*PD2+I)
+            A2=PD/(2.D0*PD2+I+1)
+            TT=PD2*DATTE0(3)
+
+            IF(ABS(1.D0-A2).LT.ABS(A1-1.D0)) THEN
+               AA=A2
+               II=I+3
+            ELSE
+               AA=A1
+               II=I+2
+            ENDIF
+
+            AA=AA*1.01D0
+            DO 44 J=2,ITMA
+   44          DATTET(J)=DATTE0(3)*AA
+
+            DATTET(1)=TT
+            DATTET(II)=TT
+
+         ENDIF
+
+         IF(PRINT) THEN
+            WRITE (6,'('' NEIGHBOUR #'',I4,''  AA='',F8.3,
+     *                 ''  NO. OF SECTORS WRT TETA'',I4)') INEB,AA,II
+            WRITE (6,'('' TETOS,TESS,TT,A1,A2,AA'',6F8.2/
+     *          '' DATTET(J)'',9F8.2)') R2D(TETOS),R2D(TESS),R2D(TT),
+     *          A1,A2,AA,(R2D(DATTET(J)),J=1,II)
+         ENDIF
+
+         ITMXX=0
+         DTTE=0.D0
 C
-C               NUMBER OF SECTIONS WRT FI
+C        IF THERE IS ONLY ONE NEIGHBOUR
 C
-                MNE=0
-                DO 21 INEI=1,NNEB
-                     IF(INEI.EQ.INEB) GOTO 21
-                     COT=COTET0(INEI)
-                     SIT=SITET0(INEI)
-                     COF=COFI0(INEI)
-                     SIF=SIFI0(INEI)
+         IF(NNEB.EQ.1) THEN
+            ISTSEC=1
+            GOTO 22
+         ENDIF
+
+         COT0=COTET0(INEB)
+         SIT0=SITET0(INEB)
+         COF0=COFI0(INEB)
+         SIF0=SIFI0(INEB)
+         STIM=SECOND()-STIME
+         STIME=SECOND()
+         STIM0=STIM0+STIM
 C
-C                    COS OF THE ANGLE OF DIRECTION TO THE NEIGHBOUR
+C        NUMBER OF SECTIONS WRT FI
 C
-                     CT000=SIT*(COF*COF0+SIF*SIF0)
-                     CTT=SIT0*CT000+COT*COT0
+         MNE=0
+         DO 21 INEI=1,NNEB
+
+            IF(INEI.EQ.INEB) GOTO 21
+            COT=COTET0(INEI)
+            SIT=SITET0(INEI)
+            COF=COFI0(INEI)
+            SIF=SIFI0(INEI)
 C
-C                    IF THE ANGLE IS > 120'
+C           COS OF THE ANGLE OF DIRECTION TO THE NEIGHBOUR
 C
-                     IF(CTT.LT.-.5) GOTO 21
+            CT000=SIT*(COF*COF0+SIF*SIF0)
+            CTT=SIT0*CT000+COT*COT0
 C
-C                    IF THE NEIGHBOURS ARE IN ONE LINE
+C           IF THE ANGLE IS > 120'
 C
-                     IF(CTT.GT.1.D0-1.D-3) GOTO 21
-                     MNE=MNE+1
-                     IF(DABS(COT0).LT.1.-1.D-5) GOTO 19
-                     FFI=FI0(INEI)
-                     GOTO 18
+            IF(CTT.LT.-.5D0) GOTO 21
 C
-C                    SIN OF THE ANGLE OF DIRECTION TO THE NEIGHBOUR
+C           IF THE NEIGHBOURS ARE IN ONE LINE
 C
-  19                 XSQRT=1.D0-CTT*CTT
-                     IF(XSQRT.LE.0.D0) XSQRT=1.D-16
-                     STT=SQRT(XSQRT)
+            IF(CTT.GT.1.D0-1.D-3) GOTO 21
+            MNE=MNE+1
+            IF(DABS(COT0).LT.1.D0-1.D-5) GOTO 19
+            FFI=FI0(INEI)
+            GOTO 18
 C
-C                    THE ANGLE FFI TO THE NEIGHBOUR
+C           SIN OF THE ANGLE OF DIRECTION TO THE NEIGHBOUR
 C
-                     CFF=(COT*SIT0-COT0*CT000)/STT
-                     IF(ABS(CFF).GT.1.D0) CFF=DSIGN(1.D0,CFF)
-                     FFI=ACOS(CFF)
+  19        XSQRT=1.D0-CTT*CTT
+            IF(XSQRT.LE.0.D0) XSQRT=1.D-16
+            STT=SQRT(XSQRT)
+C
+C           THE ANGLE FFI TO THE NEIGHBOUR
+C
+            CFF=(COT*SIT0-COT0*CT000)/STT
+            IF(ABS(CFF).GT.1.D0) CFF=DSIGN(1.D0,CFF)
+            FFI=ACOS(CFF)
 C
 C                    DEFINING THE SIGN OF FFI
 C
-                     FIF=FI0(INEI)-FI0(INEB)
-                     IF(FIF.GE.0..AND.FIF.LE.PI.AND.FI0(INEB).LE.PI.OR.
-     *               (FIF.GE.0..OR.FIF.LE.-PI).AND.FI0(INEB).GT.PI)
-     *               FFI=2.*PI-FFI
-   18                FRES(MNE)=FFI
-   21           CONTINUE
-                IF(MNE.EQ.0) THEN
-                     ISTSEC=1
-                     GOTO 22
-                ENDIF
+            FIF=FI0(INEI)-FI0(INEB)
+            IF(FIF.GE.0.D0.AND.FIF.LE.PI.AND.FI0(INEB).LE.PI.OR
+     *         .(FIF.GE.0.D0.OR.FIF.LE.-PI).AND.FI0(INEB).GT.PI)
+     *         FFI=2.D0*PI-FFI
+
+   18       FRES(MNE)=FFI
+
+   21    CONTINUE
+
+         IF(MNE.EQ.0) THEN
+            ISTSEC=1
+            GOTO 22
+         ENDIF
 C
-C               ARRANGING THE ANGLES FI TO THE NEIGHBOURS IN ORDER
+C        ARRANGING THE ANGLES FI TO THE NEIGHBOURS IN ORDER
 C
-                IF(MNE.EQ.1) GOTO 27
-                MNEN=MNE-1
-                DO 25 I=1,MNEN
-                     JJ=1
-                     S=FRES(1)
-                     MNN=MNE+1-I
-                     DO 26 J=2,MNN
-                          IF(FRES(J).LE.S) GOTO 26
-                          JJ=J
-                          S=FRES(J)
-   26                CONTINUE
-                     S1=FRES(MNN)
-                     FRES(MNN)=FRES(JJ)
-                     FRES(JJ)=S1
-   25           CONTINUE
+         IF(MNE.EQ.1) GOTO 27
+         MNEN=MNE-1
+
+         DO 25 I=1,MNEN
+            JJ=1
+            S=FRES(1)
+            MNN=MNE+1-I
+            DO 26 J=2,MNN
+               IF(FRES(J).LE.S) GOTO 26
+               JJ=J
+               S=FRES(J)
+   26       CONTINUE
+            S1=FRES(MNN)
+            FRES(MNN)=FRES(JJ)
+            FRES(JJ)=S1
+   25    CONTINUE
 C
-C               EXCLUDING CLOSE SUBSECTIONS
+C        EXCLUDING CLOSE SUBSECTIONS
 C
-                DATT=DATTET(1)*DPRAM(1)*DRASD
-                DFFR=FRES(MNE)-2.*PI
-                I=1
-   28           IF(I.GT.MNE) GOTO 27
-                DFRES=-DFFR+FRES(I)
-                IF(DFRES.GT.DATT) THEN
-                     DFFR=FRES(I)
-                     I=I+1
-                     GOTO 28
-                ELSE
-                     MNE=MNE-1
-                     DO 29 J=I,MNE
-   29                     FRES(J)=FRES(J+1)
-                ENDIF
-                GOTO 28
-   27           CONTINUE
+         DATT=DATTET(1)*DPRAM(1)*DRASD
+         DFFR=FRES(MNE)-2.D0*PI
+         I=1
+
+   28    IF(I.GT.MNE) GOTO 27
+         DFRES=-DFFR+FRES(I)
+
+         IF(DFRES.GT.DATT) THEN
+            DFFR=FRES(I)
+            I=I+1
+            GOTO 28
+         ELSE
+            MNE=MNE-1
+            DO 29 J=I,MNE
+   29          FRES(J)=FRES(J+1)
+         ENDIF
+         GOTO 28
+   27    CONTINUE
 C
-C               IF THERE ARE NO SUBSECTIONS
+C        IF THERE ARE NO SUBSECTIONS
 C
-                IF(MNE.EQ.0) THEN
-                     ISTSEC=1
-                     GOTO 22
-                ENDIF
+         IF(MNE.EQ.0) THEN
+            ISTSEC=1
+            GOTO 22
+         ENDIF
 C
-C               CONSTRUCTION OF SECTORS, RELATING TO THE GIVEN
-C               NEIGHBOUR
-C               CONSTRUCTION OF SECTORS WRT TETA SECTTE(INEB,I)
+C        CONSTRUCTION OF SECTORS, RELATING TO THE GIVEN NEIGHBOUR
+C        CONSTRUCTION OF SECTORS WRT TETA SECTTE(INEB,I)
 C
-C               WE NEED THE RAY DATTET(1;ITMA) -
-C               THE ANGLES TETA WRT THE NUMBERS
+C        WE NEED THE ARRAY DATTET(1;ITMA) -
+C        THE ANGLES TETA WRT THE NUMBERS
 C
+C        SUBSECTIONS ARE ACCOUNTED FOR ONLY
+C        IN THE FIRST TWO LAYERS
 C
-C               SUBSECTIONS ARE ACCOUNTED FOR ONLY
-C               IN THE FIRST TWO LAYERS
+         ISTSMX=2
+         DO 30 I=1,ISTSMX
+ 
+            TTER=TETERR+DTTE+DATTET(I)
+            IF(TTER.GT.PI) GOTO 34
+            ITMXX=ITMXX+1
+            SECTTE(INEB,I)=DCOS(TTER)
 C
-                ISTSMX=2
-                DO 30 I=1,ISTSMX
-                     TTER=TETERR+DTTE+DATTET(I)
-                     IF(TTER.GT.PI) GOTO 34
-                     ITMXX=ITMXX+1
-                     SECTTE(INEB,I)=DCOS(TTER)
+C           CONSTRUCTING THE SECTORS WRT FI SECTFI(INEB,I,J)
 C
-C                    CONSTRUCTING THE SECTORS WRT FI SECTFI(INEB,I,J)
+            TETLN=TETERR+DTTE+DATTET(I)/2.D0
+            DFI=DATTET(I)/DSIN(TETLN)*DPRAM(I)
+            FINO1=FRES(MNE)-2.D0*PI
+            JJ=0
+            IJNN=0
+ 
+            DO 35 J=1,MNE
+
+               FINO2=FRES(J)
+               FIST=FINO2-FINO1
+               NFIST=FIST/DFI+0.5D0
+               IF(NFIST.LE.0) NFIST=1
+               STFIST=FIST/NFIST
 C
-                     TETLN=TETERR+DTTE+DATTET(I)/2.
-                     DFI=DATTET(I)/DSIN(TETLN)*DPRAM(I)
-                     FINO1=FRES(MNE)-2.*PI
-                     JJ=0
-                     IJNN=0
-                     DO 35 J=1,MNE
-                          FINO2=FRES(J)
-                          FIST=FINO2-FINO1
-                          NFIST=FIST/DFI+0.5
-                          IF(NFIST.LE.0) NFIST=1
-                          STFIST=FIST/NFIST
+C              CORRECTION OF THE AVERAGE SIZE OF THE SECTOR
 C
-C                         CORRECTION OF THE AVERAGE SIZE OF THE SECTOR
+               STFIMS=STFIMS+STFIST/DFI*NFIST
+               NTFIMS=NTFIMS+NFIST
+
+               DO 36 JK=1,NFIST
+                  JJ=JJ+1
+                  SE0000=FINO1+STFIST*(JK-1)
+                  IF(SE0000.GT.0.D0) GOTO 37
+                  IJNN=IJNN+1
+                  SE0000=SE0000+2.D0*PI
+   37             CONTINUE
+                  IF(SE0000.LE.PI) THEN
+                     SECT00(JJ)=DCOS(SE0000)
+                  ELSE
+                     SECT00(JJ)=-DCOS(SE0000)-2.D0
+                  ENDIF
+   36          CONTINUE
+
+               FINO1=FINO2
+
+   35       CONTINUE
+
+            ISCFI(INEB,I)=ISFDL
 C
-                          STFIMS=STFIMS+STFIST/DFI*NFIST
-                          NTFIMS=NTFIMS+NFIST
-                          DO 36 JK=1,NFIST
-                               JJ=JJ+1
-                               SE0000=FINO1+STFIST*(JK-1)
-                               IF(SE0000.GT.0.) GOTO 37
-                               IJNN=IJNN+1
-                               SE0000=SE0000+2.*PI
-   37                          CONTINUE
-                               IF(SE0000.LE.PI) THEN
-                                    SECT00(JJ)=DCOS(SE0000)
-                                    ELSE
-                                    SECT00(JJ)=-DCOS(SE0000)-2.
-                               ENDIF
-   36                     CONTINUE
-                          FINO1=FINO2
-   35                CONTINUE
-                     ISCFI(INEB,I)=ISFDL
+C           SORTING THE ARRAY SECTFI IN ORDER
 C
-C                    SORTING THE ARRAY SECTFI IN ORDER
+            IJNN0=JJ-IJNN
+            IF(IJNN0.EQ.0) GOTO 43
+            IMA1=ISFDL+IJNN0+IJNN
+            IF (IMA1.GT.NBGEN) THEN
+               WRITE(6,101)IMA1,NBGEN
+               WRITE(6,102)
+               STOP
+            ENDIF
+
+            DO 40 J=1,IJNN0
+  40           SECTFI(ISFDL+J)=SECT00(J+IJNN)
+
+  43        IF(IJNN.EQ.0) GOTO 41
+            DO 42 J=1,IJNN
+  42           SECTFI(ISFDL+J+IJNN0)=SECT00(J)
+  41        CONTINUE
 C
-                     IJNN0=JJ-IJNN
-                     IF(IJNN0.EQ.0) GOTO 43
-                     IMA1=ISFDL+IJNN0+IJNN
-                     IF (IMA1.GT.NBGEN) THEN
-                        WRITE(6,101)IMA1,NBGEN
-                        WRITE(6,102)
-                        STOP
-                     ENDIF
-                     DO 40 J=1,IJNN0
-  40                      SECTFI(ISFDL+J)=SECT00(J+IJNN)
-  43                 IF(IJNN.EQ.0) GOTO 41
-                     DO 42 J=1,IJNN
-  42                      SECTFI(ISFDL+J+IJNN0)=SECT00(J)
-  41                 CONTINUE
+C           THE NUMBER OF SECTORS WRT FI
 C
-C                    THE NUMBER OF SECTORS WRT FI
+            IFMX(INEB,I)=JJ
+            ISFDL=ISFDL+JJ
+
+            IF(IFMX(INEB,I).GT.NF) THEN
+               WRITE (6,'(/'' NO. OF PARTS OF THE LARGE SECT'',
+     *                 ''ORS BEING PREPARED IS TOO LARGE''/'' ISF'',
+     *                 ''DL='',I4,'' > NBGEN='',I4)') ISFDL,NBGEN
+               STOP
+            ENDIF
+
+            IF(IFMX(INEB,I).GT.NF) THEN
+               WRITE (6,'(/'' NO. OF LARGE SECTORS WRT FI IS'',
+     *               '' TOO LARGE''/'' IFMX='',I3,'' > NF='',I3)')
+     *                  IFMX(INEB,I),NF
+               STOP
+            ENDIF
+
+            DTTE=DTTE+DATTET(I)
+
+   30    CONTINUE
 C
-                     IFMX(INEB,I)=JJ
-                     ISFDL=ISFDL+JJ
-                     IF(IFMX(INEB,I).GT.NF) THEN
-                        WRITE (6,'(/'' NO. OF PARTS OF THE LARGE SECT'',
-     *                     ''ORS BEING PREPARED IS TOO LARGE''/'' ISF'',
-     *                     ''DL='',I4,'' > NBGEN='',I4)') ISFDL,NBGEN
-                        STOP
-                     ENDIF
-                     IF(IFMX(INEB,I).GT.NF) THEN
-                        WRITE (6,'(/'' NO. OF LARGE SECTORS WRT FI IS'',
-     *                     '' TOO LARGE''/'' IFMX='',I3,'' > NF='',I3)')
-     *                      IFMX(INEB,I),NF
-                        STOP
-                     ENDIF
-                     DTTE=DTTE+DATTET(I)
-   30           CONTINUE
+C        REMAINING SECTORS WITHOUT SUBSECTIONS
 C
-C               REMAINING SECTORS WITHOUT SUBSECTIONS
+         ISTSEC=ISTSMX+1
+         GOTO 22
 C
-                ISTSEC=ISTSMX+1
-                GOTO 22
+C        THE LAST SECTOR WRT TETA
 C
-C               THE LAST SECTOR WRT TETA
+   34    CONTINUE
 C
-   34           CONTINUE
+C        THE NUMBER OF SECTORS WRT TETA
 C
-C               THE NUMBER OF SECTORS WRT TETA
+         ITMXX=ITMXX+1
+         IFMX(INEB,ITMXX)=1
+         ITMX(INEB)=ITMXX
+         ISCFI(INEB,ITMXX)=ISFDL
+         ISFDL=ISFDL+1
+
+         IF(ITMXX.GT.NT) THEN
+            WRITE (6,'(/'' NO. OF LARGE SECTORS WRT TETA'',
+     *                  '' IS TOO LARGE''/'' ITMXX='',I3,
+     *                  '' > NT='',I3)') ITMXX,NT
+            STOP
+         ENDIF
+
+         GOTO 20
+
 C
-                ITMXX=ITMXX+1
-                IFMX(INEB,ITMXX)=1
-                ITMX(INEB)=ITMXX
-                ISCFI(INEB,ITMXX)=ISFDL
-                ISFDL=ISFDL+1
-                IF(ITMXX.GT.NT) THEN
-                   WRITE (6,'(/'' NO. OF LARGE SECTORS WRT TETA'',
-     *                '' IS TOO LARGE''/'' ITMXX='',I3,
-     *                '' > NT='',I3)') ITMXX,NT
-                   STOP
-                ENDIF
-                GOTO 20
+C        IF NO ADDITIONAL SUBSECTIONS
 C
-C               IF NO ADDITIONAL SUBSECTIONS
-C
-   22           CONTINUE
-                DO 23 I=ISTSEC,ITMA
-                     TTER=TETERR+DTTE+DATTET(I)
-                     IF(TTER.GT.PI) GOTO 23
-                     ITMXX=ITMXX+1
-                     SECTTE(INEB,I)=DCOS(TTER)
-                     TETLN=TETERR+DTTE+DATTET(I)/2.
-                     IF(IONEAT.NE.1) THEN
-                        DFI=DATTET(I)/DSIN(TETLN)*DPRAM(I)
-                     ELSE
-                        IF(I.NE.1) THEN
-                           DFI=DATTET(I)/DSIN(TETLN)
-                        ELSE
-                           DFI=2.*PI
-                        ENDIF
-                     ENDIF
-                     NFIST=2.*PI/DFI+0.5
-                     IF(NFIST.LE.0) NFIST=1
-                     STFIST=2.*PI/NFIST
-C
-C                    CORRECTION OF THE AVERAGE SIZE OF THE SECTOR
-C
-                     STFIMS=STFIMS+STFIST/DFI*NFIST
-                     NTFIMS=NTFIMS+NFIST
-                     ISCFI(INEB,I)=ISFDL
-                     IMA1=ISFDL+NFIST
-                     IF (IMA1.GT.NBGEN) THEN
-                        WRITE(6,103)IMA1,NBGEN
-                        WRITE(6,102)
-                        STOP
-                     ENDIF
-                     DO 24 J=1,NFIST
-                          SE0000=STFIST*(J-1)
-                          IF(SE0000.LE.PI) THEN
-                               SECTFI(ISFDL+J)=DCOS(SE0000)
-                          ELSE
-                               SECTFI(ISFDL+J)=-DCOS(SE0000)-2.
-                          ENDIF
-   24                CONTINUE
-                     IFMX(INEB,I)=NFIST
-                     ISFDL=ISFDL+NFIST
-                     IF(IFMX(INEB,I).GT.NF) THEN
-                        WRITE (6,'(/'' NO. OF PARTS OF THE LARGE SECT'',
-     *                     ''ORS BEING PREPARED IS TOO LARGE''/'' ISF'',
-     *                     ''DL='',I4,'' > NBGEN='',I4)') ISFDL,NBGEN
-                        STOP
-                     ENDIF
-                     IF(IFMX(INEB,I).GT.NF) THEN
-                        WRITE (6,'(/'' NO. OF LARGE SECTORS WRT FI IS'',
-     *                     '' TOO LARGE''/'' IFMX='',I3,'' > NF='',I3)')
-     *                      IFMX(INEB,I),NF
-                        STOP
-                     ENDIF
-                     JJ=NFIST
-   23           DTTE=DTTE+DATTET(I)
-                ITMXX=ITMXX+1
-                IFMX(INEB,ITMXX)=1
-                ITMX(INEB)=ITMXX
-                ISCFI(INEB,ITMXX)=ISFDL
-                ISFDL=ISFDL+1
-                IF(ITMXX.GT.NT) THEN
-                   WRITE (6,'(/'' NO. OF LARGE SECTORS WRT TETA'',
-     *                '' IS TOO LARGE''/'' ITMXX='',I3,
-     *                '' > NT='',I3)') ITMXX,NT
-                   STOP
-                ENDIF
-   20       CONTINUE
+
+   22    CONTINUE
+
+         DO 23 I=ISTSEC,ITMA
+
+            TTER=TETERR+DTTE+DATTET(I)
+            IF(TTER.GT.PI) GOTO 23
+            ITMXX=ITMXX+1
+            SECTTE(INEB,I)=DCOS(TTER)
+            TETLN=TETERR+DTTE+DATTET(I)/2.D0
+ 
+            IF(IONEAT.NE.1) THEN
+               DFI=DATTET(I)/DSIN(TETLN)*DPRAM(I)
+            ELSE
+               IF(I.NE.1) THEN
+                  DFI=DATTET(I)/DSIN(TETLN)
+               ELSE
+                  DFI=2.D0*PI
+               ENDIF
+            ENDIF
+
+            NFIST=2.D0*PI/DFI+0.5D0
+            IF(NFIST.LE.0) NFIST=1
+            STFIST=2.D0*PI/NFIST
 C
 C           CORRECTION OF THE AVERAGE SIZE OF THE SECTOR
 C
-            IF(NTFIMS.NE.0) THEN
-               DFSTI=STFIMS/NTFIMS
-            ELSE
-               DFSTI=1.D0
+            STFIMS=STFIMS+STFIST/DFI*NFIST
+            NTFIMS=NTFIMS+NFIST
+            ISCFI(INEB,I)=ISFDL
+            IMA1=ISFDL+NFIST
+
+            IF (IMA1.GT.NBGEN) THEN
+               WRITE(6,103)IMA1,NBGEN
+               WRITE(6,102)
+               STOP
             ENDIF
+
+            DO 24 J=1,NFIST
+               SE0000=STFIST*(J-1)
+               IF(SE0000.LE.PI) THEN
+                  SECTFI(ISFDL+J)=DCOS(SE0000)
+               ELSE
+                  SECTFI(ISFDL+J)=-DCOS(SE0000)-2.D0
+               ENDIF
+   24       CONTINUE
+
+            IFMX(INEB,I)=NFIST
+            ISFDL=ISFDL+NFIST
+
+            IF(IFMX(INEB,I).GT.NF) THEN
+               WRITE (6,'(/'' NO. OF PARTS OF THE LARGE SECT'',
+     *                     ''ORS BEING PREPARED IS TOO LARGE''/'' ISF'',
+     *                     ''DL='',I4,'' > NBGEN='',I4)') ISFDL,NBGEN
+               STOP
+            ENDIF
+
+            IF(IFMX(INEB,I).GT.NF) THEN
+               WRITE (6,'(/'' NO. OF LARGE SECTORS WRT FI IS'',
+     *            '' TOO LARGE''/'' IFMX='',I3,'' > NF='',I3)')
+     *             IFMX(INEB,I),NF
+               STOP
+            ENDIF
+
+            JJ=NFIST
+
+   23       DTTE=DTTE+DATTET(I)
+
+         ITMXX=ITMXX+1
+         IFMX(INEB,ITMXX)=1
+         ITMX(INEB)=ITMXX
+         ISCFI(INEB,ITMXX)=ISFDL
+         ISFDL=ISFDL+1
+
+         IF(ITMXX.GT.NT) THEN
+            WRITE (6,'(/'' NO. OF LARGE SECTORS WRT TETA'',
+     *                  '' IS TOO LARGE''/'' ITMXX='',I3,
+     *                  '' > NT='',I3)') ITMXX,NT
+            STOP
+         ENDIF
+
+   20 CONTINUE
+
+C
+C     CORRECTION OF THE AVERAGE SIZE OF THE SECTOR
+C
+      IF(NTFIMS.NE.0) THEN
+         DFSTI=STFIMS/NTFIMS
+      ELSE
+         DFSTI=1.D0
+      ENDIF
 C
 C     COMPLETION OF THE ARRAY OF ADDRESSES
 C
       DO 80 I=1,NNEB
-   80 NMSABS(NMSBR(I))=I
+   80    NMSABS(NMSBR(I))=I
+
       STIM=SECOND()-STIME
       STIME=SECOND()
       STIM0=STIM0+STIM
       RETURN
+
   101 FORMAT(' SECRES: ISFDL+IJNN0+IJNN',12X,'=',I8/
      *' THIS IS LARGER THAN PARAMETER NBGEN =',I8)
   102 FORMAT(' SUCH SITUATION CAN NOT BE TREATED BY PROGRAM. IT IS',
@@ -3627,6 +3705,7 @@ C
      *' THAT ANY POSSIBLE VALUE OF ABOVE EXPRESSION')
   103 FORMAT(' SECRES: ISFDL+NFIST',12X,'=',I8/
      *' THIS IS LARGER THAN PARAMETER NBGEN =',I8)
+
       END SUBROUTINE SECRES
 
 !======================================================================!
@@ -3638,22 +3717,22 @@ C
 *     THIS SUBPROGRAM ARRANGES SMALL SECTORS FOR THEM ELIMINATION
 *
 ***********************************************************************
-      IMPLICIT REAL *8 (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
 
-      real*8,  PARAMETER :: GRTN=1.1d0
+      real(8),  PARAMETER :: GRTN=1.1d0
       integer, PARAMETER :: NTFQ1=NTFQ*GRTN
 
       integer, intent(in) :: KSECT(NBGEN)
-      real*8,  intent(in) :: SSECT(NBGEN)
+      real(8),  intent(in) :: SSECT(NBGEN)
       integer, intent(in) :: ISCFI(NB,NT)
       integer, intent(in) :: ITMX(NB),IFMX(NB,NT)
-      real*8,  intent(in) :: SEDDS(MXRAS)
+      real(8),  intent(in) :: SEDDS(MXRAS)
       integer, intent(in), dimension(NTQ,NFQ) :: LSECTK,LSECTI,LSECTJ
 
       integer, intent(inout), dimension(:) :: NSET_,NSEF_
 
       integer, intent(out) :: LS(NBS),LSNM(NBGEN),LLS(NBS),LIS(NBS)
-      real*8,  intent(out) :: SECDL(NBS)
+      real(8),  intent(out) :: SECDL(NBS)
 
       !INCLUDE 'SPHSIZES'
       !INTEGER LSECTK,LSECTI,LSECTJ
@@ -3716,7 +3795,7 @@ C
 C
 C     APR DEFINES THE ADDITIONAL SPACE IN ARRAYS NSET, NSEF
 C
-      APR=NTFQ1*1./KFUL
+      APR=NTFQ1*1.D0/KFUL
 C
 C     ARRANGE OF SECTORS
 C
@@ -3771,11 +3850,11 @@ C
 *
 ***********************************************************************
 C
-      IMPLICIT REAL *8 (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
 
       integer, intent(in)  :: NAT, KAT
-      real*8,  intent(in)  :: XA(NAT),YA(NAT),ZA(NAT),RA(NAT)
-      real*8,  intent(out) :: SNS(KAT),XNS(KAT),YNS(KAT),ZNS(KAT)
+      real(8),  intent(in)  :: XA(NAT),YA(NAT),ZA(NAT),RA(NAT)
+      real(8),  intent(out) :: SNS(KAT),XNS(KAT),YNS(KAT),ZNS(KAT)
       integer, intent(out) :: NW_(NAT+1)
       integer, intent(out) :: KSST
 
@@ -3790,11 +3869,11 @@ C
       integer, dimension(NBS)   :: LS
       integer, dimension(NBGEN) :: KSECT
 
-      real*8, DIMENSION(NTQ)   :: TETM
-      real*8, DIMENSION(NB,NT) :: SECTTE
-      real*8, DIMENSION(NBS)   :: CRELRD
-      real*8, DIMENSION(NBGEN) :: SSECT,XSECT,YSECT,ZSECT,SECTFI
-      real*8, DIMENSION(NBS)   :: SS,XS,YS,ZS
+      real(8), DIMENSION(NTQ)   :: TETM
+      real(8), DIMENSION(NB,NT) :: SECTTE
+      real(8), DIMENSION(NBS)   :: CRELRD
+      real(8), DIMENSION(NBGEN) :: SSECT,XSECT,YSECT,ZSECT,SECTFI
+      real(8), DIMENSION(NBS)   :: SS,XS,YS,ZS
 
       !INCLUDE 'SIZES'
       !INCLUDE 'SPHSIZES'
@@ -3878,7 +3957,7 @@ C
          STOP
       ENDIF
       DO I=1,NTETM
-         TETMM=STTET*(I-.5)
+         TETMM=STTET*(I*1.D0-0.5D0)
          TETM(I)=TETMM
          SITETM(I)=DSIN(TETMM)
          COTETM(I)=DCOS(TETMM)
@@ -3888,7 +3967,7 @@ C     Preparation of arrays FIM, SIFIM (SIN), COFIM (COS)
 C
       STFI=2.0D0*PI/NFIM
       DO I=1,NFIM
-         FIMM=STFI*(I-.5)
+         FIMM=STFI*(I*1.0D0-0.5D0)
          FIM(I)=FIMM
          SIFIM(I)=DSIN(FIMM)
          COFIM(I)=DCOS(FIMM)
@@ -3900,7 +3979,7 @@ C
             X=1.D0
 C           WRITE (6,*) 'X=',1.D0-X
          ENDIF
-         SQRMAS(I)=SQRT(1.-X*X)
+         SQRMAS(I)=SQRT(1.D0-X*X)
       ENDDO
       KSST=0
       NTKAT=0
@@ -3910,6 +3989,7 @@ C           WRITE (6,*) 'X=',1.D0-X
 C
 C     Main cycle per spheres
 C
+
       DO IAT=1,NAT
 
          XAT=XA(IAT)
@@ -4080,11 +4160,11 @@ C
 
 !======================================================================!
       SUBROUTINE SFERA1T
-      IMPLICIT REAL*8 (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
 
       logical :: TIMES,MERT,NSMO,PRNT,BIGPRT
       logical, save :: FIRST=.true.
-      real*8, DIMENSION(NSF) :: CCC
+      real(8), DIMENSION(NSF) :: CCC
 
       !INCLUDE 'SIZES'
       !CHARACTER*241 KEYWRD
@@ -4197,18 +4277,18 @@ C
 *     SURFACE ELEMENTS
 *
 ***********************************************************************
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
 
       logical, save :: FIRST=.true., SF, TIMES, UNIFORM1
 
-      real*8, intent(in), dimension(:) :: X0_,Y0_,Z0_,AS_
-      real*8, intent(in), dimension(:) :: X0EL_,Y0EL_,Z0EL_,ASEL_
-      real*8, intent(inout), dimension(:) :: QS_,QSEL_
+      real(8), intent(in), dimension(:) :: X0_,Y0_,Z0_,AS_
+      real(8), intent(in), dimension(:) :: X0EL_,Y0EL_,Z0EL_,ASEL_
+      real(8), intent(inout), dimension(:) :: QS_,QSEL_
       integer, intent(in), dimension(:) :: NW_, NWEL_
       integer, intent(in) :: IJ_,IJEL_
 
       ! local arrays
-      real*8, dimension(NS) :: QSO,QS1,QSOEL,QS1EL,QS12,QS21
+      real(8), dimension(NS) :: QSO,QS1,QSOEL,QS1EL,QS12,QS21
 
       !INCLUDE 'SIZES'
       !LOGICAL FIRST,SF,TIMES,UNIFORM1
@@ -4402,14 +4482,14 @@ C        IF(DABS(DQNN1).LE.SELFCR .AND. DABS(DQNN2).LE.SELFCR)
 *
 ***********************************************************************
 *
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
       
       logical, save :: FIRST=.true.,SF3
       
-      real*8,  intent(in),    dimension(:) :: X0_,Y0_,Z0_,AS_,QS1
-      real*8,  intent(in),    dimension(:) :: XX_,YY_,ZZ_,RV_
+      real(8),  intent(in),    dimension(:) :: X0_,Y0_,Z0_,AS_,QS1
+      real(8),  intent(in),    dimension(:) :: XX_,YY_,ZZ_,RV_
       integer, intent(in),    dimension(:) :: NW_
-      real*8,  intent(inout), dimension(:) :: QS_
+      real(8),  intent(inout), dimension(:) :: QS_
 
       !INCLUDE 'SIZES'
       !DIMENSION X0_(*),Y0_(*),Z0_(*),AS_(*),NW_(*),QS_(*),QS1(*)
@@ -4439,7 +4519,7 @@ C           BE TAKEN INTO ACCOUNT.
           ZIT=ZZ_(IAT)
           RIT=RV_(IAT)
           RITT=RIT*RIT
-          RIT2=2.*RIT
+          RIT2=2.D0*RIT
           DO 110 IL=NW_(IAT),NW_(IAT+1)-1
 C
              XSG=X0_(IL)
@@ -4452,7 +4532,7 @@ C
   70         DO 80 JL=IL+1,NW_(IAT+1)-1
                   RRR=SQRT((XSG-X0_(JL))*(XSG-X0_(JL))+(YSG-Y0_(JL))*
      *               (YSG-Y0_(JL))+(ZSG-Z0_(JL))*(ZSG-Z0_(JL)))
-                  COF=1./(2.*RIT*RRR)
+                  COF=1.D0/(2.D0*RIT*RRR)
 C
                   QS_(JL)=QS_(JL)+COF*QS1IL
                   QS_(IL)=QS_(IL)+COF*QS1(JL)
@@ -4481,7 +4561,7 @@ C
                  YAT=YY_(JAT)
                  ZAT=ZZ_(JAT)
                  RATT=RAT_*RAT_
-                 RAT2=2.*RAT_
+                 RAT2=2.D0*RAT_
                  RTO=(XSG-XAT)*(XSG-XAT)+(YSG-YAT)*(YSG-YAT)+
      *           (ZSG-ZAT)*(ZSG-ZAT)
                  DO 60 JL=NW_(JAT),NW_(JAT+1)-1
@@ -4513,13 +4593,13 @@ C
 C
 C    TESSERAL  CHARGE'S   COMPENSATION
 C
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
 
       integer, intent(in) :: IJ_
-      real*8,  intent(in) :: CON_, CHDIFF_
+      real(8),  intent(in) :: CON_, CHDIFF_
       integer, intent(in),    dimension(:) :: NW_
-      real*8,  intent(inout), dimension(:) :: QS_
-      real*8,  intent(inout), dimension(:) :: QSFE_
+      real(8),  intent(inout), dimension(:) :: QS_
+      real(8),  intent(inout), dimension(:) :: QSFE_
 
       ! local variables
       logical, save :: FIRST=.true.,SFERT1P
@@ -4620,17 +4700,17 @@ C         WRITE (*,'('' CON='',F9.5)') CON_
       SUBROUTINE SFERT2(X0_,Y0_,Z0_,QS2,QS_,NW_,XX_,YY_,ZZ_,RV_,
      *   X02,Y02,Z02,IJ2)
 
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
 
       integer, intent(in) :: IJ2
-      integer, intent(in),   dimension(:) :: NW_
-      real*8, intent(in),    dimension(:) :: X0_,Y0_,Z0_,XX_,YY_,ZZ_,RV_
-      real*8, intent(in),    dimension(:) :: X02,Y02,Z02,QS2
-      real*8, intent(inout), dimension(:) :: QS_
+      integer, intent(in), dimension(:) :: NW_
+      real(8), intent(in), dimension(:) :: X0_,Y0_,Z0_,XX_,YY_,ZZ_,RV_
+      real(8), intent(in), dimension(:) :: X02,Y02,Z02,QS2
+      real(8), intent(inout), dimension(:) :: QS_
 
       ! local variables
       logical, save :: FIRST=.true.,SF3
-      real*8,  save :: RSELF
+      real(8),  save :: RSELF
 
       !INCLUDE 'SIZES'
       !DIMENSION X0_(*),Y0_(*),Z0_(*),NW_(*),QS_(*)
@@ -4665,7 +4745,7 @@ C
          ZIT=ZZ_(IAT)
          RIT=RV_(IAT)
          RITT=RIT*RIT
-         RIT2=2.*RIT
+         RIT2=2.D0*RIT
 
          DO 110 IL=NW_(IAT),NW_(IAT+1)-1
 
@@ -4715,8 +4795,8 @@ C                 WRITE(6,1000)IL,JL,RRKSR,CSA,COG,COG*QS2(JL)
       END SUBROUTINE SFERT2
 
 !======================================================================!
-      REAL*8 FUNCTION VOLMIN(X)
-      IMPLICIT REAL*8 (A-H,O-Z)
+      REAL(8) FUNCTION VOLMIN(X)
+      IMPLICIT REAL(8) (A-H,O-Z)
 
       !COMMON /SCHCON/ COSBT,RAT,COSBT1,RNE,RR,RDS,RDS1
       !COMMON /VOL/     CON,VSOLV,RSOLV,SELFCR,CHDIFF,ITSE
@@ -4726,29 +4806,30 @@ C
       DL1=SQRT(DLENF(RNE+RSOLV,X1,COSBT1))
       RDS=DL-RSOLV
       RDS1=DL1-RSOLV
-      IF(RDS.LE.0.OR.X.GT.RAT+RDS.OR.RDS1.LE.0.OR.X1.GT.RNE+RDS) THEN
-         VOLMIN=0.
+      IF(RDS.LE.0.D0.OR.X.GT.RAT+RDS.OR.RDS1.LE.0.D0.OR.X1.GT.RNE+RDS)
+     1THEN
+         VOLMIN=0.D0
          RETURN
       ENDIF
       COSS=COSFN(RAT,X,RDS)
       COSS1=COSFN(RNE,X1,RDS1)
-      SINS=SQRT(1.-COSS*COSS)
-      SINS1=SQRT(1.-COSS1*COSS1)
+      SINS=SQRT(1.D0-COSS*COSS)
+      SINS1=SQRT(1.D0-COSS1*COSS1)
       RA=RAT*SINS
       RA1=RNE*SINS1
       IF(X+X1+RDS+RDS1.GT.RR) THEN
          COSG=COSFN(RDS,RR-X-X1,RDS1)
-         RG=RDS*SQRT(1.-COSG*COSG)
+         RG=RDS*SQRT(1.D0-COSG*COSG)
          HR=RDS*COSG
          HR1=RR-X-X1-HR
       ELSE
-         COSG=1.
-         RG=0.
+         COSG=1.D0
+         RG=0.D0
          HR=RDS
          HR1=RDS1
       ENDIF
-      HA=RAT*(1.-COSS)
-      HA1=RNE*(1.-COSS1)
+      HA=RAT*(1.D0-COSS)
+      HA1=RNE*(1.D0-COSS1)
       HB=HR+X-RAT*COSS
       HB1=HR1+X1-RNE*COSS1
       VOLMIN=-((VSEC(RA,RG,HB)-VSEC(RA,0.D0,HA))+
@@ -4766,35 +4847,35 @@ C    *VSEC(RA1,RG,HB1)
       END FUNCTION VOLMIN
 
 !======================================================================!
-      REAL*8 FUNCTION COSFN(X,Y,Z)
-      REAL*8 X,Y,Z
+      REAL(8) FUNCTION COSFN(X,Y,Z)
+      REAL(8) X,Y,Z
       COSFN=(X*X+Y*Y-Z*Z)/(2.0D0*X*Y)
       END FUNCTION COSFN
 
 !======================================================================!
-      REAL*8 FUNCTION DLENF(X,Y,C)
-      REAL*8 X,Y,C
+      REAL(8) FUNCTION DLENF(X,Y,C)
+      REAL(8) X,Y,C
       DLENF=X*X+Y*Y-2.0D0*X*Y*C
       END FUNCTION DLENF
 
 !======================================================================!
-      REAL*8 FUNCTION FINT(H,R,X)
-      REAL*8 H,R,X,PI
+      REAL(8) FUNCTION FINT(H,R,X)
+      REAL(8) H,R,X,PI
       PI=ATAN(1.0D0)*4.0D0
       FINT=PI*(H*H*X+R*R*X-X*X*X/3.0D0-H*X*SQRT(R*R-X*X)
      *-H*R*R*ASIN(X/R))
       END FUNCTION FINT
 
 !======================================================================!
-      REAL*8 FUNCTION VSEC(R1,R2,H)
-      REAL*8 R1,R2,H,PI
+      REAL(8) FUNCTION VSEC(R1,R2,H)
+      REAL(8) R1,R2,H,PI
       PI=DATAN(1.0D0)*4.0D0
       VSEC=PI/6.0D0*H*(3.0D0*R1*R1+3.0D0*R2*R2+H*H)
       END FUNCTION VSEC
 
 !======================================================================!
-      REAL*8 FUNCTION R2D(X) !transfer from radians to degrees
-      REAL*8 X,PI
+      REAL(8) FUNCTION R2D(X) !transfer from radians to degrees
+      REAL(8) X,PI
       PI=DATAN(1.0D0)*4.0D0
       R2D=X*180.0D0/PI
       END FUNCTION R2D
@@ -4809,13 +4890,13 @@ C   Output:   SQC     - square
 C             VMOLC   - volume
 C             PLENGTH - mean radius
 C
-      IMPLICIT REAL*8 (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
 
-      real*8, intent(in),  dimension(:) :: X0_,Y0_,Z0_,AS_
-      real*8, intent(in),  dimension(:) :: XX_,YY_,ZZ_,RV_
+      real(8), intent(in),  dimension(:) :: X0_,Y0_,Z0_,AS_
+      real(8), intent(in),  dimension(:) :: XX_,YY_,ZZ_,RV_
       integer, intent(in), dimension(:) :: NW_
       integer, intent(in) :: NN_
-      real*8, intent(out) :: SQC,VMOLC,PLENGTH
+      real(8), intent(out) :: SQC,VMOLC,PLENGTH
 
       !INCLUDE 'SIZES'
       !DIMENSION X0_(*),Y0_(*),Z0_(*),AS_(*)
@@ -4867,11 +4948,11 @@ C     WRITE (6,'(1X,''XJ,YJ,ZJ  '',3D15.10)')XJ,YJ,ZJ
                 RO=SQRT((XI-XJ)*(XI-XJ)+(YI-YJ)*(YI-YJ)+(ZI-ZJ)*(ZI-ZJ))
 C     WRITE (6,'('' RO='',D10.5)') RO
 C     Cosinus gamma
-                COM=(RO*RO+RK*RK-P2)/(2.*RK*RO)
-                VMOLC=VMOLC+COM*RO*SJ/3.
+                COM=(RO*RO+RK*RK-P2)/(2.D0*RK*RO)
+                VMOLC=VMOLC+COM*RO*SJ/3.D0
     2      CONTINUE
     1 CONTINUE
-      PLENGTH=(VMOLC*3.0/4.0/PI)**(1./3.)
+      PLENGTH=(VMOLC*3.D0/4.D0/PI)**(1.D0/3.D0)
       RETURN
       END SUBROUTINE VOLSQU
 
@@ -4883,9 +4964,9 @@ C     Cosinus gamma
 *  FINDS A WORD IT DOES NOT RECOGNIZE THE PROGRAM WILL BE STOPPED.
 *
 ***********************************************************************
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
       
-      CHARACTER(241), intent(in) :: KEYWRD_
+      CHARACTER(len=*), intent(in) :: KEYWRD_
       
       character(241) :: ALLKEY
       character(  1) :: CH
@@ -4897,7 +4978,9 @@ C     Cosinus gamma
       !LOGICAL MYWORD,TP
 
       ALLKEY=KEYWRD_
-C    DUMMY IF STATEMENT TO REMOVE AMPERSAND AND PLUS SIGNS, IF PRESENT
+
+C     DUMMY IF STATEMENT TO REMOVE AMPERSAND AND PLUS SIGNS, IF PRESENT
+
       IF(MYWORD(ALLKEY(160:),' SETUP'))I=1
       IF(MYWORD(ALLKEY,'&'))I=2
       IF(MYWORD(ALLKEY,' +'))I=3
@@ -5025,7 +5108,8 @@ C
 C
 C         END OF SOLVATATION KEY WORDS
 C
-      IF(ALLKEY.NE.' ')THEN
+      IF (ALLKEY.NE.' ') THEN
+
          J=0
          DO 50 I=1,240
             IF(ALLKEY(I:I).NE.' '.OR.ALLKEY(I:I+1).NE.'  ')THEN
@@ -5034,31 +5118,36 @@ C
                ALLKEY(J:J)=CH
             ENDIF
    50    CONTINUE
+
          IF(ALLKEY(241:241).NE.' ')THEN
             J=J+1
             CH=ALLKEY(241:241)
             ALLKEY(J:J)=CH
          ENDIF
+
          J=MAX(1,J)
          L=INDEX(KEYWRD_,'DEBUG')
+
          IF(L.NE.0)THEN
             WRITE(6,'('' *  DEBUG KEYWORDS USED:  '',A)')ALLKEY(:J)
          ELSE
-            WRITE(6,'(///10X,''UNRECOGNIZED KEY-WORDS: ('',A,'')'')')
-     1ALLKEY(:J)
-            WRITE(6,'(///10X,''CALCULATION STOPPED TO AVOID WASTING TIME
-     1.'')')
+            WRITE(6,'(///10X,''WARNING: UNKNOWN KEYWORDS: ('',A,'')'')')
+     1      ALLKEY(:J)
+C-----------WRITE(6,'(///10X,''CALCULATION STOPPED TO AVOID WASTING TIME
+C-----1     .'')')
             WRITE(6,'(///10X,''IF THESE ARE DEBUG KEYWORDS, ADD THE KEYW
-     1ORD "DEBUG"'')')
-            STOP
+     1      ORD "DEBUG"'')')
+C-----------STOP
          ENDIF
+
       ENDIF
+
       RETURN
       END SUBROUTINE WRTKEY
 
 !======================================================================!
       SUBROUTINE SEALINV(X,FX,Y,FY,FTIN,STEP_IN)
-      IMPLICIT REAL*8 (A-H,O-Z)
+      IMPLICIT REAL(8) (A-H,O-Z)
       IMPLICIT INTEGER*4 (I-N)
 
       STEP = STEP_IN
