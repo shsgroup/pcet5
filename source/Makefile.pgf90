@@ -13,6 +13,6 @@ FC      = pgf90
 MODFLAG = -module 
 BACKSLASH = -Mbackslash
 NOBACKSLASH = -Mnobackslash
-F90FLAGS = -fast -Mipa=fast
-F77FLAGS = -fast -Mipa=fast
+F90FLAGS = -fast -Mipa=fast -Mdaz
+F77FLAGS = -O2 -Mdaz
 LDFLAGS =
