@@ -5,9 +5,12 @@ subroutine setmat
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-11-10 21:14:21 $
-!  $Revision: 5.5 $
+!  $Date: 2011-01-04 20:58:14 $
+!  $Revision: 5.6 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.5  2010/11/10 21:14:21  souda
+!  Last addition/changes. IMPORTANT: Solvation keyword is back to SOLV( for compatibility reasons
+!
 !  Revision 5.4  2010/11/04 22:49:28  souda
 !  aditional check when opening the files for reading/writing
 !
@@ -73,7 +76,7 @@ subroutine setmat
    real(8) :: alim1, blim1, alim2, blim2
    real(8) :: ratio, gratio, rl, rcoef
    real(8) :: talp1, talp2, tbeta, tdet, tr1a1b, tr1a2a
-   real(8) :: ersum, erdif, ersq, tanth, sqtan
+   real(8) :: ersum, erdif, ersq, tanth, sqtan, debye
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Local arrays
@@ -1058,23 +1061,56 @@ subroutine setmat
       call getopt(keywrd,ikey+10,options)
       iread = index(options,' FILE=')
 
+      if (iread.ne.0) then
+
+         ispa = index(options(itread+7:),' ')
+         fname = options(itread+7:itread+ispa+5)
+         lenf = ispa - 1
+         call locase(fname,lenf)
+         write(6,'(/1x,''Dipole moment matrices in the adiabatic basis will be read from the external file <'',a,''>'')') fname(1:lenf)
+
+         !-- TEMPORARY: not implemented yet
+         write(*,'(/1x,"This option is not implemented yet: please be patient...")')
+         stop "unimplemented feature"
+         !-- TEMPORARY: not implemented yet
+
+         inquire(file=fname(1:lenf),exist=file_exists)
+
+         if (.not.file_exists) then
+            write(*,'(/1x,"File ",a," does not exist. Check the file name in FILE option.")') fname(1:lenf)
+            stop
+         endif
+
+         open(1,file=fname(1:lenf),status='old',form='unformatted')
+
+         !-- the external file is assumed to contain the following 30 columns
+         !   (x-components, y-components, z-components)
+         !
+         !   rp  dx11  dx12  dx13  dx14  dx22  dx23  dx24  dx33  dx34  dx44  dy11  dy12  ...
 
 
+         !--- BIG PROBLEM: The orientation of the molecule at which the calculations of the dipole moment
+         !                 were performed IS UNKNOWN and might be different from the standard orientation
+         !                 adopted in this code (origin at the center of mass of the PT interface and
+         !                 x-axis along the proton donor-acceptor axis). That means that we should read
+         !                 in the orientation (Cartesian coordinates of all atoms) as well in order to
+         !                 rotate the dipole moment properly.
+         !
+         !--- SO, WHAT ARE WE GOING TO DO?
 
+         close(1)
 
+      else
+
+         write(*,'(/1x,"SETMAT: you must specify the file name (FILE=) for TRDIPOLE keyword.")')
+         stop 'Check your input file...'
+
+      endif
 
       !------ to be coded....
       write(*,'(/1x,"from SETMAT: the keyword TRDIPOLE for reading dipole moments from disk")')
       write(*,'( 1x,"             is not implemented yet. Coming soon.")')
       stop
-
-
-
-
-
-
-
-
 
    else
 
@@ -1094,53 +1130,55 @@ subroutine setmat
          xyzsol(3,nhsol) = 0.d0
          call calculate_dipole_moment_diab(kp)
       enddo
+      
+      debye = a2bohr*au2debye
 
-      write(6,'(/1x,"Dipole moments of the diabatic charge distributions (proton at the middle of the PT interface)")')
+      write(6,'(/1x,"Dipole moments (Debye) of the diabatic charge distributions (proton at the middle of the PT interface)")')
       write(6,'( 1x,"   State  ","      d_x         d_y         d_z          |d|  ")')
 
-      write(6,'( 1x,"    1a    ",4f12.6)') dipole_moment_diab_x(1,1,npnts/2), &
-                                         & dipole_moment_diab_y(1,1,npnts/2), &
-                                         & dipole_moment_diab_z(1,1,npnts/2), &
-      &sqrt(dipole_moment_diab_x(1,1,npnts/2)**2 + dipole_moment_diab_y(1,1,npnts/2)**2 + dipole_moment_diab_z(1,1,npnts/2)**2)
+      write(6,'( 1x,"    1a    ",4f12.6)') dipole_moment_diab_x(1,1,npnts/2)*debye, &
+                                         & dipole_moment_diab_y(1,1,npnts/2)*debye, &
+                                         & dipole_moment_diab_z(1,1,npnts/2)*debye, &
+      &sqrt(dipole_moment_diab_x(1,1,npnts/2)**2 + dipole_moment_diab_y(1,1,npnts/2)**2 + dipole_moment_diab_z(1,1,npnts/2)**2)*debye
 
-      write(6,'( 1x,"    1b    ",4f12.6)') dipole_moment_diab_x(2,2,npnts/2), &
-                                         & dipole_moment_diab_y(2,2,npnts/2), &
-                                         & dipole_moment_diab_z(2,2,npnts/2), &
-      &sqrt(dipole_moment_diab_x(2,2,npnts/2)**2 + dipole_moment_diab_y(2,2,npnts/2)**2 + dipole_moment_diab_z(2,2,npnts/2)**2)
+      write(6,'( 1x,"    1b    ",4f12.6)') dipole_moment_diab_x(2,2,npnts/2)*debye, &
+                                         & dipole_moment_diab_y(2,2,npnts/2)*debye, &
+                                         & dipole_moment_diab_z(2,2,npnts/2)*debye, &
+      &sqrt(dipole_moment_diab_x(2,2,npnts/2)**2 + dipole_moment_diab_y(2,2,npnts/2)**2 + dipole_moment_diab_z(2,2,npnts/2)**2)*debye
 
-      write(6,'( 1x,"    2a    ",4f12.6)') dipole_moment_diab_x(3,3,npnts/2), &
-                                         & dipole_moment_diab_y(3,3,npnts/2), &
-                                         & dipole_moment_diab_z(3,3,npnts/2), &
-      &sqrt(dipole_moment_diab_x(3,3,npnts/2)**2 + dipole_moment_diab_y(3,3,npnts/2)**2 + dipole_moment_diab_z(3,3,npnts/2)**2)
+      write(6,'( 1x,"    2a    ",4f12.6)') dipole_moment_diab_x(3,3,npnts/2)*debye, &
+                                         & dipole_moment_diab_y(3,3,npnts/2)*debye, &
+                                         & dipole_moment_diab_z(3,3,npnts/2)*debye, &
+      &sqrt(dipole_moment_diab_x(3,3,npnts/2)**2 + dipole_moment_diab_y(3,3,npnts/2)**2 + dipole_moment_diab_z(3,3,npnts/2)**2)*debye
 
-      write(6,'( 1x,"    2b    ",4f12.6)') dipole_moment_diab_x(4,4,npnts/2), &
-                                         & dipole_moment_diab_y(4,4,npnts/2), &
-                                         & dipole_moment_diab_z(4,4,npnts/2), &
-      &sqrt(dipole_moment_diab_x(4,4,npnts/2)**2 + dipole_moment_diab_y(4,4,npnts/2)**2 + dipole_moment_diab_z(4,4,npnts/2)**2)
+      write(6,'( 1x,"    2b    ",4f12.6)') dipole_moment_diab_x(4,4,npnts/2)*debye, &
+                                         & dipole_moment_diab_y(4,4,npnts/2)*debye, &
+                                         & dipole_moment_diab_z(4,4,npnts/2)*debye, &
+      &sqrt(dipole_moment_diab_x(4,4,npnts/2)**2 + dipole_moment_diab_y(4,4,npnts/2)**2 + dipole_moment_diab_z(4,4,npnts/2)**2)*debye
 
 
-      write(72,'(/1x,"Dipole moments of the diabatic charge distributions (proton at the middle of the PT interface)")')
+      write(72,'(/1x,"Dipole moments (Debye) of the diabatic charge distributions (proton at the middle of the PT interface)")')
       write(72,'( 1x,"   State  ","      d_x         d_y         d_z          |d|  ")')
    
-      write(72,'( 1x,"    1a    ",4f12.6)') dipole_moment_diab_x(1,1,npnts/2), &
-                                         & dipole_moment_diab_y(1,1,npnts/2), &
-                                         & dipole_moment_diab_z(1,1,npnts/2), &
-      &sqrt(dipole_moment_diab_x(1,1,npnts/2)**2 + dipole_moment_diab_y(1,1,npnts/2)**2 + dipole_moment_diab_z(1,1,npnts/2)**2)
+      write(72,'( 1x,"    1a    ",4f12.6)') dipole_moment_diab_x(1,1,npnts/2)*debye, &
+                                          & dipole_moment_diab_y(1,1,npnts/2)*debye, &
+                                          & dipole_moment_diab_z(1,1,npnts/2)*debye, &
+      &sqrt(dipole_moment_diab_x(1,1,npnts/2)**2 + dipole_moment_diab_y(1,1,npnts/2)**2 + dipole_moment_diab_z(1,1,npnts/2)**2)*debye
 
-      write(72,'( 1x,"    1b    ",4f12.6)') dipole_moment_diab_x(2,2,npnts/2), &
-                                         & dipole_moment_diab_y(2,2,npnts/2), &
-                                         & dipole_moment_diab_z(2,2,npnts/2), &
-      &sqrt(dipole_moment_diab_x(2,2,npnts/2)**2 + dipole_moment_diab_y(2,2,npnts/2)**2 + dipole_moment_diab_z(2,2,npnts/2)**2)
+      write(72,'( 1x,"    1b    ",4f12.6)') dipole_moment_diab_x(2,2,npnts/2)*debye, &
+                                          & dipole_moment_diab_y(2,2,npnts/2)*debye, &
+                                          & dipole_moment_diab_z(2,2,npnts/2)*debye, &
+      &sqrt(dipole_moment_diab_x(2,2,npnts/2)**2 + dipole_moment_diab_y(2,2,npnts/2)**2 + dipole_moment_diab_z(2,2,npnts/2)**2)*debye
 
-      write(72,'( 1x,"    2a    ",4f12.6)') dipole_moment_diab_x(3,3,npnts/2), &
-                                         & dipole_moment_diab_y(3,3,npnts/2), &
-                                         & dipole_moment_diab_z(3,3,npnts/2), &
-      &sqrt(dipole_moment_diab_x(3,3,npnts/2)**2 + dipole_moment_diab_y(3,3,npnts/2)**2 + dipole_moment_diab_z(3,3,npnts/2)**2)
+      write(72,'( 1x,"    2a    ",4f12.6)') dipole_moment_diab_x(3,3,npnts/2)*debye, &
+                                          & dipole_moment_diab_y(3,3,npnts/2)*debye, &
+                                          & dipole_moment_diab_z(3,3,npnts/2)*debye, &
+      &sqrt(dipole_moment_diab_x(3,3,npnts/2)**2 + dipole_moment_diab_y(3,3,npnts/2)**2 + dipole_moment_diab_z(3,3,npnts/2)**2)*debye
 
-      write(72,'( 1x,"    2b    ",4f12.6)') dipole_moment_diab_x(4,4,npnts/2), &
-                                         & dipole_moment_diab_y(4,4,npnts/2), &
-                                         & dipole_moment_diab_z(4,4,npnts/2), &
-      &sqrt(dipole_moment_diab_x(4,4,npnts/2)**2 + dipole_moment_diab_y(4,4,npnts/2)**2 + dipole_moment_diab_z(4,4,npnts/2)**2)
+      write(72,'( 1x,"    2b    ",4f12.6)') dipole_moment_diab_x(4,4,npnts/2)*debye, &
+                                          & dipole_moment_diab_y(4,4,npnts/2)*debye, &
+                                          & dipole_moment_diab_z(4,4,npnts/2)*debye, &
+      &sqrt(dipole_moment_diab_x(4,4,npnts/2)**2 + dipole_moment_diab_y(4,4,npnts/2)**2 + dipole_moment_diab_z(4,4,npnts/2)**2)*debye
 
 
    endif
@@ -1167,7 +1205,7 @@ contains
 
       !-- move the origin to the center of charge distribution
       !   for the first (1a) diabatic state (with the proton excluded)
-      
+
       cocx = 0.d0
       cocy = 0.d0
       cocz = 0.d0
