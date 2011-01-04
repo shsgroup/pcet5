@@ -13,9 +13,16 @@ include Makefile.machine
 
 VERSION = 5.1
 
-MODDIR  = mod
+###MODDIR  = ./mod
+
+ifeq ($(FC),gfortran)
+   MODDIR = .
+else
+   MODDIR  = ./mod
+endif
+
 MODOPT  = $(MODFLAG)$(MODDIR)
-OBJDIR  = obj
+OBJDIR  = ./obj
 EXEDIR  = ../bin
 PROGRAM = pcet_$(VERSION)_$(ARCH)
 EXE     = $(EXEDIR)/$(PROGRAM).x
