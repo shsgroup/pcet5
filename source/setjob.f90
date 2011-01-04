@@ -6,9 +6,12 @@ subroutine setjob
 !---------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-12-15 21:24:56 $
-!  $Revision: 5.4 $
+!  $Date: 2011-01-04 19:59:14 $
+!  $Revision: 5.5 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.4  2010/12/15 21:24:56  souda
+!  various fixes (non-critical)
+!
 !  Revision 5.3  2010/11/10 21:14:21  souda
 !  Last addition/changes. IMPORTANT: Solvation keyword is back to SOLV( for compatibility reasons
 !
@@ -1017,6 +1020,8 @@ subroutine setjob
       ! DELTA - the width of the layer between two cavities
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+      !-- default values for different solvents
+
       if (index(options,' H2O').ne.0.or.index(options,' WATER').ne.0) then
          kappa = 0.9d0
          delta = 1.0d0
@@ -1044,29 +1049,27 @@ subroutine setjob
       elseif (index(options,' DMF').ne.0) then
          kappa = 0.9d0
          delta = 2.7d0
-
       else
+         kappa = 0.9d0
+         delta = 1.0d0
+      endif
 
-         ikappa = index(options,' KAPPA=')
-         idelta = index(options,' DELTA=')
-         if (ikappa.ne.0) then
-            kappa = reada(options,ikappa+7)
-         else
-            write(*,'(/1x,"*** (in SETJOB): You MUST specify KAPPA constant in SOLV ***"/)')
-            stop
-         endif
-         if (idelta.ne.0) then
-            delta = reada(options,idelta+7)
-         else
-            write(*,'(/1x,"*** (in SETJOB): You MUST specify DELTA constant in SOLV ***"/)')
-            stop
-         endif
+      ikappa = index(options,' KAPPA=')
+      idelta = index(options,' DELTA=')
 
+      if (ikappa.ne.0) then
+         kappa = reada(options,ikappa+7)
+         write(*,'(/1x,"The custom value of KAPPA parameter was specified in the input"/)')
+      endif
+
+      if (idelta.ne.0) then
+         delta = reada(options,idelta+7)
+         write(*,'(/1x,"The custom value of DELTA parameter was specified in the input"/)')
       endif
 
       write(6,'(/1x,"FRCM cavity parameters:")')
       write(6,'(10x,"Factor for VdW radii (KAPPA):     ",f12.6)') kappa
-      write(6,'(10x,"Width of the inner layer (DELTA): ",f12.6)') delta
+      write(6,'(10x,"Width of the inner layer (DELTA): ",f12.6," Angstroms")') delta
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
