@@ -79,9 +79,12 @@ program pcet
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-12-15 21:24:56 $
-!  $Revision: 5.4 $
+!  $Date: 2011-01-04 19:57:38 $
+!  $Revision: 5.5 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.4  2010/12/15 21:24:56  souda
+!  various fixes (non-critical)
+!
 !  Revision 5.3  2010/11/10 21:14:21  souda
 !  Last addition/changes. IMPORTANT: Solvation keyword is back to SOLV( for compatibility reasons
 !
@@ -101,7 +104,7 @@ program pcet
 
    character(len=  8) :: cdum
    character(len= 10) :: curdat, curtim
-   character(len=160) :: input, line, lsline
+   character(len=160) :: input, line, lsline, timestamp
 
    logical :: dir_exists=.false.
 
@@ -194,6 +197,7 @@ program pcet
          ljob = 2
       endif
 
+
       !-------------------------------------------------
       ! Create a subdirectory for the current job.
       ! The name is given in the string JOB.
@@ -227,22 +231,30 @@ program pcet
 
          write(*,'(/1x,"****************************** W A R N I N G !!! *******************************")')
          write(*,'( 1x,"The output directory for the current job <",a,"> already exists.")') job(1:ljob)
-         write(*,'( 1x,"It might be too important to be overwritten and thus the job wil be skipped.")')
-         write(*,'( 1x,"Rename or remove the existing directory and resubmit the job.")')
+         write(*,'( 1x,"It might be too important to be overwritten and thus the directory will be")')
+         write(*,'( 1x,"backed up (timestamp will be added to its original name).")')
          write(*,'( 1x,"****************************** W A R N I N G !!! *******************************")')
+
+         !-------------------------------------------------
+         ! Create timestamp
+         !---------------------------------------------
+         call date_and_time(curdat,curtim)
+         timestamp=curdat(5:6)//"-"//curdat(7:8)//"-"//curdat(1:4)//&
+         &"-"//curtim(1:2)//":"//curtim(3:4)//":"//curtim(5:6)
+
+         call system("mv "//job(1:ljob)//" "//job(1:ljob)//"."//trim(timestamp))
 
          !-- skip to the next job
 
-         loop_over_lines: do
-            read(5,'(a)',iostat=io_status) line
-            if (line.eq."") exit loop_over_lines
-            if (io_status.ne.0) then
-               write(*,'(/1x,"Something is wrong with the input file: I/O error or EOF encountered")')
-               exit loop_over_jobs
-            endif
-         enddo loop_over_lines
-
-         cycle loop_over_jobs
+         !loop_over_lines: do
+         !   read(5,'(a)',iostat=io_status) line
+         !   if (line.eq."") exit loop_over_lines
+         !   if (io_status.ne.0) then
+         !      write(*,'(/1x,"Something is wrong with the input file: I/O error or EOF encountered")')
+         !      exit loop_over_jobs
+         !   endif
+         !enddo loop_over_lines
+         !cycle loop_over_jobs
 
       endif
 
@@ -252,12 +264,6 @@ program pcet
       call system('cp '//input(1:lfile)//' '//job(1:ljob))
 
       !-------------------------------------------------
-      ! Read titles and keywords for the current job
-      !---------------------------------------------
-      backspace 5
-      call read0(5)
-
-      !-------------------------------------------------
       ! Initiate timing and set date
       !---------------------------------------------
       time_s = second()
@@ -265,6 +271,12 @@ program pcet
       call date_and_time(curdat,curtim)
       strdat=curdat(5:6)//"/"//curdat(7:8)//"/"//curdat(1:4)//&
        " at "//curtim(1:2)//":"//curtim(3:4)//":"//curtim(5:6)
+
+      !-------------------------------------------------
+      ! Read titles and keywords for the current job
+      !---------------------------------------------
+      backspace 5
+      call read0(5)
 
       !-------------------------------------------------
       ! Print a banner for the calculation and
