@@ -115,9 +115,12 @@ subroutine dynamics3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-11-10 21:14:21 $
-!  $Revision: 5.4 $
+!  $Date: 2011-02-08 00:47:42 $
+!  $Revision: 5.5 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.4  2010/11/10 21:14:21  souda
+!  Last addition/changes. IMPORTANT: Solvation keyword is back to SOLV( for compatibility reasons
+!
 !  Revision 5.3  2010/11/04 22:43:08  souda
 !  Next iteration... and two additional Makefiles for building the code with debug options.
 !
@@ -1049,14 +1052,16 @@ subroutine dynamics3
 
       endif
 
+
+      !-- calculate adiabatic states at t=0
+      call calculate_vibronic_states(kg0,z1,z2)
+
       !-- in case of MDQT trajectory initialize the quantum
       !   amplitudes of the initial wavefunction
 
       if (mdqt) then
 
-         !-- calculate the adiabatic states and vibronic couplings at t=0
-
-         call calculate_vibronic_states(kg0,z1,z2)
+         !-- calculate vibronic couplings at t=0
          call calculate_vibronic_couplings
 
          !-- set initial amplitudes (and/or density matrix) at t=0
@@ -1073,6 +1078,7 @@ subroutine dynamics3
       !-- write the header of the trajectory file
 
       if (weights) then
+         call get_evb_weights
          write(itraj_channel,'("#",168("="))')
       else
          write(itraj_channel,'("#",141("="))')
@@ -1097,6 +1103,24 @@ subroutine dynamics3
       write(6,'(141("-"))')
 
       write(6,'(137x,$)')
+
+      !-- transform initial values at time t=0
+      call z1z2_to_zpze(z1,z2,zp,ze)
+      call z1z2_to_zpze(vz1,vz2,vzp,vze)
+
+      !-- initial free energy (PMF)
+      efes = get_free_energy(istate)
+
+      !-- initial kinetic energy                                                                                                                           
+      ekin = half*f0*tau0*taul*(vz1*vz1 + vz2*vz2)
+
+      if (weights) then
+          write(itraj_channel,'(f12.6,10f12.5,i5,4f8.3)') &
+          & 0.d0, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn)
+      else
+          write(itraj_channel,'(f12.6,10f12.5,i5)') &
+          & 0.d0, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate
+      endif
 
       number_of_switches = 0
       number_of_rejected = 0
