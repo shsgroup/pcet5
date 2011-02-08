@@ -5,9 +5,12 @@ module propagators_3d
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2010-11-10 21:14:21 $
-   !  $Revision: 5.4 $
+   !  $Date: 2011-02-08 00:46:50 $
+   !  $Revision: 5.5 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.4  2010/11/10 21:14:21  souda
+   !  Last addition/changes. IMPORTANT: Solvation keyword is back to SOLV( for compatibility reasons
+   !
    !  Revision 5.3  2010/11/04 22:43:08  souda
    !  Next iteration... and two additional Makefiles for building the code with debug options.
    !
@@ -90,6 +93,7 @@ module propagators_3d
    real(8), allocatable, dimension(:,:) :: a0_vdotd, a1_vdotd, a2_vdotd
 
    public :: set_mode
+   public :: get_free_energy
    public :: allocate_vibronic_states, deallocate_vibronic_states
    public :: allocate_evb_weights, deallocate_evb_weights
    public :: allocate_mdqt_arrays, deallocate_mdqt_arrays
@@ -149,6 +153,20 @@ contains
       nzdim = nzdim_
       ielst = ielst_
    end subroutine set_mode
+
+   function get_free_energy(i_) result(fe_)
+      integer, intent(in) :: i_
+      real(8) :: fe_
+      integer :: isize
+      isize = size(fe)
+      if (i_.gt.0.and.i_.le.isize) then
+         fe_ = fe(i_)
+      else
+         fe_ = 0.d0
+         write(*,*) "ERROR in get_free_energy: index of state (",i_,") is out of bounds"
+         stop
+      endif
+   end function get_free_energy
 
    !---------------------------------------------------------------------
    ! array allocation routines
@@ -887,6 +905,7 @@ contains
       efes = fe(istate)
 
       !-- calculate kinetic energy
+      ekin = 0.d0
       do i=1,2
          ekin = ekin + v(i)*v(i)
       enddo
@@ -1031,6 +1050,7 @@ contains
       vz2 = v(2)
 
       !-- calculate kinetic energy
+      ekin = 0.d0
       do i=1,2
          ekin = ekin + v(i)*v(i)
       enddo
