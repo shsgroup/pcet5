@@ -115,9 +115,12 @@ subroutine dynamics3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-08 00:47:42 $
-!  $Revision: 5.5 $
+!  $Date: 2011-02-09 20:51:41 $
+!  $Revision: 5.6 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.5  2011/02/08 00:47:42  souda
+!  added: trajectory output for t=0
+!
 !  Revision 5.4  2010/11/10 21:14:21  souda
 !  Last addition/changes. IMPORTANT: Solvation keyword is back to SOLV( for compatibility reasons
 !
@@ -1106,7 +1109,7 @@ subroutine dynamics3
 
       !-- transform initial values at time t=0
       call z1z2_to_zpze(z1,z2,zp,ze)
-      call z1z2_to_zpze(vz1,vz2,vzp,vze)
+      call v1v2_to_vpve(vz1,vz2,vzp,vze)
 
       !-- initial free energy (PMF)
       efes = get_free_energy(istate)
@@ -1288,7 +1291,7 @@ subroutine dynamics3
          !-- write the current data to the trajectory file
 
          call z1z2_to_zpze(z1,z2,zp,ze)
-         call z1z2_to_zpze(vz1,vz2,vzp,vze)
+         call v1v2_to_vpve(vz1,vz2,vzp,vze)
 
          if (mod(istep,ndump).eq.0) then
             if (weights) then

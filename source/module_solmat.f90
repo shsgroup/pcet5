@@ -25,9 +25,12 @@ module solmat
 !--------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-11-04 22:43:09 $
-!  $Revision: 5.3 $
+!  $Date: 2011-02-09 20:51:41 $
+!  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.3  2010/11/04 22:43:09  souda
+!  Next iteration... and two additional Makefiles for building the code with debug options.
+!
 !  Revision 5.2  2010/10/28 21:29:36  souda
 !  First (working and hopefully bug-free) source of PCET 5.x
 !
@@ -175,7 +178,7 @@ contains
 
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   ! Transformation from (ZP,ZE) to (z1,z2)
+   ! Transformation from (ZP,ZE) to (z1,z2) - coordinates
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    subroutine zpze_to_z1z2(zp,ze,z1,z2)
       real(8), intent(in)  :: zp, ze
@@ -185,7 +188,17 @@ contains
    end subroutine zpze_to_z1z2
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   ! Transformation from (z1,z2) to (ZP,ZE)
+   ! Transformation from (VP,VE) to (v1,v2) - velocities
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   subroutine vpve_to_v1v2(vp,ve,v1,v2)
+      real(8), intent(in)  :: vp, ve
+      real(8), intent(out) :: v1, v2
+      v1 = ( cos_theta*vp + sin_theta*ve)/sq1
+      v2 = (-sin_theta*vp + cos_theta*ve)/sq2
+   end subroutine vpve_to_v1v2
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Transformation from (z1,z2) to (ZP,ZE) - coordinates
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    subroutine z1z2_to_zpze(z1,z2,zp,ze)
       real(8), intent(in)  :: z1, z2
@@ -193,6 +206,16 @@ contains
       zp = sq1*cos_theta*(z1-delta_1) - sq2*sin_theta*(z2-delta_2)
       ze = sq1*sin_theta*(z1-delta_1) + sq2*cos_theta*(z2-delta_2)
    end subroutine z1z2_to_zpze
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Transformation from (v1,v2) to (VP,VE) - velocities
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   subroutine v1v2_to_vpve(v1,v2,vp,ve)
+      real(8), intent(in)  :: v1, v2
+      real(8), intent(out) :: vp, ve
+      vp = sq1*cos_theta*v1 - sq2*sin_theta*v2
+      ve = sq1*sin_theta*v1 + sq2*cos_theta*v2
+   end subroutine v1v2_to_vpve
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Transformation of the gradient from (ZP,ZE) to (z1,z2)
