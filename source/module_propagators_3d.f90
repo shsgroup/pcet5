@@ -5,9 +5,12 @@ module propagators_3d
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2011-02-08 00:46:50 $
-   !  $Revision: 5.5 $
+   !  $Date: 2011-02-10 23:00:33 $
+   !  $Revision: 5.6 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.5  2011/02/08 00:46:50  souda
+   !  unimportant bug in evaluating the kinetic energy for output - fixed
+   !
    !  Revision 5.4  2010/11/10 21:14:21  souda
    !  Last addition/changes. IMPORTANT: Solvation keyword is back to SOLV( for compatibility reasons
    !
@@ -863,7 +866,8 @@ contains
       v(2) = vz2
 
       !-- calculate vibronic states and vibronic free energies
-      call calculate_vibronic_states(kg,x(1),x(2))
+      !   REUSE THE VIBRONIC STATES FROM THE END OF THE PREVIOUS TIMESTEP
+      !---(AVS)-call calculate_vibronic_states(kg,x(1),x(2))-------------
 
       !-- calculate gradients
       call calculate_gradient(istate,g(1),g(2))
@@ -971,7 +975,8 @@ contains
       enddo
 
       !-- calculate vibronic states and vibronic free energies
-      call calculate_vibronic_states(kg,x(1),x(2))
+      !   REUSE THE VIBRONIC STATES FROM THE END OF THE PREVIOUS TIMESTEP
+      !---(AVS)-call calculate_vibronic_states(kg,x(1),x(2))-------------
 
       !-- calculate gradients
       call calculate_gradient(istate,g(1),g(2))
