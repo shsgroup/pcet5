@@ -115,9 +115,13 @@ subroutine dynamics3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-09 20:51:41 $
-!  $Revision: 5.6 $
+!  $Date: 2011-02-10 22:58:28 $
+!  $Revision: 5.7 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.6  2011/02/09 20:51:41  souda
+!  added two subroutines for transformation of velocities
+!  (affects only the output of velocities in zp-ze frame)
+!
 !  Revision 5.5  2011/02/08 00:47:42  souda
 !  added: trajectory output for t=0
 !
@@ -1055,8 +1059,10 @@ subroutine dynamics3
 
       endif
 
+      !-- reset the counter of calls to feszz3
+      call reset_feszz3_counter
 
-      !-- calculate adiabatic states at t=0
+      !-- calculate adiabatic states at t=0 (very first time for this trajectory)
       call calculate_vibronic_states(kg0,z1,z2)
 
       !-- in case of MDQT trajectory initialize the quantum
@@ -1072,11 +1078,7 @@ subroutine dynamics3
          call set_initial_amplitudes(istate)
          call set_initial_density(istate)
 
-
       endif
-
-      !-- reset the counter of calls to feszz3
-      call reset_feszz3_counter
 
       !-- write the header of the trajectory file
 
