@@ -5,9 +5,12 @@ subroutine setmat
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-01-04 20:58:14 $
-!  $Revision: 5.6 $
+!  $Date: 2011-02-20 00:58:11 $
+!  $Revision: 5.7 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.6  2011/01/04 20:58:14  souda
+!  added: option TRDIPOLE() for reading the transition dipole moment matrix in the adiabatic basis from disk - NOT FULLY IMPLEMENTED YET!
+!
 !  Revision 5.5  2010/11/10 21:14:21  souda
 !  Last addition/changes. IMPORTANT: Solvation keyword is back to SOLV( for compatibility reasons
 !
@@ -706,7 +709,7 @@ subroutine setmat
 
    enddo
 
-   20 continue
+20 continue
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Inverse truncated matrix [t'(trunc)]^{-1}
@@ -1044,6 +1047,15 @@ subroutine setmat
    delta_1 =  cos_theta*tr1a1b/sq1 + sin_theta*tr1a2a/sq1
    delta_2 = -sin_theta*tr1a1b/sq2 + cos_theta*tr1a2a/sq2
 
+   !===================================================================
+   !  Calculate proton vibrational wavefunctions and energy
+   !  levels in the electronically solvated diabatic electronic
+   !  potentials (used to build total Hamiltonian if METHOD=1)
+   !===================================================================
+   if (method.eq.1) then
+      call allocate_proton_wavefunctions
+      call precalculate_proton_wavefunctions
+   endif
 
    !===================================================================
    ! Initialize the dipole moment matrix along the proton grid.
@@ -1251,7 +1263,6 @@ contains
       enddo
 
    end subroutine calculate_dipole_moment_diab
-
 
 !===================================================================
 end subroutine setmat

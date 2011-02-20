@@ -143,7 +143,8 @@ MODOBJ  = $(OBJDIR)/module_control.o     \
           $(OBJDIR)/module_rate_flux.o   \
           $(OBJDIR)/module_solmat.o      \
           $(OBJDIR)/module_ssplib.o      \
-          $(OBJDIR)/module_strings.o
+          $(OBJDIR)/module_strings.o     \
+          $(OBJDIR)/module_timers.o
 
 
 MODMOD  = $(MODDIR)/control.mod     \
@@ -176,7 +177,8 @@ MODMOD  = $(MODDIR)/control.mod     \
           $(MODDIR)/rate_flux.mod   \
           $(MODDIR)/solmat.mod      \
           $(MODDIR)/ssplib.mod      \
-          $(MODDIR)/strings.mod
+          $(MODDIR)/strings.mod     \
+          $(MODDIR)/timers.mod
 
 MODSRC  = module_control.f90     \
           module_control_dynamics.f90 \
@@ -208,7 +210,8 @@ MODSRC  = module_control.f90     \
           module_rate_flux.f90   \
           module_solmat.f90      \
           module_ssplib.f90      \
-          module_strings.f90
+          module_strings.f90     \
+          module_timers.f90
 
 note:
 	@echo

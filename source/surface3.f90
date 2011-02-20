@@ -42,15 +42,19 @@ subroutine surface3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:37 $
-!  $Revision: 5.2 $
+!  $Date: 2011-02-20 00:58:11 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:37  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !===================================================================C
 
    use pardim
    use keys
    use cst
+   use timers
    use strings
    use solmat
    use control
@@ -75,7 +79,7 @@ subroutine surface3
 
    real(8) :: pscal, escal, zp1, zp2, ze1, ze2, zpstep, zestep
    real(8) :: rkg, zp, zp0, ze, ze0, z1, z2, dum1, dum2, dz1, dz2
-   real(8) :: time0, time1, times, second
+   real(8) :: time0, time1, times
 
    integer, allocatable, dimension(:,:)   :: npair
    real(8), allocatable, dimension(:,:)   :: dkle, dklp

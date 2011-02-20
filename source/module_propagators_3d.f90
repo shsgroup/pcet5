@@ -5,9 +5,13 @@ module propagators_3d
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2011-02-10 23:00:33 $
-   !  $Revision: 5.6 $
+   !  $Date: 2011-02-20 00:58:11 $
+   !  $Revision: 5.7 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.6  2011/02/10 23:00:33  souda
+   !  improvement (due to Anirban Hazra): avoiding the (redundant) calculation
+   !  of vibronic states in the beginning of classical propagation step.
+   !
    !  Revision 5.5  2011/02/08 00:46:50  souda
    !  unimportant bug in evaluating the kinetic energy for output - fixed
    !
@@ -29,7 +33,7 @@ module propagators_3d
    use cst
    use parsol
    use solmat
-   use quantum, only: nprst, npnts
+   use quantum, only: nprst, npnts, wp_wavefunction
    use feszz_3d
    use random_generators
    use rk_parameters
@@ -53,9 +57,10 @@ module propagators_3d
    real(8), allocatable, dimension(:,:,:) :: psiel, psipr
    real(8), allocatable, dimension(:,:)   :: enel, envib
 
-   !-- array for absorption probabilities (vibronic spectrum)
+   !-- arrays for absorption probabilities (vibronic spectrum)
    !---------------------------------------------------------
    real(8), allocatable, dimension(:) :: absorption_prob
+   real(8), allocatable, dimension(:) :: fc_prob
 
    !-- array for EVB weights
    !---------------------------------------------
@@ -102,6 +107,7 @@ module propagators_3d
    public :: allocate_mdqt_arrays, deallocate_mdqt_arrays
    public :: calculate_vibronic_states
    public :: calculate_absorption_prob
+   public :: calculate_fc_prob
    public :: print_vibronic_spectrum
    public :: print_vibronic_spectrum_conv
    public :: calculate_vibronic_couplings
@@ -109,6 +115,7 @@ module propagators_3d
    public :: interpolate_vdotd
    public :: interpolate_energy
    public :: assign_initial_state
+   public :: assign_fc_state
    public :: set_initial_amplitudes
    public :: set_initial_density
    public :: calculate_v_dot_d_mid
@@ -181,6 +188,7 @@ contains
       allocate (fe(nstates))
       allocate (fe_prev(nstates))
       allocate (absorption_prob(nstates))
+      allocate (fc_prob(nstates))
       allocate (z(nz,nz))
       allocate (z_prev(nz,nz))
       allocate (psiel(ielst,npnts,ielst))
@@ -225,6 +233,7 @@ contains
       if (allocated(enel))    deallocate (enel)
       if (allocated(envib))   deallocate (envib)
       if (allocated(absorption_prob)) deallocate (absorption_prob)
+      if (allocated(fc_prob)) deallocate (fc_prob)
    end subroutine deallocate_vibronic_states
 
    subroutine deallocate_evb_weights
@@ -262,11 +271,8 @@ contains
       real(8), intent(in) :: z1, z2
 
       integer :: ndabf, k, i, j, mu, nu, imu, jnu, kp, i0, j0
-      real(4) :: r
       real(8) :: zp, ze, s, dx, dy, dz, davx, davy, davz
       real(8) :: pnorm
-
-      absorption_prob = 0
 
       !-- transform to zp,ze frame
       call z1z2_to_zpze(z1,z2,zp,ze)
@@ -485,6 +491,106 @@ contains
       enddo
 
    end function assign_initial_state
+
+
+
+
+
+
+
+   !--------------------------------------------------------------------
+   !-- calculate Franck-Condon transition probabilities
+   !--------------------------------------------------------------------
+   subroutine calculate_fc_prob(fc_state,kg,z1,z2)
+
+      integer, intent(in) :: fc_state, kg
+      real(8), intent(in) :: z1, z2
+
+      integer :: ndabf, n, i, i0, ifc, mu, imu, imu_start, kp
+      real(8) :: zp, ze, fc_ovlp, pnorm
+
+      fc_prob = 0
+
+      !-- Check if the specified photoexcited diabatic electronic state
+      !   (fc_state) is present in the electronic basis.
+      !   If not then fc_prob = 0
+
+      ifc = 0
+      do i=1,ielst
+         i0 = i + 2*iset - 2
+         if (i0.eq.fc_state) then
+            ifc = i
+            imu_start = (ifc-1)*nprst
+            exit
+         endif
+      enddo
+
+      if (ifc.eq.0) return
+
+      !-- transform to zp,ze frame
+      call z1z2_to_zpze(z1,z2,zp,ze)
+
+      !-- calculate vibronic states
+      call feszz3(mode,iset,kg,zp,ze,nstates,fe,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
+
+      pnorm = 0.d0
+
+      do n=1,nstates
+
+         do mu=1,nprst
+
+            imu = imu_start + 1
+
+            fc_ovlp = 0.d0
+            do kp=1,npnts
+               fc_ovlp = fc_ovlp + wp_wavefunction(kp)*psipr(ifc,mu,kp)
+            enddo
+
+            fc_prob(n) = fc_prob(n) + z(imu,n)*fc_ovlp
+
+         enddo
+
+         pnorm = pnorm + fc_prob(n)
+
+      enddo
+
+      !-- normalization
+      fc_prob = fc_prob/pnorm
+
+   end subroutine calculate_fc_prob
+
+   !--------------------------------------------------------------------
+   !-- Assign initial state according to the normalized
+   !   Franck-Condon probabilities
+   !--------------------------------------------------------------------
+   function assign_fc_state() result(istate)
+
+      integer :: istate
+
+      integer :: i
+      real(4) :: r
+      real(8) :: s
+
+      istate = 0
+
+      !-- generate a random number between 0 and 1
+      !   from a uniform distribution
+      call ran2nr(r,iseed)
+
+      s = 0.d0
+      
+      do i=1,nstates
+
+         s = s + fc_prob(i)
+
+         if (s.gt.r) then
+            istate = i
+            exit
+         endif
+
+      enddo
+
+   end function assign_fc_state
 
    !--------------------------------------------------------------------
    !-- Set initial amplitudes to correspond to a pure adiabatic state

@@ -29,9 +29,12 @@ subroutine usol(mode,k,kg,zp,ze,u,cu)
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:37 $
-!  $Revision: 5.2 $
+!  $Date: 2011-02-20 00:58:11 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:37  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !======================================================================!
 
@@ -207,40 +210,88 @@ subroutine usol(mode,k,kg,zp,ze,u,cu)
 
    deallocate (h0k,hs)
 
-   return
-
-!======================================================================
-contains
-
-   !======================================================================
-   function selfen(k,kg,zp,ze) result(sw)
-   !======================================================================
-   !  Calculates the self-energy of the inertial polarization
-   !  (summation over linearly independent solvent variables)
-   !   K     - the proton position (GRID POINT);
-   !   KG    - the gating position (GRID POINT);
-   !   ZP,ZE - the (PT) and (ET) medium coordinates (kcal/mole);
-   !======================================================================
-      integer, intent(in)  :: k, kg
-      real*8,  intent(in)  :: zp, ze
-      real*8               :: sw
-
-      integer :: i, j
-      real*8, dimension(2) :: xm
-
-      xm(1) = zp
-      xm(2) = ze
-      sw = 0.d0
-      do i=1,2
-         do j=1,2
-            sw = sw + (xm(i)+tr(1,i+1,k,kg))*t1(i,j,k,kg)*(xm(j)+tr(1,j+1,k,kg))
-         enddo
-      enddo
-
-      sw = 0.5d0*sw
-
-      return
-
-   end function selfen
-
 end subroutine usol
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+subroutine usol_diab(k,kg,u)
+
+   !======================================================================!
+   !  Calculates the diabatic electronic energies U(i,q) on the grid
+   !  K     - the proton position (GRID POINT);
+   !  KG    - gating distance (GRID POINT);
+   !  U     - the diabatic electronic energies (kcal/mole):
+   !======================================================================!
+
+   use pardim
+   use gasmat
+   use solmat
+
+   implicit none
+
+   integer, intent(in) :: k, kg
+   real*8,  intent(out), dimension(nelst) :: u
+
+   integer :: i, j
+   real*8, allocatable, dimension(:,:) :: h0k, hs, hs1
+
+   allocate (h0k(4,4),hs(4,4))
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Gas-phase 4x4 Hamiltonian (H0K)
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   do i=1,4
+      do j=1,4
+         h0k(i,j) = h0(i,j,k,kg)
+      enddo
+   enddo
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Electronic solvation of the gas-phase Hamiltonian
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   !tinf44 = tinf(1,1,k) + tinf(2,2,k) + tinf(3,3,k)&
+   !      &+ 2.d0*tinf(2,3,k) - 2.d0*tinf(1,2,k) - 2.d0*tinf(1,3,k)
+
+   h0k(1,1) = h0k(1,1) - tinf(1,1,k,kg)/2.d0
+   h0k(2,2) = h0k(2,2) - tinf(2,2,k,kg)/2.d0
+   h0k(3,3) = h0k(3,3) - tinf(3,3,k,kg)/2.d0
+   h0k(4,4) = h0k(4,4) - tinf(4,4,k,kg)/2.d0
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Reduced Hamiltonian (HS)
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   hs = h0k
+   hs(1,1) = 0.d0
+   hs(2,2) = h0k(2,2) - h0k(1,1)
+   hs(3,3) = h0k(3,3) - h0k(1,1)
+   hs(4,4) = h0k(4,4) - h0k(1,1)
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Energies
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   u = 0.d0
+   do i=1,4
+      u(i) = hs(i,i) + h0k(1,1) - tr(1,1,k,kg)/2.d0
+   enddo
+
+   deallocate (h0k,hs)
+
+end subroutine usol_diab

@@ -25,9 +25,13 @@ module solmat
 !--------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-09 20:51:41 $
-!  $Revision: 5.4 $
+!  $Date: 2011-02-20 00:58:11 $
+!  $Revision: 5.5 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.4  2011/02/09 20:51:41  souda
+!  added two subroutines for transformation of velocities
+!  (affects only the output of velocities in zp-ze frame)
+!
 !  Revision 5.3  2010/11/04 22:43:09  souda
 !  Next iteration... and two additional Makefiles for building the code with debug options.
 !
@@ -176,6 +180,34 @@ contains
       if (allocated(gtmat )) deallocate (gtmat)
    end subroutine dealloc_solmat
 
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   !  Calculates the self-energy of the inertial polarization
+   !  (summation over linearly independent solvent variables)
+   !   K     - the proton position (GRID POINT);
+   !   KG    - the gating position (GRID POINT);
+   !   ZP,ZE - the (PT) and (ET) medium coordinates (kcal/mole);
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   function selfen(k,kg,zp,ze) result(sw)
+
+      integer, intent(in)  :: k, kg
+      real*8,  intent(in)  :: zp, ze
+      real*8               :: sw
+
+      integer :: i, j
+      real*8, dimension(2) :: xm
+
+      xm(1) = zp
+      xm(2) = ze
+      sw = 0.d0
+      do i=1,2
+         do j=1,2
+            sw = sw + (xm(i)+tr(1,i+1,k,kg))*t1(i,j,k,kg)*(xm(j)+tr(1,j+1,k,kg))
+         enddo
+      enddo
+
+      sw = 0.5d0*sw
+
+   end function selfen
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Transformation from (ZP,ZE) to (z1,z2) - coordinates

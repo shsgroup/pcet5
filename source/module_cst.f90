@@ -23,9 +23,12 @@ module cst
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-12-15 21:24:55 $
-!  $Revision: 5.4 $
+!  $Date: 2011-02-20 00:58:11 $
+!  $Revision: 5.5 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.4  2010/12/15 21:24:55  souda
+!  various fixes (non-critical)
+!
 !  Revision 5.3  2010/11/04 22:43:08  souda
 !  Next iteration... and two additional Makefiles for building the code with debug options.
 !
@@ -48,7 +51,7 @@ module cst
                        & five  = 5.0d0
 
    real(8) :: pi, kb, hbar, hbarps, dalton, hmass, dmass
-   real(8) :: bohr2a, a2bohr, au2cal, cal2au, ev2cm, cm2ev
+   real(8) :: bohr2a, a2bohr, au2cal, cal2au, ev2cm, cm2ev, au2cm, cm2au
    real(8) :: au2ev, ev2au, hz2cm, cm2hz, e2, ev2cal, cal2ev, pico
    real(8) :: debye2au, au2debye
 
@@ -97,6 +100,8 @@ module cst
       e2     =   14.39982283d0
       ev2cal =   23.04512014d0
       cal2ev =   one/ev2cal
+      cm2au  =   cm2ev*ev2au
+      au2cm  =   au2ev*ev2cm
       pico   =    1.d12
       debye2au = 0.3934303d0
       au2debye = one/debye2au

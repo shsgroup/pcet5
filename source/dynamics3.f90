@@ -27,13 +27,27 @@ subroutine dynamics3
 !             from the input geometry). Otherwise KG must be smaller
 !             than NPNTSG.
 !
-!  ISTATE=[STATE/SET] - index of the occupied vibronic state (1 for ground state) at t=0.
-!                       If ADIAB then SET specifies one of the adiabatic electronic
-!                       states ("1" for ground, "2" for first excited, etc.).
-!                       If DIAB2 then SET specifies one of the ET diabatic electronic
-!                       states ("1" for 1a/1b, "2" for 2a/2b).
-!                       If DIAB4 then SET specifies one of the diabatic electronic
-!                       states ("1" for 1a, "2" for 1b, "3" for 2a, "4" for 2b).
+!  ISTATE=<N> - index of the occupied adiabatic vibronic state
+!               (1 for ground state) at t=0.
+!
+!  FCSTATE=<N> - index of the initially occupied DIABATIC electronic state
+!                ("1" for 1a, "2" for 1b, "3" for 2a, "4" for 2b).
+!                The shape of the initial proton wavepacket (specified
+!                in the keywords WPFREQ, WPPOS, and WPSTATE) is calculated
+!                for a harmonic potential and then its product with the diabatic
+!                electronic state (specified in FCSTATE) is expanded in terms of
+!                the adiabatic vibronic states. The squares of the expansion
+!                coefficients are regarded as the probabilities of the
+!                initial populations of the adiabatic vibronic states.
+!
+!  WPPOS=<position> - center of the harmonic potential for the initial proton
+!                     wavepacket relative to the center of the PT interface (Angstrom).
+!
+!  WPFREQ=<freq> - frequency (cm^-1) of the harmonic potential for the initial
+!                  proton wavepacket.
+!
+!  WPSTATE=<N> - quantum number for the initial proton wavepacket
+!                (1 for ground state which is also a default value).
 !
 !  PUMP=<energy> - energy of the initial laser pulse
 !                 (center of the spectral lineshape, in eV)
@@ -115,9 +129,12 @@ subroutine dynamics3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-10 22:58:28 $
-!  $Revision: 5.7 $
+!  $Date: 2011-02-20 00:58:11 $
+!  $Revision: 5.8 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.7  2011/02/10 22:58:28  souda
+!  minor bug in resetting the counter of vibronic states calculations.
+!
 !  Revision 5.6  2011/02/09 20:51:41  souda
 !  added two subroutines for transformation of velocities
 !  (affects only the output of velocities in zp-ze frame)
@@ -142,6 +159,7 @@ subroutine dynamics3
    use pardim
    use keys
    use cst
+   use timers
    use strings
    use solmat
    use control
@@ -171,21 +189,22 @@ subroutine dynamics3
    logical :: switch=.false.
    logical :: success=.false.
    logical :: transform=.false.
-   logical :: pump=.false.
    logical :: pure=.true.
+   logical :: pump=.false.
+   logical :: fcdia=.false.
 
    integer :: nstates_dyn, nzdim_dyn, ielst_dyn, iseed_inp, iset_dyn
-   integer :: initial_state=1, iground=1
+   integer :: initial_state=-1, iground=1
    integer :: istate, new_state, ndump6, pump_s
 
-   integer :: ikey, ioption, ioption2, kg0, ifrom, ito
-   integer :: ioutput, lenf, ispa, idash
+   integer :: ikey, ioption, ioption2, ioption3, kg0, ifrom, ito
+   integer :: ioutput, lenf, ispa, idash, icount
    integer :: itraj, istep, iqstep, k, itmp
    integer :: number_of_switches=0, number_of_rejected=0
    integer :: itraj_channel=11
 
    real(8) :: sigma, sample, population_current, wf_norm
-   real(8) :: zeit_start, zeit_end, zeit_total, second
+   real(8) :: zeit_start, zeit_end, zeit_total
    real(8) :: zeit, zeit_prev
    real(8) :: zeitq, zeitq_prev
    real(8) :: z1, z2, zp, ze, vz1, vz2, vzp, vze, z10, z20, zp0, ze0, ekin, efes
@@ -698,72 +717,161 @@ subroutine dynamics3
    !        magnitude of the transition dipole moment
    !        matrix element between the ground state
    !        and the excited state
+   !
+   ! FCDIA - initial state is a product of the specified
+   !         diabatic electronic state (1a, 1b, 2a, 2b)
+   !         and harmonic proton vibrational wavepacket
+   !         (any state of a harmonic oscillator)
+   !
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   ioption = index(options,' PUMP=')
+   pure  = index(options,' ISTATE=')  .ne. 0
+   fcdia = index(options,' FCSTATE=') .ne. 0
+   pump  = index(options,' PUMP=')    .ne. 0
 
-   if (ioption.eq.0) then
+   !-- The three options should be mutually exclusive.
 
-      write(6,'(/1x,"(Initial state is a pure vibronic state)")')
+   icount = 0
+   if (pure)  icount = icount + 1
+   if (pump)  icount = icount + 1
+   if (fcdia) icount = icount + 1
 
-      pump = .false.
+   if (icount.eq.0) then
+
+      !-- none of the relevant keywords has been specified: default mode "pure" and ISTATE=1
+
       pure = .true.
+      initial_state = 1
+      write(6,'(1x,"(Default initial condition) At t=0: Pure ground vibronic adiabatic state.")')
 
-      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      !-- specify the initial pure vibronic state
-      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   elseif (icount.gt.1) then
 
-      ioption2 = index(options,' ISTATE=')
+      !-- more than one keyword has been specified: ambiguity => stop the program
 
-      if (ioption2.ne.0) then
+      write(6,'(1x,"Ambiguious input in DYNAMICS3: only ONE of (ISTATE, FCSTATE, PUMP) keywords must be specified.)")')
+      call clean_exit
 
-         initial_state = reada(options,ioption2+8)
+   endif
 
-         if (mode_dyn.eq.'ADIAB') then
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   !  Initial state is a pure adiabatic vibronic state
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-            if (initial_state.le.0) initial_state = 1
-            write(6,'(1x,"At t=0: initial adiabatic state: ",i6)') initial_state
+   if (pure) then
 
-         elseif (mode_dyn.eq.'DIAB2') then
+      if (initial_state.lt.0) then
+         ioption2 = index(options,' ISTATE=')
+         write(6,'(/1x,"(Initial state is a pure adiabatic electron-proton vibronic state)")')
+      endif
 
-            if (iset_dyn.eq.1) then
-               write(6,'(1x,"At t=0: initial ET diabatic state: ",i6," within the first (1a/1b) ET subset")') initial_state
-            elseif (iset_dyn.eq.2) then
-               write(6,'(1x,"At t=0: initial ET diabatic state: ",i6," within the second (2a/2b) ET subset")') initial_state
-            endif
+      initial_state = reada(options,ioption2+8)
+      if (initial_state.eq.0) initial_state = 1
 
-         elseif (mode_dyn.eq.'DIAB4') then
+      if (mode_dyn.eq.'ADIAB') then
 
-            if (iset_dyn.eq.1) then
-               write(6,'(1x,"At t=0: initial diabatic state: ",i6," within the 1a electronic set")') initial_state
-            elseif (iset_dyn.eq.2) then
-               write(6,'(1x,"At t=0: initial diabatic state: ",i6," within the 1b electronic set")') initial_state
-            elseif (iset_dyn.eq.3) then
-               write(6,'(1x,"At t=0: initial diabatic state: ",i6," within the 2a electronic set")') initial_state
-            elseif (iset_dyn.eq.4) then
-               write(6,'(1x,"At t=0: initial diabatic state: ",i6," within the 2b electronic set")') initial_state
-            endif
+         if (initial_state.le.0) initial_state = 1
+         write(6,'(1x,"At t=0: initial adiabatic state: ",i6)') initial_state
 
+      elseif (mode_dyn.eq.'DIAB2') then
+
+         if (iset_dyn.eq.1) then
+            write(6,'(1x,"At t=0: initial vibronic state: ",i6," within the first (1a/1b) ET subset")') initial_state
+         elseif (iset_dyn.eq.2) then
+            write(6,'(1x,"At t=0: initial vibronic state: ",i6," within the second (2a/2b) ET subset")') initial_state
          endif
 
-      else
+      elseif (mode_dyn.eq.'DIAB4') then
 
-         initial_state = 1
-         write(6,'(1x,"(Default) At t=0: Ground vibronic adiabatic state ",i3)') initial_state
+         if (iset_dyn.eq.1) then
+            write(6,'(1x,"At t=0: initial vibronic state: ",i6," within the 1a electronic set")') initial_state
+         elseif (iset_dyn.eq.2) then
+            write(6,'(1x,"At t=0: initial vibronic state: ",i6," within the 1b electronic set")') initial_state
+         elseif (iset_dyn.eq.3) then
+            write(6,'(1x,"At t=0: initial vibronic state: ",i6," within the 2a electronic set")') initial_state
+         elseif (iset_dyn.eq.4) then
+            write(6,'(1x,"At t=0: initial vibronic state: ",i6," within the 2b electronic set")') initial_state
+         endif
 
       endif
 
+   endif
 
-   else
 
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   !  Initial state is a product of the diabatic electronic state and
+   !  proton vibrational wavepacket (vertical Franck-Condon excitation)
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   if (fcdia) then
+   
+      write(6,'(/1x,"Initial state is a product of the diabatic electronic state and")')
+      write(6,'( 1x,"proton vibrational wavepacket (vertical Franck-Condon excitation)")')
+
+      !-- read the initial diabatic electronic state (after FC exitation)
+
+      ioption = index(options,' FCSTATE=')
+      if (ioption.eq.0) then
+         write(6,'(1x,"(From DYNAMICS3: You must specify the FCSTATE keyword for this type of the initial condition)")')
+         call clean_exit
+      endif
+      initial_state = reada(options,ioption+9)
+      write(6,'(/1x,"Photoexcited diabatic electronic state: ",a)') iset_char_diab4(initial_state)
+
+      !-- read the position of the initial proton wave packet
+
+      ioption = index(options,' WPPOS=')
+      if (ioption.eq.0) then
+         write(6,'(1x,"(From DYNAMICS3: You must specify the WPPOS keyword for this type of the initial condition)")')
+         call clean_exit
+      endif
+      wp_position = reada(options,ioption+7)
+      write(6,'(/1x,"Position of the initial proton wavepacket: ",f8.3," Angstroms")') wp_position
+
+      !-- read the frequency of the initial proton wave packet
+
+      ioption = index(options,' WPFREQ=')
+      if (ioption.eq.0) then
+         write(6,'(1x,"(From DYNAMICS3: You must specify the WPFREQ keyword for this type of the initial condition)")')
+         call clean_exit
+      endif
+      wp_frequency = reada(options,ioption+8)
+      write(6,'(/1x,"Frequency of the initial proton wavepacket: ",f12.3," cm^-1")') wp_frequency
+
+      !-- read the quantum number of the initial proton wave packet
+
+      ioption = index(options,' WPSTATE=')
+      if (ioption.ne.0) then
+         wp_state = reada(options,ioption+9)
+         write(6,'(/1x,"Quantum number of the initial proton wavepacket: ",i2)') wp_state
+      else
+         wp_state = 1
+         write(6,'(/1x,"Ground state initial proton wavepacket (default)")')
+      endif
+
+      !-- precalculate the proton vibrational wavefunctions for
+      !   a harmonic potential specified by WPPOS and WPFEQ
+      !   (stored in module quantum)
+
+      call allocate_wp_wavefunction
+      call precalculate_wp_wavefunction
+
+   endif
+
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   !  Initial state is a result of a laser pump excitation from the
+   !  ground vibronic state
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   if (pump) then
+
+      ioption = index(options,' PUMP=')
 
       write(6,'(/1x,"Initial condition corresponds to the laser pump experiment:",/,&
       &         1x," the initial state for each trajectory is chosen according",/,&
       &         1x," to the magnitude of the transition dipole moment for the",/,&
-      &         1x," for the transition from the ground vibronic state")')
-
-      pump = .true.
-      pure = .false.
+      &         1x," transition from the ground vibronic state")')
 
       pump_e = reada(options,ioption+6)
       write(6,'(/1x,"Pump laser pulse energy: ",f12.6," eV")') pump_e
@@ -795,7 +903,7 @@ subroutine dynamics3
 
       if (ioption2.ne.0) then
          pump_w = reada(options,ioption2+11)
-         write(6,'(1x,"Pump laser linewidth (full width at half maximum): ",f12.6)') pump_w
+         write(6,'(1x,"Pump laser linewidth (full width at half maximum) (eV): ",f12.6)') pump_w
       else
          write(6,'(1x,"(From DYNAMICS3: You must specify the PUMPWIDTH keyword for this type of the initial condition)")')
          call clean_exit
@@ -833,6 +941,7 @@ subroutine dynamics3
       call set_laser(pump_s,pump_e,pump_w)
 
    endif
+
 
    !===DEBUG===
    !call print_propagators_3d
@@ -1048,13 +1157,30 @@ subroutine dynamics3
          istate = assign_initial_state(iground)
          
          if (istate.eq.0) then
-            write(6,'(1x,"From DYNAMICS3: FAILURE to assign the initial vibronic state. Consider to include more states in NSTATES.")')
+            write(6,'(1x,"From DYNAMICS3: FAILURE to assign the initial vibronic state after laser excitation.")')
+            write(6,'(1x,"Consider to include more states in NSTATES.")')
+            call clean_exit
+         endif
+
+      elseif (fcdia) then
+
+         !-- initial state is a product of the specified
+         !   diabatic electronic state (1a, 1b, 2a, 2b)
+         !   and harmonic proton vibrational wavepacket
+         !   (any state of a harmonic oscillator)
+
+         call calculate_fc_prob(initial_state,kg0,z1,z2)
+         istate = assign_fc_state()
+
+         if (istate.eq.0) then
+            write(6,'(1x,"From DYNAMICS3: FAILURE to assign the initial vibronic state after Franck-Condon excitation.")')
+            write(6,'(1x,"Consider to include more states in NSTATES or check FCSTATE value.")')
             call clean_exit
          endif
 
       else
 
-         write(6,'(/1x,"From DYNAMICS3: For unknown reason (a bug?) no initial condition was chosen. Abort.")')
+         write(6,'(/1x,"From DYNAMICS3: For unknown reason (a serious bug?) no initial condition was chosen. Abort.")')
          call clean_exit
 
       endif
@@ -1342,6 +1468,7 @@ subroutine dynamics3
    write(6,'(1x,"      Time per timestep    (sec): ",f20.3)') zeit_total/(ntraj*nsteps)
    write(6,'(1x,"      Productivity rate (ps/day): ",f20.3)') 3600.d0*24.d0*tstep*ntraj*nsteps/zeit_total
    write(6,'(1x,"================================================================================")')
+   write(6,*)
 
    !-- Deallocate arrays in propagators module
 

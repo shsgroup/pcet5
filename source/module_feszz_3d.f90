@@ -5,14 +5,18 @@ module feszz_3d
 !======================================================================
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:36 $
-!  $Revision: 5.2 $
+!  $Date: 2011-02-20 00:58:11 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:36  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !======================================================================
 
    use pardim
    use cst
+   use timers
    use control
    use gasmat
    use solmat
@@ -30,7 +34,9 @@ module feszz_3d
 
    integer, save :: numr = 0
    real(8), allocatable, dimension(:,:) :: zprev
-   
+
+   real(8), public, save :: zeit_proton_states=0.d0
+
 contains
 
    !-- reset the call counter numr
@@ -109,8 +115,9 @@ contains
    character(5) :: elmode
 
    integer :: nzdim, ielst0, i, j, n, k, l, kk, ll, ierr
-   integer :: iel, ipr, ielshift, jel, jpr, jelshift
+   integer :: iel, ipr, ielshift, jel, jpr, jelshift, iset_shift
    real(8) :: p, hfij, psipr_ovl, dterm, dtij, gterm, gtij
+   !real(8) :: zeit_start, zeit_end
 
    integer, allocatable, dimension(:)     :: istel, istpr
    real(8), allocatable, dimension(:,:,:) :: dij, gij
@@ -181,11 +188,52 @@ contains
 
    !======================================================================
    !     calculation of the protonic vibrational states (basis states)
-   !     method = 1 - in  diabatic electronic potentials
+   !     method = 1 - in  diabatic electronic potentials (precalculated)
    !            = 2 - in adiabatic electronic potentials
    !            = 3 - in adiabatic electronic potentials
    !======================================================================
-   call proton_states
+
+   if (method.ne.1) then
+
+      !-- calculate proton vibrational states and energies
+      call proton_states
+
+   else
+
+      !-- reuse precalculated proton vibrational states and energies
+      !   (0, zp, ze, and zp+ze will be added to the vibrational
+      !    energy levels for 1a, 1b, 2a, and 2b electronic states,
+      !    respectively)
+
+      if (diab4) then
+
+         psipr(1,:,:) = psipr_diabatic(iset,:,:,kg)
+         do j=1,nprst
+            envib(1,j) = envib_diabatic(iset,j,kg) + solvent_shift(iset,zp,ze) + selfen(npnts/2,kg,zp,ze)
+         enddo
+
+      elseif (diab2) then
+
+         iset_shift = 2*iset - 2
+         do i=1,ielst
+            do j=1,nprst
+               psipr(i,j,:) = psipr_diabatic(i+iset_shift,j,:,kg)
+               envib(i,j) = envib_diabatic(i+iset_shift,j,kg) + solvent_shift(i+iset_shift,zp,ze) + selfen(npnts/2,kg,zp,ze)
+            enddo
+         enddo
+
+      elseif (adiab) then
+
+         do i=1,ielst
+            do j=1,nprst
+               psipr(i,j,:) = psipr_diabatic(i,j,:,kg)
+               envib(i,j) = envib_diabatic(i,j,kg) + solvent_shift(i,zp,ze) + selfen(npnts/2,kg,zp,ze)
+            enddo
+         enddo
+
+      endif
+
+   endif
 
    !======================================================================
    !     building of the electronic/proton vibrational basis
@@ -353,7 +401,7 @@ contains
 
    return
 
-   contains
+contains
 
    !============================================================================!
    subroutine electronic_states
@@ -1130,5 +1178,12 @@ contains
 
    end subroutine coupzz3
    !============================================================================!
+
+   function solvent_shift(i_,zp_,ze_) result(shift_)
+      integer, intent(in) :: i_
+      real(8), intent(in) :: zp_, ze_
+      real(8) :: shift_
+      shift_ = (i_-1)*(i_-3)*(2*i_-7)*zp_/3.d0 - (i_-1)*(i_-2)*(2*i_-9)*ze_/6.d0
+   end function solvent_shift
 
 end module feszz_3d

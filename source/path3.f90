@@ -40,9 +40,12 @@ subroutine path3
 !--------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:36 $
-!  $Revision: 5.2 $
+!  $Date: 2011-02-20 00:58:11 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:36  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !===================================================================C
 
@@ -51,6 +54,7 @@ subroutine path3
    use strings
    use keys
    use cst
+   use timers
    use quantum
    use feszz_3d
 
@@ -69,7 +73,7 @@ subroutine path3
    
    real(8) :: zp1, ze1, zp2, ze2, stepzp, stepze, zpi, zei
    real(8) :: time0, zp, ze, rr, time1, times
-   real(8) :: second
+   !-(AVS)-(in module now)- real(8) :: second
 
    real(8), allocatable, dimension(:)     :: f
    real(8), allocatable, dimension(:,:)   :: z

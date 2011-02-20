@@ -79,9 +79,12 @@ program pcet
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-01-04 19:57:38 $
-!  $Revision: 5.5 $
+!  $Date: 2011-02-20 00:58:11 $
+!  $Revision: 5.6 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.5  2011/01/04 19:57:38  souda
+!  added: backing up of the job directory if it already exists.
+!
 !  Revision 5.4  2010/12/15 21:24:56  souda
 !  various fixes (non-critical)
 !
@@ -98,6 +101,7 @@ program pcet
    use keys
    use strings
    use cst
+   use timers
    use geometry
 
    implicit none
@@ -112,17 +116,15 @@ program pcet
    real(8) :: telapsed, tend, ttotal
    integer :: n1, lfile, ijob, ijobn, ispa, io_status
 
-   interface
-      function second() result(tic)
-      implicit none
-      real(8) :: tic
-      end function second
-   end interface
-
+   !interface
+   !   function second() result(tic)
+   !   implicit none
+   !   real(8) :: tic
+   !   end function second
+   !end interface
 
 
    !---(AVS)---> add interface statements for all called routines
-
 
 
    !---------------------------------------------------
@@ -420,11 +422,19 @@ program pcet
       !                  ######################
       !__________________# New in version 5.x #______________________
       !                  ######################
-      ! DYNAMICS - solvent dynamics in the 2D space of solvent
-      !            coordinates (optional Surface Hopping dynamics)
-      !            and fixed gating distance (gating coordinate
-      !            will be dynamica in the later version)
+      !
+      ! DYNAMICS2 - solvent dynamics with a single solvent
+      !             coordinate (optional Surface Hopping dynamics)
+      !             and fixed gating distance (gating coordinate
+      !             will be dynamical in the later version)
+      !
+      ! DYNAMICS3 - solvent dynamics in the 2D space of solvent
+      !             coordinates (optional Surface Hopping dynamics)
+      !             and fixed gating distance (gating coordinate
+      !             will be dynamical in the later version)
+      !
       !--------------------------------------------------------------
+      !if (index(keywrd,' DYNAMICS2').ne.0) call dynamics2
       if (index(keywrd,' DYNAMICS3').ne.0) call dynamics3
 
       !-------------------------------------------------
