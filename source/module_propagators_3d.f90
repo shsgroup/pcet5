@@ -5,9 +5,15 @@ module propagators_3d
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2011-02-20 00:58:11 $
-   !  $Revision: 5.7 $
+   !  $Date: 2011-02-21 02:40:37 $
+   !  $Revision: 5.8 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.7  2011/02/20 00:58:11  souda
+   !  Major additions/modifications:
+   !  (1) precalculation of the proton vibrational basis functions for METHOD=1
+   !  (2) Franck-Condon initial excitation added to DYNAMICS3
+   !  (3) addition of the module timers: module_timers.f90 (changes in Makefile!)
+   !
    !  Revision 5.6  2011/02/10 23:00:33  souda
    !  improvement (due to Anirban Hazra): avoiding the (redundant) calculation
    !  of vibronic states in the beginning of classical propagation step.
@@ -507,7 +513,7 @@ contains
       real(8), intent(in) :: z1, z2
 
       integer :: ndabf, n, i, i0, ifc, mu, imu, imu_start, kp
-      real(8) :: zp, ze, fc_ovlp, pnorm
+      real(8) :: zp, ze, fc_ovlp, coef, pnorm
 
       fc_prob = 0
 
@@ -541,18 +547,27 @@ contains
 
             imu = imu_start + 1
 
-            fc_ovlp = 0.d0
+            coef = 0.d0
             do kp=1,npnts
                fc_ovlp = fc_ovlp + wp_wavefunction(kp)*psipr(ifc,mu,kp)
             enddo
 
-            fc_prob(n) = fc_prob(n) + z(imu,n)*fc_ovlp
+            coef = coef + z(imu,n)*fc_ovlp
 
          enddo
+
+         fc_prob(n) = coef*coef
 
          pnorm = pnorm + fc_prob(n)
 
       enddo
+
+      !--(DEBUG)-- print unnormalized and normalized Franck-Condon probabilities
+      open(111,file="fc_prob.dat")
+      do n=1,nstates
+         write(111,'(i5,1x,2f20.6)') n, fc_prob(n), fc_prob(n)/pnorm
+      enddo
+      close(111)
 
       !-- normalization
       fc_prob = fc_prob/pnorm
