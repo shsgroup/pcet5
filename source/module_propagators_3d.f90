@@ -5,9 +5,12 @@ module propagators_3d
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2011-02-21 02:40:37 $
-   !  $Revision: 5.8 $
+   !  $Date: 2011-02-21 02:41:41 $
+   !  $Revision: 5.9 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.8  2011/02/21 02:40:37  souda
+   !  Bug fixed in calculation of Franck-Condon probabilities
+   !
    !  Revision 5.7  2011/02/20 00:58:11  souda
    !  Major additions/modifications:
    !  (1) precalculation of the proton vibrational basis functions for METHOD=1
@@ -563,11 +566,11 @@ contains
       enddo
 
       !--(DEBUG)-- print unnormalized and normalized Franck-Condon probabilities
-      open(111,file="fc_prob.dat")
-      do n=1,nstates
-         write(111,'(i5,1x,2f20.6)') n, fc_prob(n), fc_prob(n)/pnorm
-      enddo
-      close(111)
+      !open(111,file="fc_prob.dat")
+      !do n=1,nstates
+      !   write(111,'(i5,1x,2f20.6)') n, fc_prob(n), fc_prob(n)/pnorm
+      !enddo
+      !close(111)
 
       !-- normalization
       fc_prob = fc_prob/pnorm
