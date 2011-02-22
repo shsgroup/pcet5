@@ -5,9 +5,12 @@ module propagators_3d
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2011-02-21 02:41:41 $
-   !  $Revision: 5.9 $
+   !  $Date: 2011-02-22 22:02:29 $
+   !  $Revision: 5.10 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.9  2011/02/21 02:41:41  souda
+   !  removed Debug printout
+   !
    !  Revision 5.8  2011/02/21 02:40:37  souda
    !  Bug fixed in calculation of Franck-Condon probabilities
    !
@@ -114,6 +117,7 @@ module propagators_3d
    public :: allocate_vibronic_states, deallocate_vibronic_states
    public :: allocate_evb_weights, deallocate_evb_weights
    public :: allocate_mdqt_arrays, deallocate_mdqt_arrays
+   public :: deallocate_all_arrays
    public :: calculate_vibronic_states
    public :: calculate_absorption_prob
    public :: calculate_fc_prob
@@ -183,6 +187,7 @@ contains
       else
          fe_ = 0.d0
          write(*,*) "ERROR in get_free_energy: index of state (",i_,") is out of bounds"
+         call deallocate_all_arrays
          stop
       endif
    end function get_free_energy
@@ -269,6 +274,11 @@ contains
       if (allocated(a2_vdotd))          deallocate (a2_vdotd)
    end subroutine deallocate_mdqt_arrays
 
+   subroutine deallocate_all_arrays
+      call deallocate_vibronic_states
+      call deallocate_evb_weights
+      call deallocate_mdqt_arrays
+   end subroutine deallocate_all_arrays
 
    !--------------------------------------------------------------------
    !-- calculate absorption spectrum
@@ -503,10 +513,6 @@ contains
 
 
 
-
-
-
-
    !--------------------------------------------------------------------
    !-- calculate Franck-Condon transition probabilities
    !--------------------------------------------------------------------
@@ -546,11 +552,13 @@ contains
 
       do n=1,nstates
 
+         coef = 0.d0
+
          do mu=1,nprst
 
             imu = imu_start + 1
 
-            coef = 0.d0
+            fc_ovlp = 0.d0
             do kp=1,npnts
                fc_ovlp = fc_ovlp + wp_wavefunction(kp)*psipr(ifc,mu,kp)
             enddo
@@ -565,15 +573,29 @@ contains
 
       enddo
 
-      !--(DEBUG)-- print unnormalized and normalized Franck-Condon probabilities
-      !open(111,file="fc_prob.dat")
-      !do n=1,nstates
-      !   write(111,'(i5,1x,2f20.6)') n, fc_prob(n), fc_prob(n)/pnorm
-      !enddo
-      !close(111)
-
-      !-- normalization
+      !-- renormalization
       fc_prob = fc_prob/pnorm
+
+      !-- Print normalized Franck-Condon probabilities
+
+      write(*,'(//1x,"Franck-Condon factors (probabilities) for the initial state"/)')
+      write(*,'("Norm of the initial wavefunction before renormalization: ",g20.10)') pnorm
+
+      !-- stop the program if the norm is too different from one
+      
+      if (abs(pnorm-1.d0).gt.1.d-4) then
+         write(*,'(/1x,"WARNING: Bad normalization: increase the number of states NSTATES")')
+         call deallocate_all_arrays
+         stop
+      endif
+
+      write(*,'(/1x,"---------------------------------")')
+      write(*,'( 1x," state     Franck-Condon factor  ")')
+      write(*,'( 1x,"---------------------------------")')
+      do n=1,nstates
+         write(*,'(i5,1x,f20.10)') n, fc_prob(n)
+      enddo
+      write(*,'( 1x,"---------------------------------"/)')
 
    end subroutine calculate_fc_prob
 
@@ -1401,17 +1423,17 @@ contains
          success = .true.
 
          !=== DEBUG ===================================================================
-         write(*,*)
-         write(*,'(141("-"))')
-         write(*,*) "Switch: ",istate," --->", new_state
-         write(*,*) "Nonadiabatic coupling: d_z1 = ", dkl_z1
-         write(*,*) "                       d_z2 = ", dkl_z2
-         write(*,*) "                       |d|  = ", sqrt(dkl_sq)
-         write(*,*) "Switch probability: ", switch_prob(new_state)
-         write(*,*) "Kinetic energy gain (loss if negative): ", ekl, " kcal/mol"
+         !write(*,*)
+         !write(*,'(141("-"))')
+         !write(*,*) "Switch: ",istate," --->", new_state
+         !write(*,*) "Nonadiabatic coupling: d_z1 = ", dkl_z1
+         !write(*,*) "                       d_z2 = ", dkl_z2
+         !write(*,*) "                       |d|  = ", sqrt(dkl_sq)
+         !write(*,*) "Switch probability: ", switch_prob(new_state)
+         !write(*,*) "Kinetic energy gain (loss if negative): ", ekl, " kcal/mol"
          !write(*,*) "Velocity adjustments: vz1 = vz1 + ", -gamma*dkl_z1
          !write(*,*) "                      vz2 = vz2 + ", -gamma*dkl_z2
-         write(*,'(141("-"))')
+         !write(*,'(141("-"))')
          !=== end DEBUG ===============================================================
 
       endif
