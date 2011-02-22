@@ -129,9 +129,15 @@ subroutine dynamics3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-20 00:58:11 $
-!  $Revision: 5.8 $
+!  $Date: 2011-02-22 22:01:34 $
+!  $Revision: 5.9 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.8  2011/02/20 00:58:11  souda
+!  Major additions/modifications:
+!  (1) precalculation of the proton vibrational basis functions for METHOD=1
+!  (2) Franck-Condon initial excitation added to DYNAMICS3
+!  (3) addition of the module timers: module_timers.f90 (changes in Makefile!)
+!
 !  Revision 5.7  2011/02/10 22:58:28  souda
 !  minor bug in resetting the counter of vibronic states calculations.
 !
@@ -856,6 +862,13 @@ subroutine dynamics3
       call allocate_wp_wavefunction
       call precalculate_wp_wavefunction
 
+      !--(DEBUG)-- Print the wavefunction of the initial proton wave packet
+      !open(111,file="initial_wp.dat")
+      !do k=1,npnts
+      !   write(111,'(2f20.6)') rlist(k), wp_wavefunction(k)
+      !enddo
+      !close(111)
+
    endif
 
 
@@ -1370,7 +1383,7 @@ subroutine dynamics3
             !-- check the norm of the time-dependent wavefunction
             !-----------------------------------------------------
             wf_norm = tdwf_norm()
-            if (abs(wf_norm-1.d0).gt.1.d-6) then
+            if (abs(wf_norm-1.d0).gt.1.d-4) then
                write(*,*) "DYNAMICS3: Amplitudes are not normalized after timestep", istep
                call clean_exit
             endif
@@ -1475,12 +1488,6 @@ subroutine dynamics3
    call deallocate_all_arrays
 
 contains
-
-   subroutine deallocate_all_arrays
-      call deallocate_vibronic_states
-      if (mdqt) call deallocate_mdqt_arrays
-      if (weights) call deallocate_evb_weights
-   end subroutine deallocate_all_arrays
 
    subroutine clean_exit
       call deallocate_all_arrays
