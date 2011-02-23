@@ -129,9 +129,12 @@ subroutine dynamics3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-23 07:17:21 $
-!  $Revision: 5.10 $
+!  $Date: 2011-02-23 15:18:28 $
+!  $Revision: 5.11 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.10  2011/02/23 07:17:21  souda
+!  additional printout
+!
 !  Revision 5.9  2011/02/22 22:01:34  souda
 !  Minor rearrangements
 !
@@ -1249,7 +1252,7 @@ subroutine dynamics3
       write(6,'(t6,"t(ps)",t20,"z1",t32,"z2",t44,"vz1",t56,"vz2",t68,"zp",t80,"ze",t92,"vzp",t103,"vze",t115,"Ekin",t126,"Efe",t135,"occ.")')
       write(6,'(141("-"))')
 
-      write(6,'(137x,$)')
+      !write(6,'(137x,$)')
 
       !-- transform initial values at time t=0
       call z1z2_to_zpze(z1,z2,zp,ze)
@@ -1448,8 +1451,11 @@ subroutine dynamics3
             endif
          endif
 
+         !if (ndump6.gt.0.and.mod(istep,ndump6).eq.0) &
+         !& write(6,'(137("\b"),f12.6,10f12.5,i5,$)') zeit, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate
+
          if (ndump6.gt.0.and.mod(istep,ndump6).eq.0) &
-         & write(6,'(137("\b"),f12.6,10f12.5,i5,$)') zeit, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate
+         & write(6,'(f12.6,10f12.5,i5)') zeit, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate
 
       enddo loop_over_time
 
