@@ -5,9 +5,12 @@ module propagators_3d
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2011-02-22 22:02:29 $
-   !  $Revision: 5.10 $
+   !  $Date: 2011-02-23 01:26:51 $
+   !  $Revision: 5.11 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.10  2011/02/22 22:02:29  souda
+   !  Bug fixed (yet another one) in the calculation of FC factors
+   !
    !  Revision 5.9  2011/02/21 02:41:41  souda
    !  removed Debug printout
    !
@@ -376,7 +379,7 @@ contains
 
       pnorm = 0.d0
       do i=iground+1,nstates
-         write(ichannel,'(i5,f20.6,t35,f15.6)') i-1, (fe(i) - fe(iground))*cal2ev, absorption_prob(i)
+         write(ichannel,'(i5,f20.6,t35,f15.6)') i, (fe(i) - fe(iground))*cal2ev, absorption_prob(i)
          pnorm = pnorm + absorption_prob(i)
       enddo
 
@@ -553,10 +556,11 @@ contains
       do n=1,nstates
 
          coef = 0.d0
+         imu = imu_start
 
          do mu=1,nprst
 
-            imu = imu_start + 1
+            imu = imu + 1
 
             fc_ovlp = 0.d0
             do kp=1,npnts
@@ -573,21 +577,11 @@ contains
 
       enddo
 
-      !-- renormalization
-      fc_prob = fc_prob/pnorm
 
       !-- Print normalized Franck-Condon probabilities
 
       write(*,'(//1x,"Franck-Condon factors (probabilities) for the initial state"/)')
       write(*,'("Norm of the initial wavefunction before renormalization: ",g20.10)') pnorm
-
-      !-- stop the program if the norm is too different from one
-      
-      if (abs(pnorm-1.d0).gt.1.d-4) then
-         write(*,'(/1x,"WARNING: Bad normalization: increase the number of states NSTATES")')
-         call deallocate_all_arrays
-         stop
-      endif
 
       write(*,'(/1x,"---------------------------------")')
       write(*,'( 1x," state     Franck-Condon factor  ")')
@@ -596,6 +590,17 @@ contains
          write(*,'(i5,1x,f20.10)') n, fc_prob(n)
       enddo
       write(*,'( 1x,"---------------------------------"/)')
+
+      !-- renormalization
+      fc_prob = fc_prob/pnorm
+
+      !-- stop the program if the original norm is too different from one
+      
+      if (abs(pnorm-1.d0).gt.1.d-2) then
+         write(*,'(/1x,"WARNING: Bad normalization: increase the number of states NSTATES")')
+         call deallocate_all_arrays
+         stop
+      endif
 
    end subroutine calculate_fc_prob
 
