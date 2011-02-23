@@ -129,9 +129,12 @@ subroutine dynamics3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-22 22:01:34 $
-!  $Revision: 5.9 $
+!  $Date: 2011-02-23 07:17:21 $
+!  $Revision: 5.10 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.9  2011/02/22 22:01:34  souda
+!  Minor rearrangements
+!
 !  Revision 5.8  2011/02/20 00:58:11  souda
 !  Major additions/modifications:
 !  (1) precalculation of the proton vibrational basis functions for METHOD=1
@@ -1384,7 +1387,8 @@ subroutine dynamics3
             !-----------------------------------------------------
             wf_norm = tdwf_norm()
             if (abs(wf_norm-1.d0).gt.1.d-4) then
-               write(*,*) "DYNAMICS3: Amplitudes are not normalized after timestep", istep
+               write(*,'(/1x,"DYNAMICS3: Amplitudes are not normalized after timestep ",i6)') istep
+               write(*,'( 1x,"           Norm of the time-dependent wavefunction: ",f15.8)') wf_norm
                call clean_exit
             endif
 
