@@ -5,9 +5,12 @@ module propagators_3d
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2011-02-23 01:26:51 $
-   !  $Revision: 5.11 $
+   !  $Date: 2011-02-24 00:56:36 $
+   !  $Revision: 5.12 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.11  2011/02/23 01:26:51  souda
+   !  Another bug in FC part... Hopefully, last one.
+   !
    !  Revision 5.10  2011/02/22 22:02:29  souda
    !  Bug fixed (yet another one) in the calculation of FC factors
    !
@@ -132,8 +135,13 @@ module propagators_3d
    public :: interpolate_energy
    public :: assign_initial_state
    public :: assign_fc_state
-   public :: set_initial_amplitudes
-   public :: set_initial_density
+   public :: set_initial_amplitudes_pure
+   public :: set_initial_amplitudes_laser
+   public :: set_initial_amplitudes_fc
+   public :: print_initial_amplitudes
+   public :: set_initial_density_pure
+   public :: set_initial_density_laser
+   public :: set_initial_density_fc
    public :: calculate_v_dot_d_mid
    public :: calculate_bprob_amp
    public :: calculate_bprob_den
@@ -514,8 +522,6 @@ contains
 
    end function assign_initial_state
 
-
-
    !--------------------------------------------------------------------
    !-- calculate Franck-Condon transition probabilities
    !--------------------------------------------------------------------
@@ -577,13 +583,13 @@ contains
 
       enddo
 
-
       !-- Print normalized Franck-Condon probabilities
 
-      write(*,'(//1x,"Franck-Condon factors (probabilities) for the initial state"/)')
-      write(*,'("Norm of the initial wavefunction before renormalization: ",g20.10)') pnorm
-
-      write(*,'(/1x,"---------------------------------")')
+      write(*,'(/1x,"=============================================================================")')
+      write(*,'( 1x," Franck-Condon factors (probabilities) for the initial state")')
+      write(*,'( 1x,"-----------------------------------------------------------------------------")')
+      write(*,'( 1x," Norm of the initial wavefunction before renormalization: ",g20.10)') pnorm
+      write(*,'( 1x,"-----------------------------------------------------------------------------")')
       write(*,'( 1x," state     Franck-Condon factor  ")')
       write(*,'( 1x,"---------------------------------")')
       do n=1,nstates
@@ -592,12 +598,17 @@ contains
       write(*,'( 1x,"---------------------------------"/)')
 
       !-- renormalization
-      fc_prob = fc_prob/pnorm
+      !   (we don't normalize here: normalize the initial wavefunction later)
+      !fc_prob = fc_prob/pnorm
 
-      !-- stop the program if the original norm is too different from one
+      !-- stop the program if the norm is less than 0.99 or greater than 1 (unphysical situation)
       
-      if (abs(pnorm-1.d0).gt.1.d-2) then
-         write(*,'(/1x,"WARNING: Bad normalization: increase the number of states NSTATES")')
+      if (pnorm.lt.0.99d0) then
+         write(*,'(/1x,"WARNING: Bad normalization (<0.99): increase the number of states NSTATES")')
+         call deallocate_all_arrays
+         stop
+      elseif (pnorm-1.d0.gt.1.d-8) then
+         write(*,'(/1x,"WARNING: Bad normalization (>1.0): increase the accuracy of the wavefunctions (NPRST or NPNTS)")')
          call deallocate_all_arrays
          stop
       endif
@@ -640,20 +651,118 @@ contains
    !--------------------------------------------------------------------
    !-- Set initial amplitudes to correspond to a pure adiabatic state
    !--------------------------------------------------------------------
-   subroutine set_initial_amplitudes(istate)
+   subroutine set_initial_amplitudes_pure(istate)
       integer, intent(in) :: istate
       amplitude = 0.d0
-      amplitude(istate) = (1.d0,0.d0)
-   end subroutine set_initial_amplitudes
+      amplitude(istate) = cmplx(1.d0,0.d0)
+   end subroutine set_initial_amplitudes_pure
+
+   !--------------------------------------------------------------------
+   !-- Set initial amplitudes to correspond to a coherent mixture
+   !   formed after a laser pulse excitation
+   !--------------------------------------------------------------------
+   subroutine set_initial_amplitudes_laser
+      integer :: i
+      amplitude = 0.d0
+      do i=1,nstates
+         amplitude(i) = cmplx(sqrt(absorption_prob(i)),0.d0)
+      enddo
+   end subroutine set_initial_amplitudes_laser
+
+   !--------------------------------------------------------------------
+   !-- Set initial amplitudes to correspond to a coherent mixture
+   !   formed after a Franck-Condon excitation
+   !--------------------------------------------------------------------
+   subroutine set_initial_amplitudes_fc
+      integer :: i
+      real(8) :: wfnorm
+      amplitude = 0.d0
+      wfnorm = 0.d0
+      do i=1,nstates
+         amplitude(i) = cmplx(sqrt(fc_prob(i)),0.d0)
+         wfnorm = wfnorm + fc_prob(i)
+      enddo
+      amplitude = amplitude/sqrt(wfnorm)
+   end subroutine set_initial_amplitudes_fc
+
+   !--------------------------------------------------------------------
+   !-- Print initial amplitudes of the time-dependent wavefunction
+   !--------------------------------------------------------------------
+   subroutine print_initial_amplitudes(ichannel)
+
+      integer, intent(in) :: ichannel
+      integer :: i
+      real(8) :: pnorm, reamp
+
+      write(ichannel,'("#",71("="))')
+      write(ichannel,'("# Initial amplitudes of the time-dependent wavefunction")')
+      write(ichannel,'("#",71("-"))')
+      write(ichannel,'("# Basis state",t25," Re(amplitude) ")')
+      write(ichannel,'("#",71("-"))')
+
+      pnorm = 0.d0
+      do i=1,nstates
+         reamp = real(amplitude(i))
+         write(ichannel,'(i10,t25,f15.8)') i, reamp
+         pnorm = pnorm + reamp*reamp
+      enddo
+
+      write(ichannel,'("#",71("-"))')
+      write(ichannel,'("#",t10,"Norm:",f15.6)') pnorm
+      write(ichannel,'("#",71("="))')
+
+   end subroutine print_initial_amplitudes
 
    !---------------------------------------------------------------------
    !-- Set initial density matrix to correspond to a pure adiabatic state
    !---------------------------------------------------------------------
-   subroutine set_initial_density(istate)
+   subroutine set_initial_density_pure(istate)
       integer, intent(in) :: istate
       density_matrix = 0.d0
-      density_matrix(istate,istate) = (1.d0,0.d0)
-   end subroutine set_initial_density
+      density_matrix(istate,istate) = cmplx(1.d0,0.d0)
+   end subroutine set_initial_density_pure
+
+   !---------------------------------------------------------------------
+   !-- Set initial density matrix to correspond to a coherent mixture
+   !   formed after a laser pulse excitation
+   !---------------------------------------------------------------------
+   subroutine set_initial_density_laser
+      integer :: i, j
+      real(8) :: rhoij
+      density_matrix = 0.d0
+      do i=1,nstates
+         do j=1,nstates
+            rhoij = sqrt(absorption_prob(i))*sqrt(absorption_prob(j))
+            density_matrix(i,j) = cmplx(rhoij,0.d0)
+         enddo
+      enddo
+   end subroutine set_initial_density_laser
+
+   !---------------------------------------------------------------------
+   !-- Set initial density matrix to correspond to a coherent mixture
+   !   formed after a laser pulse excitation
+   !---------------------------------------------------------------------
+   subroutine set_initial_density_fc
+
+      integer :: i, j
+      real(8) :: rhoij, wfnorm
+
+      density_matrix = 0.d0
+
+      !-- calculate the norm of the initial wavefunction
+      wfnorm = 0.d0
+      do i=1,nstates
+         wfnorm = wfnorm + fc_prob(i)
+      enddo
+
+      do i=1,nstates
+         do j=1,nstates
+            rhoij = sqrt(fc_prob(i))*sqrt(fc_prob(j))/wfnorm
+            density_matrix(i,j) = cmplx(rhoij,0.d0)
+         enddo
+      enddo
+
+   end subroutine set_initial_density_fc
 
    !--------------------------------------------------------------------
    !-- Interface to the calculation of the vibronic states
