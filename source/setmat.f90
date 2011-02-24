@@ -5,9 +5,15 @@ subroutine setmat
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-20 00:58:11 $
-!  $Revision: 5.7 $
+!  $Date: 2011-02-24 00:51:09 $
+!  $Revision: 5.8 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.7  2011/02/20 00:58:11  souda
+!  Major additions/modifications:
+!  (1) precalculation of the proton vibrational basis functions for METHOD=1
+!  (2) Franck-Condon initial excitation added to DYNAMICS3
+!  (3) addition of the module timers: module_timers.f90 (changes in Makefile!)
+!
 !  Revision 5.6  2011/01/04 20:58:14  souda
 !  added: option TRDIPOLE() for reading the transition dipole moment matrix in the adiabatic basis from disk - NOT FULLY IMPLEMENTED YET!
 !
@@ -103,23 +109,21 @@ subroutine setmat
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    xint = rlist(npnts) - rlist(1)
-   write(*,*) ' '
-   write(*,*) ' Kinetic energy matrix for proton...'
+   write(6,*)
+   write(6,'(1x,"Kinetic energy matrix for proton... ",$)')
    call gridke(npnts,xint,hke)
-   write(*,*) ' done...'
-
    do i=1,npnts
       do j=1,npnts
          hke(i,j) = hke(i,j)/pm
       enddo
    enddo
-   write(6,*) ' done'
+   write(6,'(1x," Done.")')
 
    if (deriv) then
       write(6,*) ' '
-      write(6,*) ' First derivative matrix for proton...'
+      write(6,'(1x,"First derivative matrix for proton... ",$)')
       call griddx(npnts,xint,dx)
-      write(6,*) ' done'
+      write(6,'(1x,"Done.")')
    endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -131,9 +135,10 @@ subroutine setmat
    if (gquant) then
 
       xgint = glist(npntsg) - glist(1)
-      write(6,*) ' '
-      write(6,*) ' kinetic energy matrix for gating mode...'
+      write(6,*)
+      write(6,'(1x,"Kinetic energy matrix for gating mode... ",$)')
       call gridke(npntsg,xgint,hgke)
+      write(6,'(1x,"Done.")')
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ! Inversed reduced mass for gating coordinate
@@ -148,10 +153,10 @@ subroutine setmat
       write(6,*) ' done'
 
       if (derivg) then
-         write(6,*) ' '
-         write(6,*) ' First derivative matrix...'
+         write(6,*)
+         write(6,'(1x,"First derivative matrix... ",$)')
          call griddx(npntsg,xgint,dgx)
-         write(6,*) ' done'
+         write(6,'(1x,"Done.")')
       endif
 
    endif
@@ -163,8 +168,8 @@ subroutine setmat
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    write(6,*)
-   write(6,*)' gas-phase hamiltonian matrix and its derivatives...'
-   write(6,*)' reorganization energy matrices, their derivatives...'
+   write(6,*) " Gas-phase hamiltonian matrix and its derivatives..."
+   write(6,*)
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Start calculations on the grid
@@ -398,6 +403,10 @@ subroutine setmat
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Reorganization energy matrices and their derivatives
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   write(6,*)
+   write(6,*) " Reorganization energy matrices and their derivatives..."
+   write(6,*)
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Read external file with the reorganization energy matrices
@@ -1053,8 +1062,11 @@ subroutine setmat
    !  potentials (used to build total Hamiltonian if METHOD=1)
    !===================================================================
    if (method.eq.1) then
+      write(6,*)
+      write(6,'(1x,"Precalculate the proton vibrational wavefunctions... ",$)')
       call allocate_proton_wavefunctions
       call precalculate_proton_wavefunctions
+      write(6,'(1x,"Done.")')
    endif
 
    !===================================================================
@@ -1134,6 +1146,9 @@ subroutine setmat
       ! basis (GMH-like diabatic states).
       !===================================================================
 
+      write(6,*)
+      write(6,'(1x,"Calculating transition dipole moments... ",$)')
+
       nhsol = iptsol(2)
 
       do kp=1,npnts
@@ -1142,6 +1157,9 @@ subroutine setmat
          xyzsol(3,nhsol) = 0.d0
          call calculate_dipole_moment_diab(kp)
       enddo
+
+      write(6,'(1x,"Done.")')
+      write(6,*)
       
       debye = a2bohr*au2debye
 
