@@ -30,6 +30,8 @@ subroutine dynamics3
 !  ISTATE=<N> - index of the occupied adiabatic vibronic state
 !               (1 for ground state) at t=0.
 !
+!  PURESTATE - the initial density matrix always corresponds to a pure state
+!
 !  FCSTATE=<N> - index of the initially occupied DIABATIC electronic state
 !                ("1" for 1a, "2" for 1b, "3" for 2a, "4" for 2b).
 !                The shape of the initial proton wavepacket (specified
@@ -129,9 +131,12 @@ subroutine dynamics3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-23 15:18:28 $
-!  $Revision: 5.11 $
+!  $Date: 2011-02-24 00:54:12 $
+!  $Revision: 5.12 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.11  2011/02/23 15:18:28  souda
+!  disabled dynamic rewriting of trajectory data to standard output
+!
 !  Revision 5.10  2011/02/23 07:17:21  souda
 !  additional printout
 !
@@ -204,10 +209,13 @@ subroutine dynamics3
    logical :: pure=.true.
    logical :: pump=.false.
    logical :: fcdia=.false.
+   logical :: purestate=.false.
 
    integer :: nstates_dyn, nzdim_dyn, ielst_dyn, iseed_inp, iset_dyn
    integer :: initial_state=-1, iground=1
    integer :: istate, new_state, ndump6, pump_s
+   integer :: number_of_skipped_trajectories=0
+   integer :: ntraj_valid
 
    integer :: ikey, ioption, ioption2, ioption3, kg0, ifrom, ito
    integer :: ioutput, lenf, ispa, idash, icount
@@ -505,7 +513,7 @@ subroutine dynamics3
    endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   ! Number of vibronic states
+   ! Number of vibronic states to include in dynamics
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    ioption = index(options," NSTATES=")
@@ -515,7 +523,7 @@ subroutine dynamics3
       write(6,'(/1x,"Number of vibronic states to include in dynamics: ",i4/)') nstates_dyn
    else
       nstates_dyn = nelst*nprst
-      write(6,'(/1x,"Number of vibronic states to include in dynamics (default): ",i4/)') nstates_dyn
+      write(6,'(/1x,"Number of vibronic states to include in dynamics (all states by default): ",i4/)') nstates_dyn
    endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -719,6 +727,12 @@ subroutine dynamics3
    if (mdqt) call allocate_mdqt_arrays
    if (weights) call allocate_evb_weights
 
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   !-- nature of the initial density matrix
+   !   (meaningful only for MDQT dynamics)
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   purestate = index(options,' PURESTATE').ne.0
+
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Type of the initial condition:
    !
@@ -740,6 +754,7 @@ subroutine dynamics3
    pure  = index(options,' ISTATE=')  .ne. 0
    fcdia = index(options,' FCSTATE=') .ne. 0
    pump  = index(options,' PUMP=')    .ne. 0
+
 
    !-- The three options should be mutually exclusive.
 
@@ -808,8 +823,6 @@ subroutine dynamics3
 
    endif
 
-
-
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    !  Initial state is a product of the diabatic electronic state and
    !  proton vibrational wavepacket (vertical Franck-Condon excitation)
@@ -876,7 +889,6 @@ subroutine dynamics3
       !close(111)
 
    endif
-
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    !  Initial state is a result of a laser pump excitation from the
@@ -959,111 +971,102 @@ subroutine dynamics3
       !-- set variables in the laser module
       call set_laser(pump_s,pump_e,pump_w)
 
-   endif
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      !  Vibronic spectrum
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+      ioption = index(options," SPECTRUM=")
 
-   !===DEBUG===
-   !call print_propagators_3d
+      if (ioption.eq.0) then
 
-   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   !  Vibronic spectrum
-   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-   ioption = index(options," SPECTRUM=")
-
-   if (ioption.eq.0) then
-
-      open(11,file=job(1:ljob)//"/vibronic_spectrum.dat")
-      write(6,'(/1x,"Vibronic spectrum is written to the external file ",a)') &
-      &job(1:ljob)//"/vibronic_spectrum.dat"
-
-   else
-
-      ispa = index(options(ioption+10:),space)
-      fname = options(ioption+10:ioption+ispa+8)
-      lenf = ispa - 1
-      call locase(fname,lenf)
-      fname = job(1:ljob)//'/'//fname(1:lenf)
-      lenf = lenf + ljob + 1
-
-      open(11,file=fname(1:lenf))
-      write(6,'(/1x,"Vibronic spectrum is written to the external file ",a)') fname(1:lenf)
-
-   endif
-
-   !-- first, calculate the absorption spectrum
-   !   (including oscillator strengths)
-
-   call calculate_absorption_prob(iground,kg0,z10,z20)
-
-   !-- print to an external file (11)
-   call print_vibronic_spectrum(11,iground)
-   close(11)
-
-   !-- print to the standard output as well
-   call print_vibronic_spectrum(6,iground)
-
-   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   !  Convoluted vibronic spectrum
-   !  (Lorentzian and Gaussian convolutions are implemented)
-   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-   ioption = index(options," CONVOLUTION=")
-
-   if (ioption.ne.0) then
-
-      !-- extract the keyword for the convoluting function
-      ispa = index(options(ioption+13:),space)
-      str = options(ioption+13:ioption+ispa+11)
-
-      !-- extract the vibronic linewidth (eV)
-      ioption2 = index(options," LINEWIDTH=")
-      if (ioption2.ne.0) then
-         vib_linewidth = reada(options,ioption2+11)
-      else
-         vib_linewidth = 0.05
-      endif
-
-      if (str.eq."LORENTZIAN") then
-
-         write(6,'(/1x,"Vibronic spectrum with Lorentzian convolution will be written to the external file ",a)') &
-         &job(1:ljob)//"/vibronic_spectrum_conv.dat"
-         write(6,'(1x,"Vibronic linewidth: ",f12.6," eV")') vib_linewidth
-
-         open(11,file=job(1:ljob)//"/vibronic_spectrum_lconv.dat")
-         call print_vibronic_spectrum_conv(11,iground,1,vib_linewidth)
-
-      elseif (str.eq."GAUSSIAN") then
-
-         write(6,'(/1x,"Vibronic spectrum with Gaussian convolution will be written to the external file ",a)') &
-         &job(1:ljob)//"/vibronic_spectrum_conv.dat"
-         write(6,'(1x,"Vibronic linewidth: ",f12.6," eV")') vib_linewidth
-
-         open(11,file=job(1:ljob)//"/vibronic_spectrum_gconv.dat")
-         call print_vibronic_spectrum_conv(11,iground,2,vib_linewidth)
+         open(11,file=job(1:ljob)//"/vibronic_spectrum.dat")
+         write(6,'(/1x,"Vibronic spectrum is written to the external file ",a)') &
+         &job(1:ljob)//"/vibronic_spectrum.dat"
 
       else
 
-         write(6,'(/1x,"(WARNING) Unknown convolution type: ",a)') trim(str)
-         write(6,'( 1x,"Vibronic spectrum with Lorentzian (default) convolution will be written to the external file ",a)') &
-         &job(1:ljob)//"/vibronic_spectrum_conv.dat"
-         write(6,'(1x,"Vibronic linewidth: ",f12.6," eV")') vib_linewidth
+         ispa = index(options(ioption+10:),space)
+         fname = options(ioption+10:ioption+ispa+8)
+         lenf = ispa - 1
+         call locase(fname,lenf)
+         fname = job(1:ljob)//'/'//fname(1:lenf)
+         lenf = lenf + ljob + 1
 
-         open(11,file=job(1:ljob)//"/vibronic_spectrum_lconv.dat")
-         call print_vibronic_spectrum_conv(11,iground,1,vib_linewidth)
+         open(11,file=fname(1:lenf))
+         write(6,'(/1x,"Vibronic spectrum is written to the external file ",a)') fname(1:lenf)
 
       endif
 
+      !-- first, calculate the absorption spectrum
+      !   (including oscillator strengths)
+
+      call calculate_absorption_prob(iground,kg0,z10,z20)
+
+      !-- print to an external file (11)
+      call print_vibronic_spectrum(11,iground)
       close(11)
+
+      !-- print to the standard output as well
+      call print_vibronic_spectrum(6,iground)
+
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      !  Convoluted vibronic spectrum
+      !  (Lorentzian and Gaussian convolutions are implemented)
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      ioption = index(options," CONVOLUTION=")
+
+      if (ioption.ne.0) then
+
+         !-- extract the keyword for the convoluting function
+         ispa = index(options(ioption+13:),space)
+         str = options(ioption+13:ioption+ispa+11)
+
+         !-- extract the vibronic linewidth (eV)
+         ioption2 = index(options," LINEWIDTH=")
+         if (ioption2.ne.0) then
+            vib_linewidth = reada(options,ioption2+11)
+         else
+            vib_linewidth = 0.05
+         endif
+
+         if (str.eq."LORENTZIAN") then
+
+            write(6,'(/1x,"Vibronic spectrum with Lorentzian convolution will be written to the external file ",a)') &
+            &job(1:ljob)//"/vibronic_spectrum_conv.dat"
+            write(6,'(1x,"Vibronic linewidth: ",f12.6," eV")') vib_linewidth
+
+            open(11,file=job(1:ljob)//"/vibronic_spectrum_lconv.dat")
+            call print_vibronic_spectrum_conv(11,iground,1,vib_linewidth)
+   
+         elseif (str.eq."GAUSSIAN") then
+
+            write(6,'(/1x,"Vibronic spectrum with Gaussian convolution will be written to the external file ",a)') &
+            &job(1:ljob)//"/vibronic_spectrum_conv.dat"
+            write(6,'(1x,"Vibronic linewidth: ",f12.6," eV")') vib_linewidth
+
+            open(11,file=job(1:ljob)//"/vibronic_spectrum_gconv.dat")
+            call print_vibronic_spectrum_conv(11,iground,2,vib_linewidth)
+
+         else
+
+            write(6,'(/1x,"(WARNING) Unknown convolution type: ",a)') trim(str)
+            write(6,'( 1x,"Vibronic spectrum with Lorentzian (default) convolution will be written to the external file ",a)') &
+            &job(1:ljob)//"/vibronic_spectrum_conv.dat"
+            write(6,'(1x,"Vibronic linewidth: ",f12.6," eV")') vib_linewidth
+
+            open(11,file=job(1:ljob)//"/vibronic_spectrum_lconv.dat")
+            call print_vibronic_spectrum_conv(11,iground,1,vib_linewidth)
+
+         endif
+
+         close(11)
       
-   endif
+      endif
 
-
-   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   !  Output the laser pulse shape to the external file
-   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-   if (pump) then
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      !  Output the laser pulse shape to the external file
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
       write(6,'(/1x,"Pump laser spectrum will be written to the external file ",a)') &
       & job(1:ljob)//"/pump_laser_spectrum.dat"
@@ -1073,6 +1076,9 @@ subroutine dynamics3
       close(11)
 
    endif
+
+   !===DEBUG===
+   !call print_propagators_3d
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Output files for trajectories
@@ -1115,6 +1121,8 @@ subroutine dynamics3
    !======================================!
 
    zeit_start = second()
+   number_of_skipped_trajectories = 0
+   ntraj_valid = ntraj
 
    loop_over_trajectories: do itraj=1,ntraj
 
@@ -1132,6 +1140,12 @@ subroutine dynamics3
       z1 = z10 + sigma*sample
       call gaussdist_boxmuller(sample,iseed)
       z2 = z20 + sigma*sample
+
+      !--(DEBUG)--start
+      !-- ignoring sampling
+      !z1 = z10
+      !z2 = z20
+      !--(DEBUG)--end
 
       !-- initialize initial velocities
 
@@ -1165,6 +1179,20 @@ subroutine dynamics3
          !-- always the same initial state
          istate = initial_state
 
+         if (istate.gt.nstates_dyn) then
+            write(6,'(/1x,"From DYNAMICS3: index of the initial pure state specified (",i2,") ",/,&
+            &          1x,"is greater than the number of states included in dynamics (",i2,").",/,&
+            &          1x,"Check the ISTATE option!")') istate, nstates_dyn
+            call clean_exit
+         endif
+
+         if (mdqt) then
+            !-- set initial amplitudes (and/or density matrix) at t=0
+            !   (always a pure state)
+            call set_initial_amplitudes_pure(istate)
+            call set_initial_density_pure(istate)
+         endif
+
       elseif (pump) then
 
          !-- choose the initial state according to the magnitude
@@ -1181,6 +1209,20 @@ subroutine dynamics3
             call clean_exit
          endif
 
+         if (mdqt) then
+
+            !-- set initial amplitudes (and/or density matrix) at t=0
+
+            if (purestate) then
+               call set_initial_amplitudes_pure(istate)
+               call set_initial_density_pure(istate)
+            else
+               call set_initial_amplitudes_laser
+               call set_initial_density_laser
+            endif
+
+         endif
+
       elseif (fcdia) then
 
          !-- initial state is a product of the specified
@@ -1192,9 +1234,24 @@ subroutine dynamics3
          istate = assign_fc_state()
 
          if (istate.eq.0) then
-            write(6,'(1x,"From DYNAMICS3: FAILURE to assign the initial vibronic state after Franck-Condon excitation.")')
-            write(6,'(1x,"Consider to include more states in NSTATES or check FCSTATE value.")')
-            call clean_exit
+            write(6,'(1x,"FAILURE to assign the initial vibronic state after Franck-Condon excitation.")')
+            write(6,'(1x,"This trajectory will be discarded.")')
+            number_of_skipped_trajectories = number_of_skipped_trajectories + 1
+            exit loop_over_trajectories
+         endif
+
+         if (mdqt) then
+
+            !-- set initial amplitudes (and/or density matrix) at t=0
+
+            if (purestate) then
+               call set_initial_amplitudes_pure(istate)
+               call set_initial_density_pure(istate)
+            else
+               call set_initial_amplitudes_fc
+               call set_initial_density_fc
+            endif
+
          endif
 
       else
@@ -1203,6 +1260,9 @@ subroutine dynamics3
          call clean_exit
 
       endif
+
+      !-- print out the initial amplitudes of the time-dependent wavefunction
+      call print_initial_amplitudes(6)
 
       !-- reset the counter of calls to feszz3
       call reset_feszz3_counter
@@ -1214,15 +1274,8 @@ subroutine dynamics3
       !   amplitudes of the initial wavefunction
 
       if (mdqt) then
-
          !-- calculate vibronic couplings at t=0
          call calculate_vibronic_couplings
-
-         !-- set initial amplitudes (and/or density matrix) at t=0
-         !--> to be properly coded (now it is a pure state)
-         call set_initial_amplitudes(istate)
-         call set_initial_density(istate)
-
       endif
 
       !-- write the header of the trajectory file
@@ -1482,14 +1535,18 @@ subroutine dynamics3
 
    enddo loop_over_trajectories
 
+   ntraj_valid = ntraj - number_of_skipped_trajectories
    zeit_end = second()
    zeit_total = zeit_end - zeit_start
    write(6,*)
    write(6,'(1x,"================================================================================")')
+   write(6,'(1x,"Done. Number of trajectories generated: ",i6)') ntraj_valid
+   write(6,'(1x,"      Number of trajectories skipped:   ",i6)') number_of_skipped_trajectories
+   write(6,'(1x,"================================================================================")')
    write(6,'(1x,"Done. Time elapsed         (sec): ",f20.3)') zeit_total
-   write(6,'(1x,"      Time per trajectory  (sec): ",f20.3)') zeit_total/ntraj
-   write(6,'(1x,"      Time per timestep    (sec): ",f20.3)') zeit_total/(ntraj*nsteps)
-   write(6,'(1x,"      Productivity rate (ps/day): ",f20.3)') 3600.d0*24.d0*tstep*ntraj*nsteps/zeit_total
+   write(6,'(1x,"      Time per trajectory  (sec): ",f20.3)') zeit_total/ntraj_valid
+   write(6,'(1x,"      Time per timestep    (sec): ",f20.3)') zeit_total/(ntraj_valid*nsteps)
+   write(6,'(1x,"      Productivity rate (ps/day): ",f20.3)') 3600.d0*24.d0*tstep*ntraj_valid*nsteps/zeit_total
    write(6,'(1x,"================================================================================")')
    write(6,*)
 
