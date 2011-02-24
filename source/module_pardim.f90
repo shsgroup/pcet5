@@ -14,9 +14,12 @@ module pardim
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:36 $
-!  $Revision: 5.2 $
+!  $Date: 2011-02-24 00:49:24 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:36  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !======================================================================
 
@@ -39,8 +42,8 @@ contains
       maxatm   = 250
       maxpnt   = 256
       nelst    =   4
-      nprstmax =  80
-      ngastmax =  80
+      nprstmax =  100
+      ngastmax =  100
       maxsta   = nelst*nprstmax*ngastmax
    end subroutine init_pardim
 
