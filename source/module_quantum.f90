@@ -38,9 +38,15 @@ module quantum
 !---------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-20 00:58:11 $
-!  $Revision: 5.3 $
+!  $Date: 2011-02-24 00:50:26 $
+!  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.3  2011/02/20 00:58:11  souda
+!  Major additions/modifications:
+!  (1) precalculation of the proton vibrational basis functions for METHOD=1
+!  (2) Franck-Condon initial excitation added to DYNAMICS3
+!  (3) addition of the module timers: module_timers.f90 (changes in Makefile!)
+!
 !  Revision 5.2  2010/10/28 21:29:36  souda
 !  First (working and hopefully bug-free) source of PCET 5.x
 !
@@ -597,6 +603,10 @@ contains
       real*8, allocatable, dimension(:)   :: vpr, w
       real*8, allocatable, dimension(:,:) :: ham, cp, cpprev
 
+      !--(DEBUG)--start
+      !real(8), dimension(4) :: udiab
+      !--(DEBUG)--end
+
       allocate (vpr(npnts),w(npnts))
       allocate (ham(npnts,npnts),cp(npnts,npnts),cpprev(npnts,npnts))
 
@@ -612,6 +622,17 @@ contains
          dr = rlist(k) - wp_position*a2bohr
          vpr(k) = 0.5d0*pm*omega*omega*dr*dr
       enddo
+
+
+      !--(DEBUG)--start
+      !open(111,file="proton_potentials.dat")
+      !do k=1,npnts
+      !   call usol_diab(k,1,udiab)
+      !   write(111,'(6f15.6)') rlist(k)*bohr2a, vpr(k)*au2cal, udiab(1), udiab(2), udiab(3), udiab(4)
+      !enddo
+      !close(111)
+      !--(DEBUG)--end
+
 
       call calcham(npnts,vpr,hke,ham)
       call calcwf(npnts,ham,cp,w)
