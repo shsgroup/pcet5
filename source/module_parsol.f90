@@ -45,9 +45,12 @@ module parsol
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:36 $
-!  $Revision: 5.2 $
+!  $Date: 2011-02-25 19:11:25 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:36  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !=======================================================================
 
@@ -60,34 +63,34 @@ module parsol
    logical :: symt, reddens, sympt, symet, nosymd
    real(8) :: eps0, eps8, kappa, delta, a, b, r, l0
 
-   real(8) :: f0, taud, taul, tau0, tau0l, effmass
+   real(8) :: eps0_dyn, eps8_dyn, f0, taud, taul, tau0, tau0l, effmass
    real(8) :: eps1, tau1, tau2
 
 contains
 
    !=======================================================================
    subroutine set_debye_model_parameters()
-      taul  = eps8*taud/eps0
+      taul  = eps8_dyn*taud/eps0_dyn
       effmass = 0.d0
    end subroutine set_debye_model_parameters
 
    !=======================================================================
    subroutine set_debye2_model_parameters()
       !-- (not implemented yet)
-      taul  = eps8*taud/eps0
+      taul  = eps8_dyn*taud/eps0_dyn
       effmass = 0.d0
    end subroutine set_debye2_model_parameters
 
    !=======================================================================
    subroutine set_onodera_model_parameters()
-      taul  = eps8*taud/eps0
-      tau0l = eps8*tau0/eps0
+      taul  = eps8_dyn*taud/eps0_dyn
+      tau0l = eps8_dyn*tau0/eps0_dyn
       effmass = f0*tau0*taul
    end subroutine set_onodera_model_parameters
 
    !=======================================================================
    subroutine set_onodera2_model_parameters()
-      f0 = four*pi*eps0*eps8/(eps0-eps8)
+      f0 = four*pi*eps0_dyn*eps8_dyn/(eps0_dyn-eps8_dyn)
       !-- to be added...
       !eps1 = 
       !tau1 =

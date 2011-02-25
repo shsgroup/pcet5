@@ -10,9 +10,12 @@ module dielectric_functions
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2010-10-26 21:06:20 $
-   !  $Revision: 5.1 $
+   !  $Date: 2011-02-25 19:11:25 $
+   !  $Revision: 5.2 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.1  2010/10/26 21:06:20  souda
+   !  new routines/modules
+   !
    !
    !---------------------------------------------------------------------
 
@@ -38,7 +41,7 @@ contains
    function debye_epsilon(omega) result(epsilon)
       real(kind=8), intent(in) :: omega    ! frequency (1/ps)
       complex(kind=8) :: epsilon
-      epsilon = eps8 + (eps0-eps8)/(one - ii*omega*taud)
+      epsilon = eps8_dyn + (eps0_dyn-eps8_dyn)/(one - ii*omega*taud)
    end function debye_epsilon
 
    !---------------------------------------------------------------------
@@ -56,7 +59,7 @@ contains
    function onodera_epsilon(omega) result(epsilon)
       real(kind=8), intent(in) :: omega    ! frequency (1/ps)
       complex(kind=8) :: epsilon
-      epsilon = eps8 + (eps0-eps8)/((one - ii*omega*tau0)*(one - ii*omega*taud))
+      epsilon = eps8_dyn + (eps0_dyn-eps8_dyn)/((one - ii*omega*tau0)*(one - ii*omega*taud))
    end function onodera_epsilon
 
    !---------------------------------------------------------------------
@@ -67,7 +70,7 @@ contains
       complex(kind=8) :: f
       complex(kind=8) :: eps
       eps = onodera_epsilon(omega)
-      f = four*pi*eps*eps8/(eps-eps8)
+      f = four*pi*eps*eps8_dyn/(eps-eps8_dyn)
    end function onodera_f
 
 end module dielectric_functions

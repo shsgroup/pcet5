@@ -131,9 +131,14 @@ subroutine dynamics3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-24 00:54:12 $
-!  $Revision: 5.12 $
+!  $Date: 2011-02-25 19:11:25 $
+!  $Revision: 5.13 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.12  2011/02/24 00:54:12  souda
+!  - changes related to the generation of the initial state after Franck-Condon excitation;
+!  - additional keyword PURESTATE for setting the initial wavefunction in MDQT as a pure adiabatic state;
+!  - initial state in MDQT is a coherent mixture by default now.
+!
 !  Revision 5.11  2011/02/23 15:18:28  souda
 !  disabled dynamic rewriting of trajectory data to standard output
 !
@@ -346,7 +351,27 @@ subroutine dynamics3
          write(*,'(/1x,"*** (in DYNAMICS): You MUST specify TAUD= option for DEBYE model ***"/)')
          call clean_exit
       endif
+
+      ioption = index(options,' EPS0=')
+      if (ioption.ne.0) then
+         eps0_dyn = reada(options,ioption+6)
+      else
+         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS0= option for DEBYE model ***"/)')
+         call clean_exit
+      endif
+
+      ioption = index(options,' EPS8=')
+      if (ioption.ne.0) then
+         eps8_dyn = reada(options,ioption+6)
+      else
+         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS8= option for DEBYE model ***"/)')
+         call clean_exit
+      endif
+
       call set_debye_model_parameters()
+      write(6,'(1x,"Static dielectric constant EPS0         ",f15.6)') eps0_dyn
+      write(6,'(1x,"Optical dielectric constant EPS_inf     ",f15.6)') eps8_dyn
+      write(6,'(1x,"Inverse Pekar factor f_0                ",f15.6)') f0
       write(6,'(1x,"Debye relaxation time TAUD (ps):        ",f15.6)') taud
       write(6,'(1x,"Longitudianl relaxation time TAUL (ps): ",f15.6)') taul
       write(6,'(1x,"Effective mass of the solvent (ps^2):   ",f15.6)') effmass
@@ -377,7 +402,26 @@ subroutine dynamics3
          call clean_exit
       endif
 
+      ioption = index(options,' EPS0=')
+      if (ioption.ne.0) then
+         eps0_dyn = reada(options,ioption+6)
+      else
+         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS0= option for DEBYE2 model ***"/)')
+         call clean_exit
+      endif
+
+      ioption = index(options,' EPS8=')
+      if (ioption.ne.0) then
+         eps8_dyn = reada(options,ioption+6)
+      else
+         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS8= option for DEBYE2 model ***"/)')
+         call clean_exit
+      endif
+
       call set_debye2_model_parameters()
+      write(6,'(1x,"Static dielectric constant EPS0         ",f15.6)') eps0_dyn
+      write(6,'(1x,"Optical dielectric constant EPS_inf     ",f15.6)') eps8_dyn
+      write(6,'(1x,"Inverse Pekar factor f_0                ",f15.6)') f0
       write(6,'(1x,"First  relaxation time TAU1 (ps):       ",f15.6)') tau1
       write(6,'(1x,"Second relaxation time TAU2 (ps):       ",f15.6)') tau2
       write(6,'(1x,"Longitudianl relaxation time TAUL (ps): ",f15.6)') taul
@@ -401,13 +445,31 @@ subroutine dynamics3
          call clean_exit
       endif
 
+      ioption = index(options,' EPS0=')
+      if (ioption.ne.0) then
+         eps0_dyn = reada(options,ioption+6)
+      else
+         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS0= option for ONODERA model ***"/)')
+         call clean_exit
+      endif
+
+      ioption = index(options,' EPS8=')
+      if (ioption.ne.0) then
+         eps8_dyn = reada(options,ioption+6)
+      else
+         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS8= option for ONODERA model ***"/)')
+         call clean_exit
+      endif
+
       call set_onodera_model_parameters()
-      write(6,'(1x,"Inverse Pekar factor f_0         :       ",f15.6)') f0
-      write(6,'(1x,"Debye   relaxation time TAUD (ps):       ",f15.6)') taud
-      write(6,'(1x,"Onodera relaxation time TAU0 (ps):       ",f15.6)') tau0
-      write(6,'(1x,"Longitudinal relaxation time TAUL  (ps): ",f15.6)') taul
-      write(6,'(1x,"Longitudinal relaxation time TAU0L (ps): ",f15.6)') tau0l
-      write(6,'(1x,"Effective mass of the solvent (ps^2):    ",f15.6)') effmass
+      write(6,'(1x,"Static dielectric constant EPS0          ",f15.6)') eps0_dyn
+      write(6,'(1x,"Optical dielectric constant EPS_inf      ",f15.6)') eps8_dyn
+      write(6,'(1x,"Inverse Pekar factor f_0                 ",f15.6)') f0
+      write(6,'(1x,"Debye   relaxation time TAUD (ps)        ",f15.6)') taud
+      write(6,'(1x,"Onodera relaxation time TAU0 (ps)        ",f15.6)') tau0
+      write(6,'(1x,"Longitudinal relaxation time TAUL  (ps)  ",f15.6)') taul
+      write(6,'(1x,"Longitudinal relaxation time TAU0L (ps)  ",f15.6)') tau0l
+      write(6,'(1x,"Effective mass of the solvent (ps^2)     ",f15.6)') effmass
 
    elseif (solvent_model.eq."ONODERA2") then
 

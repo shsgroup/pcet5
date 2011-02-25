@@ -6,9 +6,12 @@ subroutine setjob
 !---------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-01-04 19:59:14 $
-!  $Revision: 5.5 $
+!  $Date: 2011-02-25 19:11:25 $
+!  $Revision: 5.6 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.5  2011/01/04 19:59:14  souda
+!  added: now the custom delta and kappa FRCM parameters can be specified even if the solvent name is explicitly given.
+!
 !  Revision 5.4  2010/12/15 21:24:56  souda
 !  various fixes (non-critical)
 !
@@ -836,17 +839,17 @@ subroutine setjob
       eps0 = 78.39d0
       eps8 = 1.78d0
 
-   elseif (index(options,' CH2CL2').ne.0) then
+   elseif (index(options,' CH2CL2').ne.0.or.index(options,' DICHLOROETHANE').ne.0) then
 
       eps0 = 8.93d0
       eps8 = 2.02d0
 
-   elseif (index(options,' MEOH').ne.0) then
+   elseif (index(options,' MEOH').ne.0.or.index(options,' METHANOL').ne.0) then
 
       eps0 = 33.7d0
       eps8 = 5.6d0
 
-   elseif (index(options,' ETOH').ne.0) then
+   elseif (index(options,' ETOH').ne.0.or.index(options,' ETHANOL').ne.0) then
 
       eps0 = 24.6d0
       eps8 = 1.85d0
