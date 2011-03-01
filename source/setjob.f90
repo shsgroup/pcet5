@@ -6,9 +6,12 @@ subroutine setjob
 !---------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-25 19:11:25 $
-!  $Revision: 5.6 $
+!  $Date: 2011-03-01 23:52:15 $
+!  $Revision: 5.7 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.6  2011/02/25 19:11:25  souda
+!  Now using a separate set of dielectric constant for solvent dynamics.
+!
 !  Revision 5.5  2011/01/04 19:59:14  souda
 !  added: now the custom delta and kappa FRCM parameters can be specified even if the solvent name is explicitly given.
 !
@@ -315,7 +318,7 @@ subroutine setjob
       write(6,'(10x,"Mass of the particle (Daltons): ",f12.6)') pm/dalton
       write(6,'(10x,"Integration limits (Angstroms): ",2f12.6)') alim,blim
       write(6,'(10x,"Number of integration points:   ",i12)') npnts
-      write(6,'(10x,"Number of proton vibrational states counted:",4x,i12)') nprst
+      write(6,'(10x,"Number of proton basis states:  ",i12)') nprst
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ! Integration steps (STEP,STEPR) and
