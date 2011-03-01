@@ -5,9 +5,14 @@ module propagators_3d
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2011-02-24 00:56:36 $
-   !  $Revision: 5.12 $
+   !  $Date: 2011-03-01 23:54:03 $
+   !  $Revision: 5.13 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.12  2011/02/24 00:56:36  souda
+   !  - Additional routines for generating a coherent mixture for initial state in MDQT;
+   !  - Franck-Condon factors are not renormalized initially;
+   !  - initial wavefunction (coherent mixture) is renormalized.
+   !
    !  Revision 5.11  2011/02/23 01:26:51  souda
    !  Another bug in FC part... Hopefully, last one.
    !
@@ -61,7 +66,7 @@ module propagators_3d
    implicit none
    private
 
-   complex(kind=8), parameter :: ii=(zero,one)
+   complex(kind=8), parameter :: ii=(0.d0,1.d0)
 
    character(len=5) :: mode
    integer :: iset, nstates, nzdim, ielst
@@ -100,6 +105,7 @@ module propagators_3d
    !-- Array for the renormalized complex amplitudes
    !---------------------------------------------------------
    complex(8), allocatable, dimension(:) :: amplitude
+   complex(8), allocatable, dimension(:) :: amplitude_copy
 
    !-- Array for the density matrix
    !---------------------------------------------------------
@@ -164,18 +170,45 @@ module propagators_3d
    public :: reset_switch_prob
    public :: accumulate_switch_prob
    public :: normalize_switch_prob
+   public :: save_amplitudes
+   public :: restore_amplitudes
 
 contains
 
    !===DEBUG printout===
    subroutine print_propagators_3d
+      integer :: k
       write(*,*)
       write(*,*) "-----Contents of the propagators_3d module"
+      write(*,*)
       write(*,*) "mode:    ",mode
       write(*,*) "iset:    ",iset
       write(*,*) "nstates: ",nstates
       write(*,*) "nzdim:   ",nzdim
       write(*,*) "ielst:   ",ielst
+      write(*,*)
+      write(*,*) "Splittings: ",(fe(k)-fe(k-1),k=2,nstates)
+      write(*,*)
+      write(*,*) "Vibronic couplings z1: ",coupz1
+      write(*,*)
+      write(*,*) "Vibronic couplings z2: ",coupz2
+      write(*,*)
+      write(*,*) "V_dot_d: ",v_dot_d
+      write(*,*)
+      write(*,*) "a0_fe: ",a0_fe
+      write(*,*)
+      write(*,*) "a1_fe: ",a1_fe
+      write(*,*)
+      write(*,*) "a2_fe: ",a2_fe
+      write(*,*)
+      write(*,*) "a0_vdotd: ",a0_vdotd
+      write(*,*)
+      write(*,*) "a1_vdotd: ",a1_vdotd
+      write(*,*)
+      write(*,*) "a2_vdotd: ",a2_vdotd
+      write(*,*)
+      write(*,*) "TDSE amplitudes: ",amplitude
+      write(*,*)
    end subroutine print_propagators_3d
 
    subroutine set_mode(mode_,iset_,nstates_,nzdim_,ielst_)
@@ -231,7 +264,7 @@ contains
       allocate (coupz2(nstates,nstates))
       allocate (coupz1_prev(nstates,nstates))
       allocate (coupz2_prev(nstates,nstates))
-      allocate (amplitude(nstates))
+      allocate (amplitude(nstates),amplitude_copy(nstates))
       allocate (density_matrix(nstates,nstates))
       allocate (switch_prob(nstates))
       allocate (b_prob(nstates))
@@ -271,6 +304,7 @@ contains
       if (allocated(coupz1_prev))       deallocate (coupz1_prev)
       if (allocated(coupz2_prev))       deallocate (coupz2_prev)
       if (allocated(amplitude))         deallocate (amplitude)
+      if (allocated(amplitude_copy))    deallocate (amplitude_copy)
       if (allocated(density_matrix))    deallocate (density_matrix)
       if (allocated(b_prob))            deallocate (b_prob)
       if (allocated(switch_prob))       deallocate (switch_prob)
@@ -603,7 +637,7 @@ contains
 
       !-- stop the program if the norm is less than 0.99 or greater than 1 (unphysical situation)
       
-      if (pnorm.lt.0.99d0) then
+      if (pnorm.lt.0.98d0) then
          write(*,'(/1x,"WARNING: Bad normalization (<0.99): increase the number of states NSTATES")')
          call deallocate_all_arrays
          stop
@@ -712,6 +746,20 @@ contains
       write(ichannel,'("#",71("="))')
 
    end subroutine print_initial_amplitudes
+
+   !---------------------------------------------------------------------
+   !-- save amplitudes
+   !---------------------------------------------------------------------
+   subroutine save_amplitudes
+      amplitude_copy = amplitude   !array operation
+   end subroutine save_amplitudes
+
+   !---------------------------------------------------------------------
+   !-- restore amplitudes
+   !---------------------------------------------------------------------
+   subroutine restore_amplitudes
+      amplitude = amplitude_copy   !array operation
+   end subroutine restore_amplitudes
 
    !---------------------------------------------------------------------
    !-- Set initial density matrix to correspond to a pure adiabatic state
@@ -927,9 +975,9 @@ contains
    !--------------------------------------------------------------------
    !-- accumulate switching probabilities
    !--------------------------------------------------------------------
-   subroutine accumulate_switch_prob(qtstep)
-      real(8), intent(in) :: qtstep
-      switch_prob = switch_prob + b_prob*qtstep   ! (array operation)
+   subroutine accumulate_switch_prob(qtstep_)
+      real(8), intent(in) :: qtstep_
+      switch_prob = switch_prob + b_prob*qtstep_   ! (array operation)
    end subroutine accumulate_switch_prob
 
    !--------------------------------------------------------------------
@@ -1379,9 +1427,9 @@ contains
    !-- Quantum propagator for the density matrix (von Neumann equation)
    !   I. Based on the classic 4-th order Runge-Kutta algorithm.
    !--------------------------------------------------------------------
-   subroutine propagate_density_rk4(t_,qtstep)
+   subroutine propagate_density_rk4(t_,qtstep_)
 
-      real(8), intent(in) :: t_, qtstep
+      real(8), intent(in) :: t_, qtstep_
 
       complex(8), dimension(nstates,nstates) :: y, dy1, dy2, dy3, dy4
 
@@ -1390,12 +1438,12 @@ contains
 
       !-- Runge-Kutta steps
       call tdvn_derivatives(t_,y,dy1)
-      call tdvn_derivatives(t_+0.5d0*qtstep,y+0.5d0*qtstep*dy1,dy2)
-      call tdvn_derivatives(t_+0.5d0*qtstep,y+0.5d0*qtstep*dy2,dy3)
-      call tdvn_derivatives(t_+qtstep,y+qtstep*dy3,dy4)
+      call tdvn_derivatives(t_+0.5d0*qtstep_,y+0.5d0*qtstep_*dy1,dy2)
+      call tdvn_derivatives(t_+0.5d0*qtstep_,y+0.5d0*qtstep_*dy2,dy3)
+      call tdvn_derivatives(t_+qtstep_,y+qtstep_*dy3,dy4)
 
       !-- final amplitude (array operation)
-      density_matrix = y + qtstep*(dy1 + 2.d0*dy2 + 2.d0*dy3 + dy4)/6.d0
+      density_matrix = y + qtstep_*(dy1 + 2.d0*dy2 + 2.d0*dy3 + dy4)/6.d0
 
    end subroutine propagate_density_rk4
 
@@ -1421,7 +1469,7 @@ contains
          !   relative to the ground state energy
          de = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_ - e0
 
-         dci = c(i)*de/(ii*hbarps)
+         dci = -ii*c(i)*de/hbarps
          
          do j=1,nstates
             !-- calculate the interpolated value of the
@@ -1440,9 +1488,9 @@ contains
    !-- Quantum propagator for renormalized amplitudes
    !   I. Based on the classic 4-th order Runge-Kutta algorithm.
    !--------------------------------------------------------------------
-   subroutine propagate_amplitudes_rk4(t_,qtstep)
+   subroutine propagate_amplitudes_rk4(t_,qtstep_)
 
-      real(8), intent(in) :: t_, qtstep
+      real(8), intent(in) :: t_, qtstep_
 
       complex(8), dimension(nstates) :: y, dy1, dy2, dy3, dy4
       complex(8), dimension(nstates) :: y2, y3, y4
@@ -1452,15 +1500,15 @@ contains
 
       !-- Runge-Kutta steps
       call tdse_derivatives(t_,y,dy1)
-      y2 = y + 0.5d0*qtstep*dy1
-      call tdse_derivatives(t_+0.5d0*qtstep,y2,dy2)
-      y3 = y + 0.5d0*qtstep*dy2
-      call tdse_derivatives(t_+0.5d0*qtstep,y3,dy3)
-      y4 = y + qtstep*dy3
-      call tdse_derivatives(t_+qtstep,y4,dy4)
+      y2 = y + 0.5d0*qtstep_*dy1
+      call tdse_derivatives(t_+0.5d0*qtstep_,y2,dy2)
+      y3 = y + 0.5d0*qtstep_*dy2
+      call tdse_derivatives(t_+0.5d0*qtstep_,y3,dy3)
+      y4 = y + qtstep_*dy3
+      call tdse_derivatives(t_+qtstep_,y4,dy4)
 
       !-- final amplitude (array operation)
-      amplitude = y + qtstep*(dy1 + 2.d0*dy2 + 2.d0*dy3 + dy4)/6.d0
+      amplitude = y + qtstep_*(dy1 + 2.d0*dy2 + 2.d0*dy3 + dy4)/6.d0
 
    end subroutine propagate_amplitudes_rk4
 
@@ -1537,17 +1585,17 @@ contains
          success = .true.
 
          !=== DEBUG ===================================================================
-         !write(*,*)
-         !write(*,'(141("-"))')
-         !write(*,*) "Switch: ",istate," --->", new_state
-         !write(*,*) "Nonadiabatic coupling: d_z1 = ", dkl_z1
-         !write(*,*) "                       d_z2 = ", dkl_z2
-         !write(*,*) "                       |d|  = ", sqrt(dkl_sq)
-         !write(*,*) "Switch probability: ", switch_prob(new_state)
-         !write(*,*) "Kinetic energy gain (loss if negative): ", ekl, " kcal/mol"
-         !write(*,*) "Velocity adjustments: vz1 = vz1 + ", -gamma*dkl_z1
-         !write(*,*) "                      vz2 = vz2 + ", -gamma*dkl_z2
-         !write(*,'(141("-"))')
+         write(*,*)
+         write(*,'(137("-"))')
+         write(*,*) "Switch: ",istate," --->", new_state
+         write(*,*) "Nonadiabatic coupling: d_z1 = ", dkl_z1
+         write(*,*) "                       d_z2 = ", dkl_z2
+         write(*,*) "                       |d|  = ", sqrt(dkl_sq)
+         write(*,*) "Switch probability: ", switch_prob(new_state)
+         write(*,*) "Kinetic energy gain (loss if negative): ", ekl, " kcal/mol"
+         write(*,*) "Velocity adjustments: vz1 = vz1 + ", -gamma*dkl_z1
+         write(*,*) "                      vz2 = vz2 + ", -gamma*dkl_z2
+         write(*,'(137("-"))')
          !=== end DEBUG ===============================================================
 
       endif

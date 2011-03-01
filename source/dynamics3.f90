@@ -114,6 +114,8 @@ subroutine dynamics3
 !
 !  NQSTEPS=<int> - number of TDSE steps per classical step in MDQT
 !
+!  MAXNQSTEPS=<int> - maximum number of TDSE steps per classical step in MDQT
+!
 !  INTERPOLATION=<KEY> - interpolation scheme for TDSE
 !
 !            LINEAR - linear interpolation of the nonadiabatic coupling term
@@ -131,9 +133,12 @@ subroutine dynamics3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-25 19:11:25 $
-!  $Revision: 5.13 $
+!  $Date: 2011-03-01 23:55:18 $
+!  $Revision: 5.14 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.13  2011/02/25 19:11:25  souda
+!  Now using a separate set of dielectric constant for solvent dynamics.
+!
 !  Revision 5.12  2011/02/24 00:54:12  souda
 !  - changes related to the generation of the initial state after Franck-Condon excitation;
 !  - additional keyword PURESTATE for setting the initial wavefunction in MDQT as a pure adiabatic state;
@@ -220,11 +225,13 @@ subroutine dynamics3
    integer :: initial_state=-1, iground=1
    integer :: istate, new_state, ndump6, pump_s
    integer :: number_of_skipped_trajectories=0
+   integer :: number_of_failed_trajectories=0
    integer :: ntraj_valid
+   integer :: nqsteps_var
 
    integer :: ikey, ioption, ioption2, ioption3, kg0, ifrom, ito
    integer :: ioutput, lenf, ispa, idash, icount
-   integer :: itraj, istep, iqstep, k, itmp
+   integer :: itraj, istep, iqstep, k, itmp, itmp1
    integer :: number_of_switches=0, number_of_rejected=0
    integer :: itraj_channel=11
 
@@ -235,6 +242,7 @@ subroutine dynamics3
    real(8) :: z1, z2, zp, ze, vz1, vz2, vzp, vze, z10, z20, zp0, ze0, ekin, efes
    real(8) :: vz1_prev, vz2_prev
    real(8) :: pump_e, pump_w, vib_linewidth
+   real(8) :: qtstep_var
 
    adiab   = .true.
    diab2   = .false.
@@ -635,7 +643,6 @@ subroutine dynamics3
    if (mdqt) then
 
       ioption = index(options," NQSTEPS=")
-   
       if (ioption.ne.0) then
          itmp = reada(options,ioption+9)
          write(6,'(1x,"Number of TDSE steps per classical step in MDQT: ",i10/)') itmp
@@ -643,9 +650,19 @@ subroutine dynamics3
          itmp = 100
          write(6,'(1x,"Number of TDSE steps per classical step in MDQT (default value): ",i10/)') itmp
       endif
-
-      call set_tdse_timestep(itmp,tstep)
       write(6,'(1x,"Timestep for TDSE: ",g15.6," ps"/)') tstep/real(itmp)
+
+      ioption = index(options," MAXNQSTEPS=")
+      if (ioption.ne.0) then
+         itmp1 = reada(options,ioption+12)
+         write(6,'(1x,"Maximum number of TDSE steps per classical step in MDQT: ",i10/)') itmp1
+      else
+         itmp1 = 10000
+         write(6,'(1x,"Maximum number of TDSE steps per classical step in MDQT (default value): ",i10/)') itmp1
+      endif
+      write(6,'(1x,"Minimum timestep for TDSE: ",g15.6," ps"/)') tstep/real(itmp1)
+
+      call set_tdse_timestep(itmp,itmp1,tstep)
 
    endif
 
@@ -1184,15 +1201,14 @@ subroutine dynamics3
 
    zeit_start = second()
    number_of_skipped_trajectories = 0
+   number_of_failed_trajectories = 0
    ntraj_valid = ntraj
 
    loop_over_trajectories: do itraj=1,ntraj
 
       !-- initialize the suffix of the output file
-      write(traj_suffix,'(i5.5)') itraj
 
-      !-- open the trajectory output file (channel 1)
-      open(itraj_channel,file=trim(fname)//"_"//traj_suffix//".dat")
+      write(traj_suffix,'(i5.5)') itraj
 
       !-- pick the initial values of solvent coordinates
       !   from gaussian distribution centered at (z10,z20)
@@ -1297,9 +1313,9 @@ subroutine dynamics3
 
          if (istate.eq.0) then
             write(6,'(1x,"FAILURE to assign the initial vibronic state after Franck-Condon excitation.")')
-            write(6,'(1x,"This trajectory will be discarded.")')
+            write(6,'(1x,"The trajectory ",i6," will be discarded.")') itraj
             number_of_skipped_trajectories = number_of_skipped_trajectories + 1
-            exit loop_over_trajectories
+            cycle loop_over_trajectories
          endif
 
          if (mdqt) then
@@ -1339,6 +1355,10 @@ subroutine dynamics3
          !-- calculate vibronic couplings at t=0
          call calculate_vibronic_couplings
       endif
+
+      !-- open the trajectory output file (channel 1)
+
+      open(itraj_channel,file=trim(fname)//"_"//traj_suffix//".dat")
 
       !-- write the header of the trajectory file
 
@@ -1477,18 +1497,31 @@ subroutine dynamics3
             population_current = calculate_population(istate)
             call reset_switch_prob
 
+            !--(DEBUG)--start
+            !if (istep.eq.19419) call print_propagators_3d
+            !--(DEBUG)--end
+
             !-- propagate the amplitudes and switch probabilities
             !   from t_prev to t
             !------------------------------------------------------------------
-            do iqstep=1,nqsteps
 
-               zeitq_prev = (iqstep-1)*qtstep + zeit_prev
-               zeitq = iqstep*qtstep + zeit_prev
+            nqsteps_var = nqsteps
+            qtstep_var = qtstep
+            call save_amplitudes
+
+            24 continue
+            call restore_amplitudes
+            call reset_switch_prob
+
+            do iqstep=1,nqsteps_var
+
+               zeitq_prev = (iqstep-1)*qtstep_var + zeit_prev
+               zeitq = iqstep*qtstep_var + zeit_prev
 
                !-- propagate amplitudes forward in time
                !-------------------------------------------------------
-               call propagate_amplitudes_rk4(zeitq_prev,qtstep)
-               !call propagate_density_rk4(zeitq_prev,qtstep)
+               call propagate_amplitudes_rk4(zeitq_prev,qtstep_var)
+               !call propagate_density_rk4(zeitq_prev,qtstep_var)
 
                !-- calculate transition probabilities from current state
                !--------------------------------------------------------
@@ -1497,17 +1530,64 @@ subroutine dynamics3
 
                !-- accumulate swithing probabilities (array operation)
                !------------------------------------------------------
-               call accumulate_switch_prob(qtstep)
+               call accumulate_switch_prob(qtstep_var)
                
             enddo
 
             !-- check the norm of the time-dependent wavefunction
             !-----------------------------------------------------
             wf_norm = tdwf_norm()
+
             if (abs(wf_norm-1.d0).gt.1.d-4) then
-               write(*,'(/1x,"DYNAMICS3: Amplitudes are not normalized after timestep ",i6)') istep
-               write(*,'( 1x,"           Norm of the time-dependent wavefunction: ",f15.8)') wf_norm
-               call clean_exit
+
+               write(*,'(/1x,"-------------------------------------------------------------------------------")')
+               write(*,'( 1x,"DYNAMICS3: Amplitudes are not normalized after timestep ",i6)') istep
+               write(*,'( 1x,"           Norm of the time-dependent wavefunction:     ",g20.10)') wf_norm
+               write(*,'(/1x,"-------------------------------------------------------------------------------")')
+
+               if (nqsteps_var.lt.maxnqsteps) then
+
+                  !-- reduce the TDSE timestep by ten times and repeat the quantum propagation
+
+                  nqsteps_var = nqsteps_var*10
+                  qtstep_var = qtstep_var/10.d0
+
+                  write(*,'( 1x,"Number of quantum timesteps is increased ten times to ",i6)') nqsteps_var
+                  write(*,'( 1x,"and the quantum propagation will be repeated with a 10 times smaller timestep.")')
+                  write(*,'(/1x,"-------------------------------------------------------------------------------")')
+
+                  goto 24
+
+               else
+
+                  !-- discard the failed trajectory
+
+                  write(*,'( 1x,"--- The trajectory ",i6," will be discarded-------------------------------"/)') itraj
+
+                  number_of_failed_trajectories = number_of_failed_trajectories + 1
+
+                  if (weights) then
+                     write(itraj_channel,'("#",168("-"))')
+                  else
+                     write(itraj_channel,'("#",141("-"))')
+                  endif
+
+                  write(itraj_channel,'("# Amplitudes are not normalized after timestep ",i6)') istep
+                  write(itraj_channel,'("# Norm of the time-dependent wavefunction:     ",g20.10)') wf_norm
+                  write(itraj_channel,'("# This trajectory has failed... Even after several tries with smaller TDSE timesteps.")')
+
+                  if (weights) then
+                     write(itraj_channel,'("#",168("-"))')
+                  else
+                     write(itraj_channel,'("#",141("-"))')
+                  endif
+
+                  close(itraj_channel)
+                  call system("mv "//trim(fname)//"_"//traj_suffix//".dat"//" "//trim(fname)//"_"//traj_suffix//".dat_failed")
+                  cycle loop_over_trajectories
+
+               endif
+
             endif
 
             !-- Normalize swithing probabilities by the current state population
@@ -1597,13 +1677,15 @@ subroutine dynamics3
 
    enddo loop_over_trajectories
 
-   ntraj_valid = ntraj - number_of_skipped_trajectories
+   ntraj_valid = ntraj - number_of_skipped_trajectories - number_of_failed_trajectories
+   if (ntraj_valid.le.0) ntraj_valid = 1
    zeit_end = second()
    zeit_total = zeit_end - zeit_start
    write(6,*)
    write(6,'(1x,"================================================================================")')
    write(6,'(1x,"Done. Number of trajectories generated: ",i6)') ntraj_valid
-   write(6,'(1x,"      Number of trajectories skipped:   ",i6)') number_of_skipped_trajectories
+   write(6,'(1x,"      Number of skipped trajectories:   ",i6)') number_of_skipped_trajectories
+   write(6,'(1x,"      Number of failed trajectories:    ",i6)') number_of_failed_trajectories
    write(6,'(1x,"================================================================================")')
    write(6,'(1x,"Done. Time elapsed         (sec): ",f20.3)') zeit_total
    write(6,'(1x,"      Time per trajectory  (sec): ",f20.3)') zeit_total/ntraj_valid
