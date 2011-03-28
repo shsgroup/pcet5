@@ -5,9 +5,14 @@ module propagators_3d
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2011-03-01 23:54:03 $
-   !  $Revision: 5.13 $
+   !  $Date: 2011-03-28 20:58:46 $
+   !  $Revision: 5.14 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.13  2011/03/01 23:54:03  souda
+   !  Variable timestep for quantum propagation implemented (thanks to Sharon) -
+   !  that fixes the problems with the conservation of the norm
+   !  of the time-dependent wavefunction.
+   !
    !  Revision 5.12  2011/02/24 00:56:36  souda
    !  - Additional routines for generating a coherent mixture for initial state in MDQT;
    !  - Franck-Condon factors are not renormalized initially;
@@ -539,7 +544,7 @@ contains
 
       !-- generate a random number between 0 and 1
       !   from a uniform distribution
-      call ran2nr(r,iseed)
+      r = ran2nr()
 
       s = 0.d0
       
@@ -665,7 +670,7 @@ contains
 
       !-- generate a random number between 0 and 1
       !   from a uniform distribution
-      call ran2nr(r,iseed)
+      r = ran2nr()
 
       s = 0.d0
       
@@ -1181,7 +1186,7 @@ contains
       call calculate_gradient(istate,g(1),g(2))
 
       do i=1,2
-         call gaussdist_boxmuller(psi,iseed)
+         psi = gaussdist_boxmuller()
          f1(i) = -x(i)/taul
          !-- add forces from the vibronic surface
          f1(i) = f1(i) - g(i)/(f0*taul)
@@ -1273,8 +1278,8 @@ contains
       !   from univariate Gaussian distributions
 
       do i=1,2
-         call gaussdist_boxmuller(ksi(i),iseed)
-         call gaussdist_boxmuller(eta(i),iseed)
+         ksi(i) = gaussdist_boxmuller()
+         eta(i) = gaussdist_boxmuller()
       enddo
 
       !-- regular forces from the self-energy
@@ -1522,7 +1527,7 @@ contains
       real(8) :: total_prob
       real(4) :: s
       new_state = istate
-      call ran2nr(s,iseed)
+      s = ran2nr()
       total_prob = 0.d0
       do i=1,nstates
          if (i.ne.istate) total_prob = total_prob + switch_prob(i)
