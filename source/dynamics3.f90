@@ -90,9 +90,12 @@ subroutine dynamics3
 !                     (default filename "trajectory_n.dat" where n is the
 !                     trajectory index starting from 1)
 !
-!  SEED=<int> - random seed for random number generator.
+!  SEED=<int> - random seed for RAN2NR random number generator.
 !               (if SEED=0 then clock will be used to generate seed)
 !               Default value is generated using the current time.
+!
+!  DUNISEEDS=i/j/k/l - random seeds for DUNI random number generator.
+!               (if DUNISEEDS=CLOCK then clock will be used to generate seeds)
 !
 !  NTRAJ=<int> - number of trajectories to generate (default is 1)
 !
@@ -130,12 +133,22 @@ subroutine dynamics3
 !
 !  T=<float> - temperature in K
 !
+!  RESTART - restart trajectories (and random number sequences)
+!            (file dynamics_checkpoint must be present and not empty)
+!
+!
+!
+!
+!
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-03-01 23:55:18 $
-!  $Revision: 5.14 $
+!  $Date: 2011-03-28 21:34:53 $
+!  $Revision: 5.15 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.14  2011/03/01 23:55:18  souda
+!  Variable timestep for quantum propagation implemented (thanks to Sharon) - that fixes the problems with the conservation of the norm of the time-dependent wavefunction.
+!
 !  Revision 5.13  2011/02/25 19:11:25  souda
 !  Now using a separate set of dielectric constant for solvent dynamics.
 !
@@ -226,10 +239,12 @@ subroutine dynamics3
    integer :: istate, new_state, ndump6, pump_s
    integer :: number_of_skipped_trajectories=0
    integer :: number_of_failed_trajectories=0
+   integer :: itraj_start=1
    integer :: ntraj_valid
    integer :: nqsteps_var
 
    integer :: ikey, ioption, ioption2, ioption3, kg0, ifrom, ito
+   integer :: islash1, islash2, islash3, idum1, idum2, idum3, idum4
    integer :: ioutput, lenf, ispa, idash, icount
    integer :: itraj, istep, iqstep, k, itmp, itmp1
    integer :: number_of_switches=0, number_of_rejected=0
@@ -727,21 +742,58 @@ subroutine dynamics3
       ndump6 = 0
    endif
 
-
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   ! Random seed
+   ! Random seed for RAN2NR (negative to reinitialize)
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    ioption = index(options," SEED=")
    if (ioption.ne.0) then
       iseed_inp = reada(options,ioption+6)
+      call set_random_seed(iseed_inp)
+      write(6,'(1x,"Random seed for RAN2NR: ",i6/)') iseed
    else
-      !-- use clock to generate random seed (to be done...)
-      iseed_inp = -11
+      !-- use clock to generate random seed
+      call set_random_seed()
+      write(6,'(1x,"Random seed for RAN2NR was generated based on the clock: ",i6/)') iseed
    endif
-   call set_random_seed(iseed_inp)
 
-   write(6,'(1x,"Random seed: ",i6/)') iseed_inp
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Random seeds for DUNI
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   ioption = index(options," DUNISEEDS=")
+   ioption2 = ioption + 11
+
+   if (ioption.ne.0) then
+
+      if (options(ioption2:ioption2+4).eq."CLOCK") then
+      
+         !-- set seeds using current time
+         call set_duni_random_seeds()
+         write(6,'(/1x,"Random seeds for DUNI: from clock:")')
+
+      else
+
+         !-- set seeds manually (from input)
+
+         islash1 = index(options(ioption2:),'/')
+         islash2 = index(options(ioption2+islash1:),'/')
+         islash3 = index(options(ioption2+islash1+islash2:),'/')
+         idum1 = reada(options(ioption2:ioption2+islash1-2),1)
+         idum2 = reada(options(ioption2+islash1:ioption2+islash1+islash2-1),1)
+         idum3 = reada(options(ioption2+islash1+islash2:ioption2+islash1+islash2+islash3-1),1)
+         idum4 = reada(options,ioption2+islash1+islash2+islash3)
+         call set_duni_random_seeds(idum1,idum2,idum3,idum4)
+         write(6,'(/1x,"Random seeds for DUNI: from input:")')
+
+      endif
+
+      write(6,'(1x,"i_seed = ",i6)')  i_seed
+      write(6,'(1x,"j_seed = ",i6)')  j_seed
+      write(6,'(1x,"k_seed = ",i6)')  k_seed
+      write(6,'(1x,"l_seed = ",i6/)') l_seed
+
+   endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! The solvent coordinate frame used for initial values
@@ -1200,23 +1252,64 @@ subroutine dynamics3
    !======================================!
 
    zeit_start = second()
+
    number_of_skipped_trajectories = 0
    number_of_failed_trajectories = 0
+   itraj_start = 1
    ntraj_valid = ntraj
 
-   loop_over_trajectories: do itraj=1,ntraj
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Restart trajectories
+   ! (restore all random seeds from the checkpoint file)
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   ioption = index(options," RESTART")
+
+   if (ioption.ne.0) then
+
+      !-- open checkpoint file
+
+      open(unit=1,file="dynamics_checkpoint",action="read",form="unformatted",status="old")
+
+      !-- read last trajectory number etc.
+      read(1) itraj_start, number_of_skipped_trajectories, number_of_failed_trajectories
+      itraj_start = itraj_start + 1
+      write(6,'(/1x,"Restarting from trajectory: ",i6)') itraj_start
+
+      !-- restore random seeds
+      call restore_random_seeds(1)
+
+      !-- close checkpoint file
+      close(1)
+
+   endif
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   !-- initialize DUNI() random number generator
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   call initialize_duni()
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   !-- start (restart) loop over trajectories
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   loop_over_trajectories: do itraj=itraj_start,ntraj
 
       !-- initialize the suffix of the output file
 
       write(traj_suffix,'(i5.5)') itraj
 
+      write(6,'(/1x,60("#"))')
+      write(6,'( 1x,"Trajectory #",i6)') itraj
+      write(6,'( 1x,60("#")/)')
+
       !-- pick the initial values of solvent coordinates
       !   from gaussian distribution centered at (z10,z20)
 
       sigma = sqrt(kb*temp/f0)
-      call gaussdist_boxmuller(sample,iseed)
+      sample = gaussdist_boxmuller()
       z1 = z10 + sigma*sample
-      call gaussdist_boxmuller(sample,iseed)
+      sample = gaussdist_boxmuller()
       z2 = z20 + sigma*sample
 
       !--(DEBUG)--start
@@ -1237,9 +1330,9 @@ subroutine dynamics3
 
          !-- initial velocities from Maxwell distribution
          sigma = sqrt(kb*temp/effmass)
-         call gaussdist_boxmuller(sample,iseed)
+         sample = gaussdist_boxmuller()
          vz1 = sigma*sample
-         call gaussdist_boxmuller(sample,iseed)
+         sample = gaussdist_boxmuller()
          vz2 = sigma*sample
 
       else
@@ -1675,9 +1768,25 @@ subroutine dynamics3
       write(6,'(141("-"))')
       write(6,*)
 
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      !-- save some data to the binary checkpoint file
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      open(unit=1,file="dynamics_checkpoint",action="write",form="unformatted",status="replace")
+
+      !-- write last trajectory number etc.
+      write(1) itraj, number_of_skipped_trajectories, number_of_failed_trajectories
+
+      !-- save random seeds
+      call save_random_seeds(1)
+
+      !-- close checkpoint file
+      close(1)
+
    enddo loop_over_trajectories
 
    ntraj_valid = ntraj - number_of_skipped_trajectories - number_of_failed_trajectories
+
    if (ntraj_valid.le.0) ntraj_valid = 1
    zeit_end = second()
    zeit_total = zeit_end - zeit_start
