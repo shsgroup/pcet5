@@ -5,9 +5,12 @@ module keys
 !---------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:36 $
-!  $Revision: 5.2 $
+!  $Date: 2011-03-28 20:57:59 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:36  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !===============================================================
 
@@ -17,8 +20,8 @@ module keys
 
    character(1024) :: keywrd
    character(32)   :: strdat
-   character(80)   :: title, title2
-   character(80)   :: job
+   character(160)  :: title, title2
+   character(160)  :: job
    integer         :: ljob
 
 end module keys
