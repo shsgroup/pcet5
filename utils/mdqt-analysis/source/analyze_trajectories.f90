@@ -201,6 +201,10 @@ program analyze_trajectories
    !   occupied state for the whole set of trajectories.
    !=============================================================
 
+   write(*,*)
+   write(*,'(1x,"Scanning MDQT trajectories to identify unique occupied states... ")')
+   time_start = secondi()
+
    number_of_states = 0
 
    do itraj=1,number_of_traj
@@ -268,6 +272,9 @@ program analyze_trajectories
 
    write(*,'(1x,"Highest occupied adiabatic state: ",i3/)') number_of_states
    write(*,'(1x,"Unique occupied states:",/,(10(1x,i3)))') istate_occ
+
+   time_end = secondi()
+   write(*,'(/1x,"Done in ",f12.3," sec"/)') time_end-time_start
 
    !======================================
    !-- Start calculating the observables
