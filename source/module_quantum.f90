@@ -38,9 +38,12 @@ module quantum
 !---------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-24 00:50:26 $
-!  $Revision: 5.4 $
+!  $Date: 2011-04-13 23:49:48 $
+!  $Revision: 5.5 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.4  2011/02/24 00:50:26  souda
+!  additional debug statements (no actual changes)
+!
 !  Revision 5.3  2011/02/20 00:58:11  souda
 !  Major additions/modifications:
 !  (1) precalculation of the proton vibrational basis functions for METHOD=1
@@ -57,6 +60,8 @@ module quantum
    use cst
    use control
    use eispack
+   use lapack_wrappers
+   use turbomole_wrappers
 
    implicit none
    public
@@ -458,7 +463,7 @@ contains
    end subroutine calcham
 
    !============================================================================!
-   pure subroutine calcwf(n_,h_,c_,w_)
+   subroutine calcwf(n_,h_,c_,w_)
    !============================================================================!
    !  Calculates the wavefunctions and eigen values
    !  of the Hamiltonian matrix given on the grid
@@ -480,7 +485,13 @@ contains
       ierr = 0
 
       !** diagonalize Hamiltonian matrix **!
-      call rs(n_,n_,h_,w_,n_,c_,work1,work2,ierr)
+      !call rs(n_,n_,h_,w_,n_,c_,work1,work2,ierr)
+      !call dspevx_wrapper(n_,h_,w_,c_,ierr)
+      !call dspevd_wrapper(n_,h_,w_,c_,ierr)
+      !call rdiag_wrapper(n_,h_,w_,c_,ierr)
+      call dsyevr_wrapper(n_,h_,w_,c_,ierr)
+
+      if (ierr.ne.0) write(*,*) "DSPEV* diagonalization error in calcwf, IERR =",ierr
       
       return
 

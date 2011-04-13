@@ -14,9 +14,12 @@ subroutine weight3(nout,kg,zp,ze,mode,iset,istate)
 !--------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:37 $
-!  $Revision: 5.2 $
+!  $Date: 2011-04-13 23:49:48 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:37  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !====================================================================
 
@@ -25,6 +28,7 @@ subroutine weight3(nout,kg,zp,ze,mode,iset,istate)
    use control
    use quantum
    use feszz_3d, only: feszz3
+   use sorting
 
    implicit none
 

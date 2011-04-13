@@ -133,19 +133,22 @@ subroutine dynamics3
 !
 !  T=<float> - temperature in K
 !
-!  RESTART - restart trajectories (and random number sequences)
-!            (file dynamics_checkpoint must be present and not empty)
-!
-!
-!
-!
+!  RESTART[=<file>] - restart trajectories (and random number sequences)
+!                     File (default name is dynamics_checkpoint) must be
+!                     present and not empty.
 !
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-03-28 21:34:53 $
-!  $Revision: 5.15 $
+!  $Date: 2011-04-13 23:49:48 $
+!  $Revision: 5.16 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.15  2011/03/28 21:34:53  souda
+!  List of additions:
+!  (1) keyword DUNISEEDS for manual input of random seeds for DUNI generator;
+!  (2) initialization of random seeds for both RAN2NR and DUNI from the clock;
+!  (3) restarting the dynamic trajectories (checkpoint file dynamics_checkpoint)
+!
 !  Revision 5.14  2011/03/01 23:55:18  souda
 !  Variable timestep for quantum propagation implemented (thanks to Sharon) - that fixes the problems with the conservation of the norm of the time-dependent wavefunction.
 !
@@ -219,7 +222,7 @@ subroutine dynamics3
    character(len=  15) :: zpedim="kcal/mol      "
    character(len=  15) :: z12dim="(kcal/mol)^1/2"
    character(len=   5) :: mode_dyn
-   character(len=   5) :: traj_suffix
+   character(len=   6) :: traj_suffix
    character(len=  20) :: str
 
    character(len=3), dimension(2) :: iset_char_diab2=(/"1ab","2ab"/)
@@ -251,7 +254,7 @@ subroutine dynamics3
    integer :: itraj_channel=11
 
    real(8) :: sigma, sample, population_current, wf_norm
-   real(8) :: zeit_start, zeit_end, zeit_total
+   real(8) :: zeit_start, zeit_end, zeit_total, traj_time_start, traj_time_end
    real(8) :: zeit, zeit_prev
    real(8) :: zeitq, zeitq_prev
    real(8) :: z1, z2, zp, ze, vz1, vz2, vzp, vze, z10, z20, zp0, ze0, ekin, efes
@@ -788,12 +791,13 @@ subroutine dynamics3
 
       endif
 
-      write(6,'(1x,"i_seed = ",i6)')  i_seed
-      write(6,'(1x,"j_seed = ",i6)')  j_seed
-      write(6,'(1x,"k_seed = ",i6)')  k_seed
-      write(6,'(1x,"l_seed = ",i6/)') l_seed
-
    endif
+
+   write(6,'(/1x,"Random seeds for DUNI random number generator:")')
+   write(6,'( 1x,"i_seed = ",i6)')  i_seed
+   write(6,'( 1x,"j_seed = ",i6)')  j_seed
+   write(6,'( 1x,"k_seed = ",i6)')  k_seed
+   write(6,'( 1x,"l_seed = ",i6/)') l_seed
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! The solvent coordinate frame used for initial values
@@ -1245,7 +1249,7 @@ subroutine dynamics3
       fname = trim(fname)//"_diab4_"//iset_char_diab4(iset_dyn)
    endif
 
-   write(6,'(/1x,"Trajectory data are written to the file(s) <",a,">"/)') trim(fname)//"_<NNNN>.dat"
+   write(6,'(/1x,"Trajectory data are written to the file(s) <",a,">"/)') trim(fname)//"_<xxxxxx>.dat"
 
    !======================================!
    !      MAIN LOOP OVER TRAJECTORIES     !
@@ -1267,9 +1271,17 @@ subroutine dynamics3
 
    if (ioption.ne.0) then
 
+      if (options(ioption+8:ioption+8).eq."=") then
+         ispa = index(options(ioption+9:),space)
+         fname = options(ioption+9:ioption+ispa+7)
+         call locase(fname,ispa-1)
+      else
+         fname = job(1:ljob)//".dchk"
+      endif
+
       !-- open checkpoint file
 
-      open(unit=1,file="dynamics_checkpoint",action="read",form="unformatted",status="old")
+      open(unit=1,file=trim(fname),action="read",form="unformatted",status="old")
 
       !-- read last trajectory number etc.
       read(1) itraj_start, number_of_skipped_trajectories, number_of_failed_trajectories
@@ -1297,10 +1309,10 @@ subroutine dynamics3
 
       !-- initialize the suffix of the output file
 
-      write(traj_suffix,'(i5.5)') itraj
+      write(traj_suffix,'(i6.6)') itraj
 
       write(6,'(/1x,60("#"))')
-      write(6,'( 1x,"Trajectory #",i6)') itraj
+      write(6,'( 1x,"Trajectory #",i10)') itraj
       write(6,'( 1x,60("#")/)')
 
       !-- pick the initial values of solvent coordinates
@@ -1461,7 +1473,7 @@ subroutine dynamics3
       else
          write(itraj_channel,'("#",141("="))')
       endif
-      write(itraj_channel,'("#   Data for the trajectory ",i5)') itraj
+      write(itraj_channel,'("#   Data for the trajectory #",i6.6)') itraj
       if (weights) then
          write(itraj_channel,'("#",168("-"))')
          write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"z2",t44,"vz1",t56,"vz2",t68,"zp",t80,"ze",t92,"vzp",t103,"vze",t115,"Ekin",t126,"Efe",t135,"occ.",t142,"EVB weights (1a,1b,2a,2b)")')
@@ -1502,6 +1514,8 @@ subroutine dynamics3
 
       number_of_switches = 0
       number_of_rejected = 0
+
+      traj_time_start = second()
 
       !===============================!
       !   MAIN LOOP OVER TIME STEPS   !
@@ -1747,6 +1761,8 @@ subroutine dynamics3
 
       enddo loop_over_time
 
+      traj_time_end = second()
+
       if (weights) then
          write(itraj_channel,'("#",168("-"))')
       else
@@ -1765,14 +1781,15 @@ subroutine dynamics3
       write(6,'(141("-"))')
       write(6,'("# Total number of allowed  switches: ",i5)') number_of_switches
       write(6,'("# Total number of rejected switches: ",i5)') number_of_rejected
+      write(6,'("# CPU time elapsed (sec):            ",f12.3)') traj_time_end - traj_time_start
       write(6,'(141("-"))')
       write(6,*)
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      !-- save some data to the binary checkpoint file
+      !-- save restart data to the binary checkpoint file
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-      open(unit=1,file="dynamics_checkpoint",action="write",form="unformatted",status="replace")
+      open(unit=1,file=job(1:ljob)//".dchk",action="write",form="unformatted",status="replace")
 
       !-- write last trajectory number etc.
       write(1) itraj, number_of_skipped_trajectories, number_of_failed_trajectories
@@ -1793,7 +1810,7 @@ subroutine dynamics3
    write(6,*)
    write(6,'(1x,"================================================================================")')
    write(6,'(1x,"Done. Number of trajectories generated: ",i6)') ntraj_valid
-   write(6,'(1x,"      Number of skipped trajectories:   ",i6)') number_of_skipped_trajectories
+   write(6,'(1x,"      Number of discarded trajectories: ",i6)') number_of_skipped_trajectories
    write(6,'(1x,"      Number of failed trajectories:    ",i6)') number_of_failed_trajectories
    write(6,'(1x,"================================================================================")')
    write(6,'(1x,"Done. Time elapsed         (sec): ",f20.3)') zeit_total

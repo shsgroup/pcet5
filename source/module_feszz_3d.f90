@@ -5,9 +5,15 @@ module feszz_3d
 !======================================================================
 !
 !  $Author: souda $
-!  $Date: 2011-02-20 00:58:11 $
-!  $Revision: 5.3 $
+!  $Date: 2011-04-13 23:49:48 $
+!  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.3  2011/02/20 00:58:11  souda
+!  Major additions/modifications:
+!  (1) precalculation of the proton vibrational basis functions for METHOD=1
+!  (2) Franck-Condon initial excitation added to DYNAMICS3
+!  (3) addition of the module timers: module_timers.f90 (changes in Makefile!)
+!
 !  Revision 5.2  2010/10/28 21:29:36  souda
 !  First (working and hopefully bug-free) source of PCET 5.x
 !
@@ -22,6 +28,8 @@ module feszz_3d
    use solmat
    use quantum
    use eispack, only: rs
+   use lapack_wrappers
+   use turbomole_wrappers
 
    implicit none
    private
@@ -376,7 +384,14 @@ contains
    fv1 = 0.d0
    fv2 = 0.d0
    z = 0.d0
-   call rs(ndabf,ndabf,hf,wfe,ndabf,z,fv1,fv2,ierr)
+
+   !call rs(ndabf,ndabf,hf,wfe,ndabf,z,fv1,fv2,ierr)
+   !call dspevx_wrapper(ndabf,hf,wfe,z,ierr)
+   !call dspevd_wrapper(ndabf,hf,wfe,z,ierr)
+   !call rdiag_wrapper(ndabf,hf,wfe,z,ierr)
+   call dsyevr_wrapper(ndabf,hf,wfe,z,ierr)
+
+   if (ierr.ne.0) write(*,*) "DSPEV* diagonalization error in feszz3, IERR =",ierr 
 
    do i=1,nstates
       fe(i) = wfe(i)*au2cal

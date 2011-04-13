@@ -5,9 +5,12 @@ module propagators_3d
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2011-03-28 20:58:46 $
-   !  $Revision: 5.14 $
+   !  $Date: 2011-04-13 23:49:48 $
+   !  $Revision: 5.15 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.14  2011/03/28 20:58:46  souda
+   !  changes caused by the changes in random_generators module
+   !
    !  Revision 5.13  2011/03/01 23:54:03  souda
    !  Variable timestep for quantum propagation implemented (thanks to Sharon) -
    !  that fixes the problems with the conservation of the norm
@@ -624,17 +627,24 @@ contains
 
       !-- Print normalized Franck-Condon probabilities
 
-      write(*,'(/1x,"=============================================================================")')
+      write(*,'(/1x,100("="))')
       write(*,'( 1x," Franck-Condon factors (probabilities) for the initial state")')
-      write(*,'( 1x,"-----------------------------------------------------------------------------")')
+      write(*,'( 1x,100("-"))')
       write(*,'( 1x," Norm of the initial wavefunction before renormalization: ",g20.10)') pnorm
-      write(*,'( 1x,"-----------------------------------------------------------------------------")')
-      write(*,'( 1x," state     Franck-Condon factor  ")')
-      write(*,'( 1x,"---------------------------------")')
-      do n=1,nstates
-         write(*,'(i5,1x,f20.10)') n, fc_prob(n)
+      write(*,'( 1x,100("-"))')
+
+      do n=1,nstates/10
+         write(6,'(/1x,10i10)') (i,i=(n-1)*10+1,n*10)
+         write(6,'(1x,10f10.6)') (fc_prob(i),i=(n-1)*10+1,n*10)
       enddo
-      write(*,'( 1x,"---------------------------------"/)')
+
+      n = mod(nstates,10)
+      if (n.gt.0) then
+         write(6,'(/1x,10i10)') (i,i=nstates-n+1,nstates)
+         write(6,'(1x,10f10.6)') (fc_prob(i),i=nstates-n+1,nstates)
+      endif
+
+      write(*,'(/1x,100("-")/)')
 
       !-- renormalization
       !   (we don't normalize here: normalize the initial wavefunction later)
@@ -730,25 +740,34 @@ contains
    subroutine print_initial_amplitudes(ichannel)
 
       integer, intent(in) :: ichannel
-      integer :: i
+      integer :: i, n
       real(8) :: pnorm, reamp
 
-      write(ichannel,'("#",71("="))')
+      write(ichannel,'("#",100("="))')
       write(ichannel,'("# Initial amplitudes of the time-dependent wavefunction")')
-      write(ichannel,'("#",71("-"))')
-      write(ichannel,'("# Basis state",t25," Re(amplitude) ")')
-      write(ichannel,'("#",71("-"))')
+      write(ichannel,'("#",100("-"))')
 
       pnorm = 0.d0
       do i=1,nstates
          reamp = real(amplitude(i))
-         write(ichannel,'(i10,t25,f15.8)') i, reamp
          pnorm = pnorm + reamp*reamp
       enddo
 
-      write(ichannel,'("#",71("-"))')
+      do n=1,nstates/10
+         write(ichannel,'(/1x,10i10)') (i,i=(n-1)*10+1,n*10)
+         write(ichannel,'(1x,10f10.6)') (real(amplitude(i)),i=(n-1)*10+1,n*10)
+      enddo
+
+      n = mod(nstates,10)
+      if (n.gt.0) then
+         write(ichannel,'(/1x,10i10)') (i,i=nstates-n+1,nstates)
+         write(ichannel,'(1x,10f10.6)') (real(amplitude(i)),i=nstates-n+1,nstates)
+      endif
+      write(6,'(/)')
+
+      write(ichannel,'("#",100("-"))')
       write(ichannel,'("#",t10,"Norm:",f15.6)') pnorm
-      write(ichannel,'("#",71("="))')
+      write(ichannel,'("#",100("="))')
 
    end subroutine print_initial_amplitudes
 
