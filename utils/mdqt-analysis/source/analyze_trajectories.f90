@@ -921,8 +921,8 @@ program analyze_trajectories
    !-- output to the external file for visualization
 
    open(2,file="weights_cross_corr.dat")
+   write(2,'("#",t10,"time(ps)",t30,"1a-1b",t50,"1a-2a",t70,"1a-2b",t90,"1b-2a",t110,"1b-2b",t130,"2a-2b")')
    do istep=1,number_of_timesteps
-      write(2,'("#",t10,"time(ps)",t30,"1a-1b",t50,"1a-2a",t70,"1a-2b",t90,"1b-2a",t110,"1b-2b",t130,"2a-2b")')
       write(2,'(7g20.10)') time(1,istep), (cw_cross(k,istep),k=1,6)
    enddo
    close(2)
