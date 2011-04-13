@@ -35,6 +35,10 @@ program analyze_trajectories
 
    real(kind=8) :: bin_width_z1, bin_width_z2, bin_width_zp, bin_width_ze
 
+   real(kind=8) :: cd1a1a, cd1b1b, cd2a2a, cd2b2b
+   real(kind=8) :: cc1a1b, cc1a2a, cc1a2b, cc1b2a, cc1b2b, cc2a2b
+   real(kind=8) :: sq1a, sq1b, sq2a, sq2b
+
    real(kind=8), dimension(number_of_bins_z12) :: bin_center_z1, bin_center_z2
    real(kind=8), dimension(number_of_bins_zpe) :: bin_center_zp, bin_center_ze
 
@@ -52,6 +56,7 @@ program analyze_trajectories
    real(kind=8), dimension(:),     allocatable :: z11_tcf, z22_tcf, z12_tcf, zpp_tcf, zee_tcf, zpe_tcf
    real(kind=8), dimension(:),     allocatable :: efe_mean, ekin_mean
    real(kind=8), dimension(:),     allocatable :: w1a_mean, w1b_mean, w2a_mean, w2b_mean
+   real(kind=8), dimension(:,:),   allocatable :: cw_cross
    real(kind=8), dimension(:,:),   allocatable :: pop_ad
 
    integer, dimension(:,:), allocatable :: istate
@@ -846,13 +851,83 @@ program analyze_trajectories
    enddo
    close(2)
 
+   time_end = secondi()
+   write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
+
+   write(*,'(/1x,"Building time-dependent cross-correlation matrix of EVB weights... ",$)')
+   time_start = secondi()
+
+   allocate (cw_cross(6,number_of_timesteps))  !-- 1a-1b, 1a-2a, 1a-2b, 1b-2a, 1b-2b, 2a-2b
+
+   do istep=1,number_of_timesteps
+
+      cw_cross(:,istep) = 0.d0
+      cd1a1a = 0.d0
+      cd1b1b = 0.d0
+      cd2a2a = 0.d0
+      cd2b2b = 0.d0
+      cc1a1b = 0.d0
+      cc1a2a = 0.d0
+      cc1a2b = 0.d0
+      cc1b2a = 0.d0
+      cc1b2b = 0.d0
+      cc2a2b = 0.d0
+
+      do itraj=1,number_of_traj
+         cd1a1a = cd1a1a + w1a(itraj,istep)*w1a(itraj,istep)
+         cd1b1b = cd1b1b + w1b(itraj,istep)*w1b(itraj,istep)
+         cd2a2a = cd2a2a + w2a(itraj,istep)*w2a(itraj,istep)
+         cd2b2b = cd2b2b + w2b(itraj,istep)*w2b(itraj,istep)
+         cc1a1b = cc1a1b + w1a(itraj,istep)*w1b(itraj,istep)
+         cc1a2a = cc1a2a + w1a(itraj,istep)*w2a(itraj,istep)
+         cc1a2b = cc1a2b + w1a(itraj,istep)*w2b(itraj,istep)
+         cc1b2a = cc1b2a + w1b(itraj,istep)*w2a(itraj,istep)
+         cc1b2b = cc1b2b + w1b(itraj,istep)*w2b(itraj,istep)
+         cc2a2b = cc2a2b + w2a(itraj,istep)*w2b(itraj,istep)
+      enddo
+
+      cd1a1a = cd1a1a/number_of_traj
+      cd1b1b = cd1b1b/number_of_traj
+      cd2a2a = cd2a2a/number_of_traj
+      cd2b2b = cd2b2b/number_of_traj
+      cc1a1b = cc1a1b/number_of_traj
+      cc1a2a = cc1a2a/number_of_traj
+      cc1a2b = cc1a2b/number_of_traj
+      cc1b2a = cc1b2a/number_of_traj
+      cc1b2b = cc1b2b/number_of_traj
+      cc2a2b = cc2a2b/number_of_traj
+
+      sq1a = sqrt(cd1a1a - w1a_mean(istep)*w1a_mean(istep))
+      sq1b = sqrt(cd1b1b - w1b_mean(istep)*w1b_mean(istep))
+      sq2a = sqrt(cd2a2a - w2a_mean(istep)*w2a_mean(istep))
+      sq2b = sqrt(cd2b2b - w2b_mean(istep)*w2b_mean(istep))
+
+      cw_cross(1,istep) = (cc1a1b - w1a_mean(istep)*w1b_mean(istep))/sq1a/sq1b
+      cw_cross(2,istep) = (cc1a2a - w1a_mean(istep)*w2a_mean(istep))/sq1a/sq2a
+      cw_cross(3,istep) = (cc1a2b - w1a_mean(istep)*w2b_mean(istep))/sq1a/sq2b
+      cw_cross(4,istep) = (cc1b2a - w1b_mean(istep)*w2a_mean(istep))/sq1b/sq2a
+      cw_cross(5,istep) = (cc1b2b - w1b_mean(istep)*w2b_mean(istep))/sq1b/sq2b
+      cw_cross(6,istep) = (cc2a2b - w2a_mean(istep)*w2b_mean(istep))/sq2a/sq2b
+
+   enddo
+
+   !-- output to the external file for visualization
+
+   open(2,file="weights_cross_corr.dat")
+   do istep=1,number_of_timesteps
+      write(2,'("#",t10,"time(ps)",t30,"1a-1b",t50,"1a-2a",t70,"1a-2b",t90,"1b-2a",t110,"1b-2b",t130,"2a-2b")')
+      write(2,'(7g20.10)') time(1,istep), (cw_cross(k,istep),k=1,6)
+   enddo
+   close(2)
+
+   time_end = secondi()
+   write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
+
    deallocate (w1a,w1a_mean)
    deallocate (w1b,w1b_mean)
    deallocate (w2a,w2a_mean)
    deallocate (w2b,w2b_mean)
-
-   time_end = secondi()
-   write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
+   deallocate (cw_cross)
 
    !---------------------------------------------------------------
    !--(7)-- Time-dependent adiabatic populations
@@ -937,6 +1012,7 @@ contains
       if (allocated(w1b_mean)) deallocate(w1b_mean)
       if (allocated(w2a_mean)) deallocate(w2a_mean)
       if (allocated(w2b_mean)) deallocate(w2b_mean)
+      if (allocated(cw_cross)) deallocate(cw_cross)
       if (allocated(pop_ad)) deallocate(pop_ad)
    end subroutine deallocate_all_arrays
 
