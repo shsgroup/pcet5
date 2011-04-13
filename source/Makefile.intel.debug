@@ -15,4 +15,4 @@ BACKSLASH = -assume nobscc
 NOBACKSLASH = -assume bscc
 F90FLAGS = -check -g -traceback
 F77FLAGS = -check -g -traceback
-LDFLAGS	= 
+LDFLAGS	= -L/usr/local/intel/ifort_11.1/072/mkl/lib/em64t -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread

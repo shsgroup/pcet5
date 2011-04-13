@@ -1,7 +1,5 @@
 $(OBJDIR)/banner.o : banner.f90 
 
-$(OBJDIR)/bubbli.o : bubbli.f90 
-
 $(OBJDIR)/deinitmat.o : deinitmat.f90 \
 $(OBJDIR)/module_quantum.o \
 $(OBJDIR)/module_geosol.o \
@@ -49,6 +47,8 @@ $(OBJDIR)/module_pardim.o
 
 $(OBJDIR)/lbfgsb.o : lbfgsb.f 
 
+$(OBJDIR)/rdiag.o : rdiag.f 
+
 $(OBJDIR)/minima2.o : minima2.f90 \
 $(OBJDIR)/module_fesmin_2d.o \
 $(OBJDIR)/module_control.o \
@@ -78,6 +78,14 @@ $(OBJDIR)/module_cst.o
 
 $(OBJDIR)/module_eispack.o : module_eispack.f90 
 
+$(OBJDIR)/module_lapack_wrappers.o : module_lapack_wrappers.f90 
+
+$(OBJDIR)/module_turbomole_wrappers.o : module_lapack_wrappers.f90 \
+$(OBJDIR)/module_sorting.o \
+$(OBJDIR)/rdiag.o
+
+$(OBJDIR)/module_sorting.o : module_sorting.f90
+
 $(OBJDIR)/module_elcm.o : module_elcm.f90 \
 $(OBJDIR)/module_geosol.o \
 $(OBJDIR)/module_parsol.o \
@@ -91,6 +99,7 @@ $(OBJDIR)/module_feszz_2d.o \
 $(OBJDIR)/module_quantum.o \
 $(OBJDIR)/module_control.o \
 $(OBJDIR)/module_eispack.o \
+$(OBJDIR)/module_lapack_wrappers.o \
 $(OBJDIR)/module_cst.o \
 $(OBJDIR)/module_pardim.o
 
@@ -99,11 +108,14 @@ $(OBJDIR)/module_feszz_3d.o \
 $(OBJDIR)/module_quantum.o \
 $(OBJDIR)/module_control.o \
 $(OBJDIR)/module_eispack.o \
+$(OBJDIR)/module_lapack_wrappers.o \
 $(OBJDIR)/module_cst.o \
 $(OBJDIR)/module_pardim.o
 
 $(OBJDIR)/module_feszz_2d.o : module_feszz_2d.f90 \
 $(OBJDIR)/module_eispack.o \
+$(OBJDIR)/module_lapack_wrappers.o \
+$(OBJDIR)/module_turbomole_wrappers.o \
 $(OBJDIR)/module_quantum.o \
 $(OBJDIR)/module_solmat.o \
 $(OBJDIR)/module_gasmat.o \
@@ -114,6 +126,8 @@ $(OBJDIR)/module_timers.o
 
 $(OBJDIR)/module_feszz_3d.o : module_feszz_3d.f90 \
 $(OBJDIR)/module_eispack.o \
+$(OBJDIR)/module_lapack_wrappers.o \
+$(OBJDIR)/module_turbomole_wrappers.o \
 $(OBJDIR)/module_quantum.o \
 $(OBJDIR)/module_solmat.o \
 $(OBJDIR)/module_gasmat.o \
@@ -184,6 +198,8 @@ $(OBJDIR)/module_rk_parameters.o : module_rk_parameters.f90
 
 $(OBJDIR)/module_quantum.o : module_quantum.f90 \
 $(OBJDIR)/module_eispack.o \
+$(OBJDIR)/module_lapack_wrappers.o \
+$(OBJDIR)/module_turbomole_wrappers.o \
 $(OBJDIR)/module_control.o \
 $(OBJDIR)/module_cst.o
 
@@ -343,12 +359,14 @@ $(OBJDIR)/module_timers.o
 
 $(OBJDIR)/ugas.o : ugas.f90 \
 $(OBJDIR)/module_eispack.o \
+$(OBJDIR)/module_lapack_wrappers.o \
 $(OBJDIR)/module_solmat.o \
 $(OBJDIR)/module_gasmat.o \
 $(OBJDIR)/module_pardim.o
 
 $(OBJDIR)/usol.o : usol.f90 \
 $(OBJDIR)/module_eispack.o \
+$(OBJDIR)/module_lapack_wrappers.o \
 $(OBJDIR)/module_solmat.o \
 $(OBJDIR)/module_gasmat.o \
 $(OBJDIR)/module_pardim.o
@@ -368,6 +386,7 @@ $(OBJDIR)/weight2.o : weight2.f90 \
 $(OBJDIR)/module_feszz_2d.o \
 $(OBJDIR)/module_quantum.o \
 $(OBJDIR)/module_control.o \
+$(OBJDIR)/module_sorting.o \
 $(OBJDIR)/module_pardim.o
 
 $(OBJDIR)/weight3.o : weight3.f90 \
@@ -375,6 +394,7 @@ $(OBJDIR)/module_feszz_3d.o \
 $(OBJDIR)/module_quantum.o \
 $(OBJDIR)/module_control.o \
 $(OBJDIR)/module_cst.o \
+$(OBJDIR)/module_sorting.o \
 $(OBJDIR)/module_pardim.o
 
 $(OBJDIR)/wfn2prt.o : wfn2prt.f90 \

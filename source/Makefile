@@ -44,13 +44,13 @@ $(MODDIR)/%.mod : $(OBJDIR)/module_%.o
 
 
 SRCOBJ = $(OBJDIR)/pcet.o        \
-         $(OBJDIR)/bubbli.o      \
          $(OBJDIR)/deinitmat.o   \
          $(OBJDIR)/dynamics3.o   \
          $(OBJDIR)/et2.o         \
          $(OBJDIR)/getmin.o      \
          $(OBJDIR)/initmat.o     \
          $(OBJDIR)/lbfgsb.o      \
+         $(OBJDIR)/rdiag.o      \
          $(OBJDIR)/minima2.o     \
          $(OBJDIR)/minima3.o     \
          $(OBJDIR)/path2.o       \
@@ -62,7 +62,6 @@ SRCOBJ = $(OBJDIR)/pcet.o        \
          $(OBJDIR)/rate2.o       \
          $(OBJDIR)/rate3.o       \
          $(OBJDIR)/rateb.o       \
-         $(OBJDIR)/second.o      \
          $(OBJDIR)/setjob.o      \
          $(OBJDIR)/setmat.o      \
          $(OBJDIR)/surface2.o    \
@@ -79,13 +78,13 @@ SRCOBJ = $(OBJDIR)/pcet.o        \
 
 SRCSRC = pcet.f90        \
          banner.f90      \
-         bubbli.f90      \
          deinitmat.f90   \
          dynamics3.f90   \
          et2.f90         \
          getmin.f90      \
          initmat.f90     \
          lbfgsb.f        \
+         rdiag.f        \
          minima2.f90     \
          minima3.f90     \
          path2.f90       \
@@ -97,7 +96,6 @@ SRCSRC = pcet.f90        \
          rate2.f90       \
          rate3.f90       \
          rateb.f90       \
-         second.f90      \
          setjob.f90      \
          setmat.f90      \
          surface2.f90    \
@@ -118,6 +116,7 @@ MODOBJ  = $(OBJDIR)/module_control.o     \
           $(OBJDIR)/module_cst.o         \
           $(OBJDIR)/module_dielectric_functions.o \
           $(OBJDIR)/module_eispack.o     \
+          $(OBJDIR)/module_lapack_wrappers.o     \
           $(OBJDIR)/module_elcm.o        \
           $(OBJDIR)/module_elmnts.o      \
           $(OBJDIR)/module_fesmin_2d.o   \
@@ -142,9 +141,11 @@ MODOBJ  = $(OBJDIR)/module_control.o     \
           $(OBJDIR)/module_random_generators.o \
           $(OBJDIR)/module_rate_flux.o   \
           $(OBJDIR)/module_solmat.o      \
+          $(OBJDIR)/module_sorting.o      \
           $(OBJDIR)/module_ssplib.o      \
           $(OBJDIR)/module_strings.o     \
-          $(OBJDIR)/module_timers.o
+          $(OBJDIR)/module_timers.o      \
+          $(OBJDIR)/module_turbomole_wrappers.o
 
 
 MODMOD  = $(MODDIR)/control.mod     \
@@ -152,6 +153,7 @@ MODMOD  = $(MODDIR)/control.mod     \
           $(MODDIR)/cst.mod         \
           $(MODDIR)/dielectric_functions.mod \
           $(MODDIR)/eispack.mod     \
+          $(MODDIR)/lapack_wrappers.mod     \
           $(MODDIR)/elcm.mod        \
           $(MODDIR)/elmnts.mod      \
           $(MODDIR)/fesmin_2d.mod   \
@@ -178,13 +180,15 @@ MODMOD  = $(MODDIR)/control.mod     \
           $(MODDIR)/solmat.mod      \
           $(MODDIR)/ssplib.mod      \
           $(MODDIR)/strings.mod     \
-          $(MODDIR)/timers.mod
+          $(MODDIR)/timers.mod      \
+          $(MODDIR)/turbomole_wrappers.mod
 
 MODSRC  = module_control.f90     \
           module_control_dynamics.f90 \
           module_cst.f90         \
           module_dielectric_functions.f90 \
           module_eispack.f90     \
+          module_lapack_wrappers.f90     \
           module_elcm.f90        \
           module_elmnts.f90      \
           module_fesmin_2d.f90   \
@@ -209,9 +213,11 @@ MODSRC  = module_control.f90     \
           module_random_generators.f90 \
           module_rate_flux.f90   \
           module_solmat.f90      \
+          module_sorting.f90      \
           module_ssplib.f90      \
           module_strings.f90     \
-          module_timers.f90
+          module_timers.f90      \
+          module_turbomole_wrappers.f90
 
 note:
 	@echo
@@ -234,7 +240,7 @@ all:    build
 	@echo " "
 	@echo "===> linking" $(PROGRAM)
 	@echo " "
-	$(FC) $(FCFLAGS) $(NOBACKSLASH) $(LDFLAGS) -o $(EXE) $(MODOPT) $(SRCOBJ) $(OBJDIR)/banner.o $(MODOBJ)
+	$(FC) -o $(EXE) $(MODOPT) $(SRCOBJ) $(OBJDIR)/banner.o $(MODOBJ) $(LDFLAGS)
 	@echo "---------------------------------------------------------------------------------------"
 	@echo "Executable: " $(EXE)
 	@echo "---------------------------------------------------------------------------------------"
