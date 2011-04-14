@@ -629,6 +629,7 @@ program analyze_trajectories
    !-- output to the external file for visualization
 
    open(2,file="z_mean.dat")
+   write(2,'("#",t10,"time(ps)",t30,"<z1>",t50,"<z2>",t70,"<zp>",t90,"<ze>")')
    do istep=1,number_of_timesteps
        write(2,'(5g20.10)') time(1,istep), z1_mean(istep), z2_mean(istep), zp_mean(istep), ze_mean(istep)
    enddo
@@ -690,6 +691,7 @@ program analyze_trajectories
    !-- output to the external file for visualization
 
    open(2,file="z_var.dat")
+   write(2,'("#",t10,"time(ps)",t30,"<z1^2>",t50,"<z2^2>",t70,"<z1z2>",t90,"<zp^2>",t110,"<ze^2>",t130,"<zpze>")')
    do istep=1,number_of_timesteps
        write(2,'(7g20.10)') time(1,istep), z1_var(istep), z2_var(istep), z12_var(istep), zp_var(istep), ze_var(istep), zpe_var(istep)
    enddo
@@ -759,6 +761,7 @@ program analyze_trajectories
    !-- output to the external file for visualization
 
    open(2,file="z_tcf.dat")
+   write(2,'("#",t10,"time(ps)",t25,"<z1(0)z2(t)>",t45,"<z2(0)z2(t)>",t65,"<z1(0)z2(t)>",t85,"<zp(0)zp(t)>",t105,"<ze(0)ze(t)>",t125,"<zp(0)ze(t)>")')
    do istep=1,number_of_timesteps
        write(2,'(7g20.10)') time(1,istep), z11_tcf(istep), z22_tcf(istep), z12_tcf(istep), zpp_tcf(istep), zee_tcf(istep), zpe_tcf(istep)
    enddo
@@ -806,6 +809,10 @@ program analyze_trajectories
    !-- output to the external file for visualization
 
    open(2,file="ene_mean.dat")
+   write(2,'("#",79("-"))')
+   write(2,'("#",t10,"time",t25,"Free energy",t45,"Kinetic energy")')
+   write(2,'("#",t10,"(ps)",t25,"(kcal/mol) ",t45,"  (kcal/mol)  ")')
+   write(2,'("#",79("-"))')
    do istep=1,number_of_timesteps
       write(2,'(3g20.10)') time(1,istep), efe_mean(istep), ekin_mean(istep)
    enddo
@@ -853,6 +860,9 @@ program analyze_trajectories
    !-- output to the external file for visualization
 
    open(2,file="weights_mean.dat")
+   write(2,'("#",99("-"))')
+   write(2,'("#",t10,"time",t30,"(1a)",t50,"(1b)",t70,"(2a)",t90,"(2b)")')
+   write(2,'("#",99("-"))')
    do istep=1,number_of_timesteps
       write(2,'(5g20.10)') time(1,istep), w1a_mean(istep), w1b_mean(istep), w2a_mean(istep), w2b_mean(istep)
    enddo
@@ -921,10 +931,13 @@ program analyze_trajectories
    !-- output to the external file for visualization
 
    open(2,file="weights_cross_corr.dat")
+   write(2,'("#",139("-"))')
    write(2,'("#",t10,"time(ps)",t30,"1a-1b",t50,"1a-2a",t70,"1a-2b",t90,"1b-2a",t110,"1b-2b",t130,"2a-2b")')
+   write(2,'("#",139("-"))')
    do istep=1,number_of_timesteps
       write(2,'(7g20.10)') time(1,istep), (cw_cross(k,istep),k=1,6)
    enddo
+   write(2,'("#",139("-"))')
    close(2)
 
    time_end = secondi()
