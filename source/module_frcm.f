@@ -13,9 +13,15 @@
       !----------------------------------------------------------------|
       !
       !  $Author: souda $
-      !  $Date: 2011-02-20 00:58:11 $
-      !  $Revision: 5.5 $
+      !  $Date: 2011-04-17 18:25:20 $
+      !  $Revision: 5.6 $
       !  $Log: not supported by cvs2svn $
+      !  Revision 5.5  2011/02/20 00:58:11  souda
+      !  Major additions/modifications:
+      !  (1) precalculation of the proton vibrational basis functions for METHOD=1
+      !  (2) Franck-Condon initial excitation added to DYNAMICS3
+      !  (3) addition of the module timers: module_timers.f90 (changes in Makefile!)
+      !
       !  Revision 5.4  2011/01/04 21:00:35  souda
       !  some code formatting issues.
       !
@@ -47,7 +53,7 @@
       !============================================
       ! Parameters for the FRCM portion of the code
       !--------------------------------------------
-      real(8),  PARAMETER :: GATINC = 2.0D0
+      real(8),  PARAMETER :: GATINC = 3.0D0
       real(8),  PARAMETER :: RTFQ   = 1.1D0
       real(8),  PARAMETER :: GSAV   = 0.9D0
 
@@ -67,16 +73,16 @@
       integer, PARAMETER :: NTQ=360
       integer, PARAMETER :: NFQ=720
       integer, PARAMETER :: NB=500
-      integer, PARAMETER :: NT=50
+      integer, PARAMETER :: NT=1000
       integer, PARAMETER :: NF=150
-      integer, PARAMETER :: NBS=2000
+      integer, PARAMETER :: NBS=3000
       integer, PARAMETER :: NBGEN=100000
       integer, PARAMETER :: NBSQ=NBS*(NBS+1)/2
       integer, PARAMETER :: NTFQ=NTQ*NFQ
       integer, PARAMETER :: NTFQ1=NTFQ*RTFQ
       integer, PARAMETER :: NDNBMX=500
       integer, PARAMETER :: NDFMAX=5000
-      integer, PARAMETER :: MXRAS=100
+      integer, PARAMETER :: MXRAS=200
       integer, PARAMETER :: MSZSV=NTQ*NFQ*GSAV/2+28*NB+4*NBS
 
 
