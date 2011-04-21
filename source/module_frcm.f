@@ -13,9 +13,12 @@
       !----------------------------------------------------------------|
       !
       !  $Author: souda $
-      !  $Date: 2011-04-17 18:25:20 $
-      !  $Revision: 5.6 $
+      !  $Date: 2011-04-21 22:59:51 $
+      !  $Revision: 5.7 $
       !  $Log: not supported by cvs2svn $
+      !  Revision 5.6  2011/04/17 18:25:20  souda
+      !  Increased maximum sizes of some arrays (max number of spheres, etc.)
+      !
       !  Revision 5.5  2011/02/20 00:58:11  souda
       !  Major additions/modifications:
       !  (1) precalculation of the proton vibrational basis functions for METHOD=1
@@ -53,10 +56,10 @@
       !============================================
       ! Parameters for the FRCM portion of the code
       !--------------------------------------------
-      real(8),  PARAMETER :: GATINC = 3.0D0
       real(8),  PARAMETER :: RTFQ   = 1.1D0
       real(8),  PARAMETER :: GSAV   = 0.9D0
 
+      integer, PARAMETER :: GATINC = 3
       integer, PARAMETER :: MAXHEV=300, MAXLIT=300
       integer, PARAMETER :: NUMATM=MAXHEV+MAXLIT
       integer, PARAMETER :: MAXORB=4*MAXHEV+MAXLIT
@@ -73,16 +76,16 @@
       integer, PARAMETER :: NTQ=360
       integer, PARAMETER :: NFQ=720
       integer, PARAMETER :: NB=500
-      integer, PARAMETER :: NT=1000
+      integer, PARAMETER :: NT=50
       integer, PARAMETER :: NF=150
-      integer, PARAMETER :: NBS=3000
+      integer, PARAMETER :: NBS=2000
       integer, PARAMETER :: NBGEN=100000
       integer, PARAMETER :: NBSQ=NBS*(NBS+1)/2
       integer, PARAMETER :: NTFQ=NTQ*NFQ
       integer, PARAMETER :: NTFQ1=NTFQ*RTFQ
       integer, PARAMETER :: NDNBMX=500
       integer, PARAMETER :: NDFMAX=5000
-      integer, PARAMETER :: MXRAS=200
+      integer, PARAMETER :: MXRAS=100
       integer, PARAMETER :: MSZSV=NTQ*NFQ*GSAV/2+28*NB+4*NBS
 
 
