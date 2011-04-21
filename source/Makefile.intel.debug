@@ -7,12 +7,18 @@
 #
 #############################################################
 
-ARCH = intel_11.1-x86_64-debug
+ARCH = intel_11.1-x86_64_debug
 FC = ifort
 # Important: MODFLAG must have a trailing blank
 MODFLAG = -module 
 BACKSLASH = -assume nobscc
 NOBACKSLASH = -assume bscc
-F90FLAGS = -check -g -traceback
-F77FLAGS = -check -g -traceback
-LDFLAGS	= -L/usr/local/intel/ifort_11.1/072/mkl/lib/em64t -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread
+F90FLAGS = -g -check
+F77FLAGS = -g -check
+
+# sequential mkl libraries
+LDFLAGS = -L/usr/local/intel/ifort_11.1/072/mkl/lib/em64t -lmkl_lapack -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lpthread -lm
+
+# parallel (threaded) mkl libraries
+# set OMP_NUM_THREADS=<number_of_threads> in your script (default is 8 threads)
+#LDFLAGS = -L/usr/local/intel/ifort_11.1/072/mkl/lib/em64t -lmkl_lapack -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm
