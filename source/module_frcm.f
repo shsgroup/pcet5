@@ -13,9 +13,12 @@
       !----------------------------------------------------------------|
       !
       !  $Author: souda $
-      !  $Date: 2011-04-21 22:59:51 $
-      !  $Revision: 5.7 $
+      !  $Date: 2011-04-29 22:36:24 $
+      !  $Revision: 5.8 $
       !  $Log: not supported by cvs2svn $
+      !  Revision 5.7  2011/04/21 22:59:51  souda
+      !  slight modification of FRCM parameters (for consistency with version 4.0)
+      !
       !  Revision 5.6  2011/04/17 18:25:20  souda
       !  Increased maximum sizes of some arrays (max number of spheres, etc.)
       !
@@ -56,10 +59,10 @@
       !============================================
       ! Parameters for the FRCM portion of the code
       !--------------------------------------------
-      real(8),  PARAMETER :: RTFQ   = 1.1D0
-      real(8),  PARAMETER :: GSAV   = 0.9D0
-
       integer, PARAMETER :: GATINC = 3
+      real(8), PARAMETER :: RTFQ   = 1.1D0
+      real(8), PARAMETER :: GSAV   = 0.9D0
+
       integer, PARAMETER :: MAXHEV=300, MAXLIT=300
       integer, PARAMETER :: NUMATM=MAXHEV+MAXLIT
       integer, PARAMETER :: MAXORB=4*MAXHEV+MAXLIT
@@ -971,7 +974,7 @@ C*----------------------------------------------------------------------
       real(8),  intent(inout) :: EPO_
 
       LOGICAL, save :: FIRST=.true.,PRINT
-      real(8),  save :: second = 0.529167D00
+      real(8),  save :: au2ang = 0.529167D00
 
       !COMMON /KEYWRD/ KEYWRD
       !COMMON /QATOM/ QATOM(NUMATM)
@@ -980,7 +983,7 @@ C*----------------------------------------------------------------------
       !DIMENSION X0_(*),Y0_(*),Z0_(*),QS_(*)
 
       !SAVE PRINT
-      !DATA SECOND/0.529167D00 /
+      !DATA AU2ANG/0.529167D00 /
       !DATA FIRST /.TRUE./
 
       IF (FIRST) THEN
@@ -1005,7 +1008,7 @@ C              EPO_ = EPO_ + QS_(J)*CORE(NI)/RA
          ENDDO
       ENDDO
 
-      EPO_=EPO_*27.21D00*SECOND
+      EPO_=EPO_*27.21D00*AU2ANG
 
       IF (PRINT) THEN
 C          WRITE(6,'('' POLARIZATION ENERGY FROM CORES '',F14.5,
@@ -4646,13 +4649,13 @@ C
       DC=ABS(QQ2-CHARGE_)
 C      IF (ABS(CHARGE_).GT.1.D0) DC=DC/ABS(CHARGE_)
       IF (DC.GT.CHDIFF_) THEN
-         WRITE (6,'(//'' CATION!!!''/
+         WRITE (6,'(//'' CAUTION!!!''/
      *   '' SFERT1:  CHARGE ON CAVITY TOO FAR FROM EXPECTED'')')
          WRITE (6,'('' EXPECTED CHARGE ON SURFACE'',9X,''='',F9.5)')
      *   CHARGE_
          WRITE (6,'('' SURFACE CHARGE BEFORE COMPENSATION ='',F9.5)')QQ2
          WRITE (6,'('' MOST LIKELY SOMETHING WRONG IN INPUT FILES'')')
-         WRITE (6,'('' FURTHER JOB DOES NOT HAVE A SENSE. IT STOPPED'')
+         WRITE (6,'('' FURTHER JOB DOES NOT MAKE SENSE. IT STOPPED'')
      *      ')
          WRITE(6,100)
          STOP
