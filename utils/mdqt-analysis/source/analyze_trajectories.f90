@@ -49,6 +49,8 @@ program analyze_trajectories
    real(kind=8), dimension(:,:),   allocatable :: w1a, w1b, w2a, w2b
    real(kind=8), dimension(:,:),   allocatable :: histogram_z12
    real(kind=8), dimension(:,:),   allocatable :: histogram_zpe
+   real(kind=8), dimension(:),     allocatable :: histogram_marg_z1, histogram_marg_z2
+   real(kind=8), dimension(:),     allocatable :: histogram_marg_zp, histogram_marg_ze
    real(kind=8), dimension(:,:,:), allocatable :: state_histogram_z12
    real(kind=8), dimension(:,:,:), allocatable :: state_histogram_zpe
    real(kind=8), dimension(:),     allocatable :: z1_mean, z2_mean, zp_mean, ze_mean
@@ -56,6 +58,7 @@ program analyze_trajectories
    real(kind=8), dimension(:),     allocatable :: z11_tcf, z22_tcf, z12_tcf, zpp_tcf, zee_tcf, zpe_tcf
    real(kind=8), dimension(:),     allocatable :: efe_mean, ekin_mean
    real(kind=8), dimension(:),     allocatable :: w1a_mean, w1b_mean, w2a_mean, w2b_mean
+   real(kind=8), dimension(:),     allocatable :: w1ab_mean, w2ab_mean
    real(kind=8), dimension(:,:),   allocatable :: cw_cross
    real(kind=8), dimension(:,:),   allocatable :: pop_ad
 
@@ -518,16 +521,32 @@ program analyze_trajectories
    write(*,'(1x,"Building global histograms for solvent coordinates... ",$)')
    time_start = secondi()
    
+   !-- global 2D-distributions
    allocate(histogram_z12(number_of_bins_z12,number_of_bins_z12))
    allocate(histogram_zpe(number_of_bins_zpe,number_of_bins_zpe))
-   
+
    open(21,file="z12_distribution_global.dat",form="unformatted")
    open(22,file="zpe_distribution_global.dat",form="unformatted")
+
+   !-- marginal 1D-distributions
+   allocate(histogram_marg_z1(number_of_bins_z12))
+   allocate(histogram_marg_z2(number_of_bins_z12))
+   allocate(histogram_marg_zp(number_of_bins_zpe))
+   allocate(histogram_marg_ze(number_of_bins_zpe))
+
+   open(31,file="z1_marg_distribution_global.dat",form="formatted")
+   open(32,file="z2_marg_distribution_global.dat",form="formatted")
+   open(33,file="zp_marg_distribution_global.dat",form="formatted")
+   open(34,file="ze_marg_distribution_global.dat",form="formatted")
    
    do istep=1,number_of_timesteps
    
       histogram_z12 = 0.d0
       histogram_zpe = 0.d0
+      histogram_marg_z1 = 0.d0
+      histogram_marg_z2 = 0.d0
+      histogram_marg_zp = 0.d0
+      histogram_marg_ze = 0.d0
    
       do itraj=1,number_of_traj
    
@@ -539,22 +558,30 @@ program analyze_trajectories
          ibin_1 = nint((z1_curr-z1_min)/bin_width_z1 + 0.5d0)
          ibin_2 = nint((z2_curr-z2_min)/bin_width_z2 + 0.5d0)
          histogram_z12(ibin_1,ibin_2) = histogram_z12(ibin_1,ibin_2) + 1.d0
+         histogram_marg_z1(ibin_1) = histogram_marg_z1(ibin_1) + 1.d0
+         histogram_marg_z2(ibin_2) = histogram_marg_z2(ibin_2) + 1.d0
    
          ibin_p = nint((zp_curr-zp_min)/bin_width_zp + 0.5d0)
          ibin_e = nint((ze_curr-ze_min)/bin_width_ze + 0.5d0)
          histogram_zpe(ibin_p,ibin_e) = histogram_zpe(ibin_p,ibin_e) + 1.d0
+         histogram_marg_zp(ibin_p) = histogram_marg_zp(ibin_p) + 1.d0
+         histogram_marg_ze(ibin_e) = histogram_marg_ze(ibin_e) + 1.d0
    
       enddo
    
       !-- normalize distributions
    
       do i1=1,number_of_bins_z12
+         histogram_marg_z1(i1) = histogram_marg_z1(i1)/number_of_traj
+         histogram_marg_z2(i1) = histogram_marg_z2(i1)/number_of_traj
          do i2=1,number_of_bins_z12
             histogram_z12(i1,i2) = histogram_z12(i1,i2)/number_of_traj
          enddo
       enddo
    
       do i1=1,number_of_bins_zpe
+         histogram_marg_zp(i1) = histogram_marg_zp(i1)/number_of_traj
+         histogram_marg_ze(i1) = histogram_marg_ze(i1)/number_of_traj
          do i2=1,number_of_bins_zpe
             histogram_zpe(i1,i2) = histogram_zpe(i1,i2)/number_of_traj
          enddo
@@ -563,25 +590,39 @@ program analyze_trajectories
       !-- output to the external files for visualization
    
       do i1=1,number_of_bins_z12
+         write(31,'(3g15.6)') time(1,istep), bin_center_z1(i1), histogram_marg_z1(i1)
+         write(32,'(3g15.6)') time(1,istep), bin_center_z2(i1), histogram_marg_z2(i1)
          do i2=1,number_of_bins_z12
             !write(21,'(3g15.6)') bin_center_z1(i1), bin_center_z2(i2), histogram_z12(i1,i2)
             write(21) bin_center_z1(i1), bin_center_z2(i2), histogram_z12(i1,i2)
          enddo
       enddo
+      write(31,*)
+      write(32,*)
    
       do i1=1,number_of_bins_zpe
+         write(33,'(3g15.6)') time(1,istep), bin_center_zp(i1), histogram_marg_zp(i1)
+         write(34,'(3g15.6)') time(1,istep), bin_center_ze(i1), histogram_marg_ze(i1)
          do i2=1,number_of_bins_zpe
             !write(22,'(3g15.6)') bin_center_z1(i1), bin_center_z2(i2), histogram_zpe(i1,i2)
-            write(22) bin_center_z1(i1), bin_center_z2(i2), histogram_zpe(i1,i2)
+            write(22) bin_center_zp(i1), bin_center_ze(i2), histogram_zpe(i1,i2)
          enddo
       enddo
+      write(33,*)
+      write(34,*)
    
    enddo
    
    close(21)
    close(22)
+   close(31)
+   close(32)
+   close(33)
+   close(34)
    
    deallocate (histogram_z12,histogram_zpe)
+   deallocate (histogram_marg_z1,histogram_marg_z2)
+   deallocate (histogram_marg_zp,histogram_marg_ze)
    
    time_end = secondi()
    write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
@@ -681,23 +722,25 @@ program analyze_trajectories
       z1_var(istep) = z1_var(istep)/number_of_traj
       z2_var(istep) = z2_var(istep)/number_of_traj
       z12_var(istep) = z12_var(istep)/number_of_traj
+      z12_var(istep) = z12_var(istep)/sqrt(z1_var(istep)*z2_var(istep))
 
       zp_var(istep) = zp_var(istep)/number_of_traj
       ze_var(istep) = ze_var(istep)/number_of_traj
       zpe_var(istep) = zpe_var(istep)/number_of_traj
+      zpe_var(istep) = zpe_var(istep)/sqrt(zp_var(istep)*ze_var(istep))
 
    enddo
 
    !-- output to the external file for visualization
 
    open(2,file="z_var.dat")
-   write(2,'("#",t10,"time(ps)",t30,"<z1^2>",t50,"<z2^2>",t70,"<z1z2>",t90,"<zp^2>",t110,"<ze^2>",t130,"<zpze>")')
+   write(2,'("#",t10,"time(ps)",t30,"sigma(z1)",t50,"sigma(z2)",t68,"cov(z1,z2)",t90,"sigma(zp)",t110,"sigma(ze)",t128,"cov(zp,ze)")')
    do istep=1,number_of_timesteps
        write(2,'(7g20.10)') time(1,istep), z1_var(istep), z2_var(istep), z12_var(istep), zp_var(istep), ze_var(istep), zpe_var(istep)
    enddo
    close(2)
 
-   deallocate (z1_mean, z2_mean, zp_mean, ze_mean, z1_var, z2_var, z12_var, zp_var, ze_var, zpe_var)
+   deallocate (z1_var, z2_var, z12_var, zp_var, ze_var, zpe_var)
 
    time_end = secondi()
    write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
@@ -728,15 +771,15 @@ program analyze_trajectories
 
       do itraj=1,number_of_traj
 
-         z1_0 = z1(itraj,1)
-         z2_0 = z2(itraj,1)
-         zp_0 = zp(itraj,1)
-         ze_0 = ze(itraj,1)
+         z1_0 = z1(itraj,1) - z1_mean(1)
+         z2_0 = z2(itraj,1) - z2_mean(1)
+         zp_0 = zp(itraj,1) - zp_mean(1)
+         ze_0 = ze(itraj,1) - ze_mean(1)
 
-         z1_curr = z1(itraj,istep)
-         z2_curr = z2(itraj,istep)
-         zp_curr = zp(itraj,istep)
-         ze_curr = ze(itraj,istep)
+         z1_curr = z1(itraj,istep) - z1_mean(istep)
+         z2_curr = z2(itraj,istep) - z2_mean(istep)
+         zp_curr = zp(itraj,istep) - zp_mean(istep)
+         ze_curr = ze(itraj,istep) - ze_mean(istep)
 
          z11_tcf(istep) = z11_tcf(istep) + z1_0*z1_curr
          z22_tcf(istep) = z22_tcf(istep) + z2_0*z2_curr
@@ -761,7 +804,7 @@ program analyze_trajectories
    !-- output to the external file for visualization
 
    open(2,file="z_tcf.dat")
-   write(2,'("#",t10,"time(ps)",t25,"<z1(0)z2(t)>",t45,"<z2(0)z2(t)>",t65,"<z1(0)z2(t)>",t85,"<zp(0)zp(t)>",t105,"<ze(0)ze(t)>",t125,"<zp(0)ze(t)>")')
+   write(2,'("#",t10,"time(ps)",t25,"<z1(0)z1(t)>",t45,"<z2(0)z2(t)>",t65,"<z1(0)z2(t)>",t85,"<zp(0)zp(t)>",t105,"<ze(0)ze(t)>",t125,"<zp(0)ze(t)>")')
    do istep=1,number_of_timesteps
        write(2,'(7g20.10)') time(1,istep), z11_tcf(istep), z22_tcf(istep), z12_tcf(istep), zpp_tcf(istep), zee_tcf(istep), zpe_tcf(istep)
    enddo
@@ -775,6 +818,7 @@ program analyze_trajectories
    deallocate (zpe_tcf)
 
    deallocate (z1, z2, zp, ze)
+   deallocate (z1_mean, z2_mean, zp_mean, ze_mean)
 
    time_end = secondi()
    write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
@@ -836,6 +880,9 @@ program analyze_trajectories
    allocate (w2a_mean(number_of_timesteps))
    allocate (w2b_mean(number_of_timesteps))
 
+   allocate (w1ab_mean(number_of_timesteps))
+   allocate (w2ab_mean(number_of_timesteps))
+
    do istep=1,number_of_timesteps
 
       w1a_mean(istep) = 0.d0
@@ -843,11 +890,22 @@ program analyze_trajectories
       w2a_mean(istep) = 0.d0
       w2b_mean(istep) = 0.d0
 
+      w1ab_mean(istep) = 0.d0
+      w2ab_mean(istep) = 0.d0
+
       do itraj=1,number_of_traj
+
          w1a_mean(istep) = w1a_mean(istep) + w1a(itraj,istep)
          w1b_mean(istep) = w1b_mean(istep) + w1b(itraj,istep)
          w2a_mean(istep) = w2a_mean(istep) + w2a(itraj,istep)
          w2b_mean(istep) = w2b_mean(istep) + w2b(itraj,istep)
+
+         if (w1a(itraj,istep)+w1b(itraj,istep).gt.w2a(itraj,istep)+w2b(itraj,istep)) then
+            w1ab_mean(istep) = w1ab_mean(istep) + 1.d0
+         else
+            w2ab_mean(istep) = w2ab_mean(istep) + 1.d0
+         endif
+
       enddo
 
       w1a_mean(istep) = w1a_mean(istep)/number_of_traj
@@ -855,16 +913,21 @@ program analyze_trajectories
       w2a_mean(istep) = w2a_mean(istep)/number_of_traj
       w2b_mean(istep) = w2b_mean(istep)/number_of_traj
 
+      w1ab_mean(istep) = 100.d0*w1ab_mean(istep)/number_of_traj
+      w2ab_mean(istep) = 100.d0*w2ab_mean(istep)/number_of_traj
+
    enddo
 
    !-- output to the external file for visualization
 
    open(2,file="weights_mean.dat")
-   write(2,'("#",99("-"))')
-   write(2,'("#",t10,"time",t30,"(1a)",t50,"(1b)",t70,"(2a)",t90,"(2b)")')
-   write(2,'("#",99("-"))')
+   write(2,'("#",179("-"))')
+   write(2,'("#",t10,"time",t30,"<1a>",t50,"<1b>",t70,"<2a>",t90,"<2b>",t110,"<1a+1b>",t130,"<2a+2b>",t150,"<1a/1b>",t170,"<2a/2b>")')
+   write(2,'("#",179("-"))')
    do istep=1,number_of_timesteps
-      write(2,'(5g20.10)') time(1,istep), w1a_mean(istep), w1b_mean(istep), w2a_mean(istep), w2b_mean(istep)
+      write(2,'(9g20.10)') time(1,istep), w1a_mean(istep),w1b_mean(istep),w2a_mean(istep),w2b_mean(istep), &
+                                        & w1a_mean(istep)+w1b_mean(istep),w2a_mean(istep)+w2b_mean(istep), &
+                                        & w1ab_mean(istep),w2ab_mean(istep)
    enddo
    close(2)
 
@@ -947,6 +1010,7 @@ program analyze_trajectories
    deallocate (w1b,w1b_mean)
    deallocate (w2a,w2a_mean)
    deallocate (w2b,w2b_mean)
+   deallocate (w1ab_mean,w2ab_mean)
    deallocate (cw_cross)
 
    !---------------------------------------------------------------
@@ -1008,6 +1072,10 @@ contains
       if (allocated(w2b)) deallocate(w2b)
       if (allocated(histogram_z12)) deallocate(histogram_z12)
       if (allocated(histogram_zpe)) deallocate(histogram_zpe)
+      if (allocated(histogram_marg_z1)) deallocate(histogram_marg_z1)
+      if (allocated(histogram_marg_z2)) deallocate(histogram_marg_z2)
+      if (allocated(histogram_marg_zp)) deallocate(histogram_marg_zp)
+      if (allocated(histogram_marg_ze)) deallocate(histogram_marg_ze)
       if (allocated(state_histogram_z12)) deallocate(state_histogram_z12)
       if (allocated(state_histogram_zpe)) deallocate(state_histogram_zpe)
       if (allocated(z1_mean)) deallocate(z1_mean)
@@ -1032,6 +1100,8 @@ contains
       if (allocated(w1b_mean)) deallocate(w1b_mean)
       if (allocated(w2a_mean)) deallocate(w2a_mean)
       if (allocated(w2b_mean)) deallocate(w2b_mean)
+      if (allocated(w1ab_mean)) deallocate(w1ab_mean)
+      if (allocated(w2ab_mean)) deallocate(w2ab_mean)
       if (allocated(cw_cross)) deallocate(cw_cross)
       if (allocated(pop_ad)) deallocate(pop_ad)
    end subroutine deallocate_all_arrays
