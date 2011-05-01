@@ -176,7 +176,7 @@ program analyze_trajectories
          efe(itraj,nsteps) = rarr(11)
 
          istate(itraj,nsteps) = iarr(1)
- 
+
          w1a(itraj,nsteps) = rarr(12)
          w1b(itraj,nsteps) = rarr(13)
          w2a(itraj,nsteps) = rarr(14)
@@ -357,7 +357,7 @@ program analyze_trajectories
    write(*,*)
    write(*,'(1x,"Building state-resolved histograms for solvent coordinates... ",$)')
    time_start = secondi()
-   
+
    allocate(state_histogram_z12(number_of_states,number_of_bins_z12,number_of_bins_z12))
    allocate(state_histogram_zpe(number_of_states,number_of_bins_zpe,number_of_bins_zpe))
 
@@ -375,19 +375,19 @@ program analyze_trajectories
    enddo
 
    do istep=1,number_of_timesteps
-   
+
       state_histogram_z12 = 0.d0
       state_histogram_zpe = 0.d0
-   
+
       do itraj=1,number_of_traj
-   
+
          z1_curr = z1(itraj,istep)
          z2_curr = z2(itraj,istep)
          zp_curr = zp(itraj,istep)
          ze_curr = ze(itraj,istep)
-         
+
          iocc = istate(itraj,istep)
-         
+
          ibin_1 = nint((z1_curr-z1_min)/bin_width_z1 + 0.5d0)
          ibin_2 = nint((z2_curr-z2_min)/bin_width_z2 + 0.5d0)
 
@@ -411,7 +411,7 @@ program analyze_trajectories
          !--DEBUG end--
 
          state_histogram_z12(iocc,ibin_1,ibin_2) = state_histogram_z12(iocc,ibin_1,ibin_2) + 1.d0
-    
+
          ibin_p = nint((zp_curr-zp_min)/bin_width_zp + 0.5d0)
          ibin_e = nint((ze_curr-ze_min)/bin_width_ze + 0.5d0)
 
@@ -435,11 +435,11 @@ program analyze_trajectories
          !--DEBUG end--
 
          state_histogram_zpe(iocc,ibin_p,ibin_e) = state_histogram_zpe(iocc,ibin_p,ibin_e) + 1.d0
-   
+
       enddo
-   
+
       !-- normalize distributions
-   
+
       do i1=1,number_of_bins_z12
          do i2=1,number_of_bins_z12
             do k=1,number_of_states
@@ -447,7 +447,7 @@ program analyze_trajectories
             enddo
          enddo
       enddo
-   
+
       do i1=1,number_of_bins_zpe
          do i2=1,number_of_bins_zpe
             do k=1,number_of_states
@@ -455,7 +455,7 @@ program analyze_trajectories
             enddo
          enddo
       enddo
-   
+
       !-- output to the external files for visualization
       !
       !do i1=1,number_of_bins_z12
@@ -495,9 +495,9 @@ program analyze_trajectories
          enddo
 
       enddo
-  
+
    enddo
-   
+
    !close(21)
    !close(22)
 
@@ -507,7 +507,7 @@ program analyze_trajectories
       close(ichannel_z12)
       close(ichannel_zpe)
    enddo
-   
+
    deallocate (state_histogram_z12,state_histogram_zpe)
    deallocate (istate_occ)
    time_end = secondi()
@@ -520,7 +520,7 @@ program analyze_trajectories
    write(*,*)
    write(*,'(1x,"Building global histograms for solvent coordinates... ",$)')
    time_start = secondi()
-   
+
    !-- global 2D-distributions
    allocate(histogram_z12(number_of_bins_z12,number_of_bins_z12))
    allocate(histogram_zpe(number_of_bins_zpe,number_of_bins_zpe))
@@ -538,39 +538,41 @@ program analyze_trajectories
    open(32,file="z2_marg_distribution_global.dat",form="formatted")
    open(33,file="zp_marg_distribution_global.dat",form="formatted")
    open(34,file="ze_marg_distribution_global.dat",form="formatted")
-   
+
    do istep=1,number_of_timesteps
-   
+
       histogram_z12 = 0.d0
       histogram_zpe = 0.d0
       histogram_marg_z1 = 0.d0
       histogram_marg_z2 = 0.d0
       histogram_marg_zp = 0.d0
       histogram_marg_ze = 0.d0
-   
+
       do itraj=1,number_of_traj
-   
+
          z1_curr = z1(itraj,istep)
          z2_curr = z2(itraj,istep)
          zp_curr = zp(itraj,istep)
          ze_curr = ze(itraj,istep)
-         
+
          ibin_1 = nint((z1_curr-z1_min)/bin_width_z1 + 0.5d0)
          ibin_2 = nint((z2_curr-z2_min)/bin_width_z2 + 0.5d0)
+
          histogram_z12(ibin_1,ibin_2) = histogram_z12(ibin_1,ibin_2) + 1.d0
          histogram_marg_z1(ibin_1) = histogram_marg_z1(ibin_1) + 1.d0
          histogram_marg_z2(ibin_2) = histogram_marg_z2(ibin_2) + 1.d0
-   
+
          ibin_p = nint((zp_curr-zp_min)/bin_width_zp + 0.5d0)
          ibin_e = nint((ze_curr-ze_min)/bin_width_ze + 0.5d0)
+
          histogram_zpe(ibin_p,ibin_e) = histogram_zpe(ibin_p,ibin_e) + 1.d0
          histogram_marg_zp(ibin_p) = histogram_marg_zp(ibin_p) + 1.d0
          histogram_marg_ze(ibin_e) = histogram_marg_ze(ibin_e) + 1.d0
-   
+
       enddo
-   
+
       !-- normalize distributions
-   
+
       do i1=1,number_of_bins_z12
          histogram_marg_z1(i1) = histogram_marg_z1(i1)/number_of_traj
          histogram_marg_z2(i1) = histogram_marg_z2(i1)/number_of_traj
@@ -578,7 +580,7 @@ program analyze_trajectories
             histogram_z12(i1,i2) = histogram_z12(i1,i2)/number_of_traj
          enddo
       enddo
-   
+
       do i1=1,number_of_bins_zpe
          histogram_marg_zp(i1) = histogram_marg_zp(i1)/number_of_traj
          histogram_marg_ze(i1) = histogram_marg_ze(i1)/number_of_traj
@@ -586,9 +588,9 @@ program analyze_trajectories
             histogram_zpe(i1,i2) = histogram_zpe(i1,i2)/number_of_traj
          enddo
       enddo
-   
+
       !-- output to the external files for visualization
-   
+
       do i1=1,number_of_bins_z12
          write(31,'(3g15.6)') time(1,istep), bin_center_z1(i1), histogram_marg_z1(i1)
          write(32,'(3g15.6)') time(1,istep), bin_center_z2(i1), histogram_marg_z2(i1)
@@ -599,7 +601,7 @@ program analyze_trajectories
       enddo
       write(31,*)
       write(32,*)
-   
+
       do i1=1,number_of_bins_zpe
          write(33,'(3g15.6)') time(1,istep), bin_center_zp(i1), histogram_marg_zp(i1)
          write(34,'(3g15.6)') time(1,istep), bin_center_ze(i1), histogram_marg_ze(i1)
@@ -610,20 +612,20 @@ program analyze_trajectories
       enddo
       write(33,*)
       write(34,*)
-   
+
    enddo
-   
+
    close(21)
    close(22)
    close(31)
    close(32)
    close(33)
    close(34)
-   
+
    deallocate (histogram_z12,histogram_zpe)
    deallocate (histogram_marg_z1,histogram_marg_z2)
    deallocate (histogram_marg_zp,histogram_marg_ze)
-   
+
    time_end = secondi()
    write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
 
