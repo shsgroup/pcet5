@@ -1,7 +1,14 @@
 !======================================================================================
+!
 !  Analysis of the dynamical trajectories
-!  Alexander V. Soudackov, Penn State
+!  Alexander V. Soudackov, Penn State University
 !  March 14, 2011
+!
+!  $Author: souda $
+!  $Date: 2011-05-05 03:56:48 $
+!  $Revision: 1.8 $
+!  $Log: not supported by cvs2svn $
+!
 !======================================================================================
 
 program analyze_trajectories
@@ -53,6 +60,8 @@ program analyze_trajectories
    real(kind=8), dimension(:),     allocatable :: histogram_marg_zp, histogram_marg_ze
    real(kind=8), dimension(:,:,:), allocatable :: state_histogram_z12
    real(kind=8), dimension(:,:,:), allocatable :: state_histogram_zpe
+   real(kind=8), dimension(:,:),   allocatable :: excited_states_histogram_z12
+   real(kind=8), dimension(:,:),   allocatable :: excited_states_histogram_zpe
    real(kind=8), dimension(:),     allocatable :: z1_mean, z2_mean, zp_mean, ze_mean
    real(kind=8), dimension(:),     allocatable :: z1_var, z2_var, z12_var, zp_var, ze_var, zpe_var
    real(kind=8), dimension(:),     allocatable :: z11_tcf, z22_tcf, z12_tcf, zpp_tcf, zee_tcf, zpe_tcf
@@ -176,7 +185,7 @@ program analyze_trajectories
          efe(itraj,nsteps) = rarr(11)
 
          istate(itraj,nsteps) = iarr(1)
-
+ 
          w1a(itraj,nsteps) = rarr(12)
          w1b(itraj,nsteps) = rarr(13)
          w2a(itraj,nsteps) = rarr(14)
@@ -357,128 +366,110 @@ program analyze_trajectories
    write(*,*)
    write(*,'(1x,"Building state-resolved histograms for solvent coordinates... ",$)')
    time_start = secondi()
-
+   
    allocate(state_histogram_z12(number_of_states,number_of_bins_z12,number_of_bins_z12))
    allocate(state_histogram_zpe(number_of_states,number_of_bins_zpe,number_of_bins_zpe))
-
-   !open(21,file="z12_distribution_state.dat",form="formatted")
-   !open(22,file="zpe_distribution_state.dat",form="formatted")
+   allocate(excited_states_histogram_z12(number_of_bins_z12,number_of_bins_z12))
+   allocate(excited_states_histogram_zpe(number_of_bins_zpe,number_of_bins_zpe))
 
    !-- open a separate file for each occupied state
 
    do i=1,number_of_occ_states
-      ichannel_z12 = 10 + 2*i - 1
-      ichannel_zpe = 10 + 2*i
+      ichannel_z12 = 10 + 2*istate_occ(i) - 1
+      ichannel_zpe = 10 + 2*istate_occ(i)
       write(state_suffix,'(i3.3)') istate_occ(i)
       open(ichannel_z12,file="z12_distribution_"//state_suffix//".dat",form="unformatted")
       open(ichannel_zpe,file="zpe_distribution_"//state_suffix//".dat",form="unformatted")
    enddo
 
-   do istep=1,number_of_timesteps
+   !-- open files for combined excited states
 
+   open(571,file="z12_distribution_excited.dat",form="unformatted")
+   open(572,file="zpe_distribution_excited.dat",form="unformatted")
+
+   !-- open files for combined marginal distributions for excited states
+
+   open(581,file="z1_marg_distribution_excited.dat",form="formatted")
+   open(582,file="z2_marg_distribution_excited.dat",form="formatted")
+   open(583,file="zp_marg_distribution_excited.dat",form="formatted")
+   open(584,file="ze_marg_distribution_excited.dat",form="formatted")
+
+   do istep=1,number_of_timesteps
+   
       state_histogram_z12 = 0.d0
       state_histogram_zpe = 0.d0
-
+      excited_states_histogram_z12 = 0.d0
+      excited_states_histogram_zpe = 0.d0
+   
       do itraj=1,number_of_traj
-
+   
          z1_curr = z1(itraj,istep)
          z2_curr = z2(itraj,istep)
          zp_curr = zp(itraj,istep)
          ze_curr = ze(itraj,istep)
-
+         
          iocc = istate(itraj,istep)
-
+         
          ibin_1 = nint((z1_curr-z1_min)/bin_width_z1 + 0.5d0)
          ibin_2 = nint((z2_curr-z2_min)/bin_width_z2 + 0.5d0)
 
-         !--DEBUG start--
-         !if (ibin_1.gt.number_of_bins_z12) then
-         !   write(*,*)
-         !   write(*,*) "Problem with binning: ibin_1 =",ibin_1
-         !   write(*,*) "z1_curr-z1_min =",z1_curr-z1_min
-         !   write(*,*) "z1_max-z1_min  =",z1_max-z1_min
-         !   call deallocate_all_arrays
-         !   stop
-         !endif
-         !if (ibin_2.gt.number_of_bins_z12) then
-         !   write(*,*)
-         !   write(*,*) "Problem with binning: ibin_2 =",ibin_2
-         !   write(*,*) "z2_curr-z2_min =",z2_curr-z2_min
-         !   write(*,*) "z2_max-z2_min  =",z2_max-z2_min
-         !   call deallocate_all_arrays
-         !   stop
-         !endif
-         !--DEBUG end--
-
          state_histogram_z12(iocc,ibin_1,ibin_2) = state_histogram_z12(iocc,ibin_1,ibin_2) + 1.d0
-
+    
          ibin_p = nint((zp_curr-zp_min)/bin_width_zp + 0.5d0)
          ibin_e = nint((ze_curr-ze_min)/bin_width_ze + 0.5d0)
 
-         !--DEBUG start--
-         !if (ibin_p.gt.number_of_bins_zpe) then
-         !   write(*,*)
-         !   write(*,*) "Problem with binning: ibin_p =",ibin_p
-         !   write(*,*) "zp_curr-zp_min =",zp_curr-zp_min
-         !   write(*,*) "zp_max-zp_min  =",zp_max-zp_min
-         !   call deallocate_all_arrays
-         !   stop
-         !endif
-         !if (ibin_e.gt.number_of_bins_zpe) then
-         !   write(*,*)
-         !   write(*,*) "Problem with binning: ibin_e =",ibin_e
-         !   write(*,*) "ze_curr-ze_min =",ze_curr-ze_min
-         !   write(*,*) "ze_max-ze_min  =",ze_max-ze_min
-         !   call deallocate_all_arrays
-         !   stop
-         !endif
-         !--DEBUG end--
-
          state_histogram_zpe(iocc,ibin_p,ibin_e) = state_histogram_zpe(iocc,ibin_p,ibin_e) + 1.d0
-
+   
+      enddo
+   
+      !-- normalize distributions
+   
+      do i1=1,number_of_bins_z12
+         do i2=1,number_of_bins_z12
+            do k=1,number_of_occ_states
+               state_histogram_z12(istate_occ(k),i1,i2) = state_histogram_z12(istate_occ(k),i1,i2)/number_of_traj
+            enddo
+         enddo
+      enddo
+   
+      do i1=1,number_of_bins_zpe
+         do i2=1,number_of_bins_zpe
+            do k=1,number_of_occ_states
+               state_histogram_zpe(istate_occ(k),i1,i2) = state_histogram_zpe(istate_occ(k),i1,i2)/number_of_traj
+            enddo
+         enddo
       enddo
 
-      !-- normalize distributions
+      !-- build combined histograms for all excited states
 
       do i1=1,number_of_bins_z12
          do i2=1,number_of_bins_z12
-            do k=1,number_of_states
-               state_histogram_z12(k,i1,i2) = state_histogram_z12(k,i1,i2)/number_of_traj
+            do k=1,number_of_occ_states
+               if (istate_occ(k).gt.1) &
+               & excited_states_histogram_z12(i1,i2) = excited_states_histogram_z12(i1,i2) &
+               & + state_histogram_z12(istate_occ(k),i1,i2)
             enddo
          enddo
       enddo
 
       do i1=1,number_of_bins_zpe
          do i2=1,number_of_bins_zpe
-            do k=1,number_of_states
-               state_histogram_zpe(k,i1,i2) = state_histogram_zpe(k,i1,i2)/number_of_traj
+            do k=1,number_of_occ_states
+               if (istate_occ(k).gt.1) &
+               & excited_states_histogram_zpe(i1,i2) = excited_states_histogram_zpe(i1,i2) &
+               & + state_histogram_zpe(istate_occ(k),i1,i2)
             enddo
          enddo
       enddo
 
       !-- output to the external files for visualization
-      !
-      !do i1=1,number_of_bins_z12
-      !   do i2=1,number_of_bins_z12
-      !      write(21,'(f10.6,1x,f10.6,100(1x,i3,1x,g12.6))') bin_center_z1(i1), bin_center_z2(i2), (istate_occ(k),state_histogram_z12(istate_occ(k),i1,i2),k=1,number_of_occ_states)
-      !      !write(21) bin_center_z1(i1), bin_center_z2(i2), (istate_occ(k),state_histogram_z12(istate_occ(k),i1,i2),k=1,number_of_occ_states)
-      !   enddo
-      !enddo
-      !
-      !do i1=1,number_of_bins_zpe
-      !   do i2=1,number_of_bins_zpe
-      !      write(22,'(f10.6,1x,f10.6,100(1x,i3,1x,g12.6))') bin_center_z1(i1), bin_center_z2(i2), (istate_occ(k),state_histogram_zpe(istate_occ(k),i1,i2),k=1,number_of_occ_states)
-      !      !write(22) bin_center_z1(i1), bin_center_z2(i2), (istate_occ(k),state_histogram_zpe(istate_occ(k),i1,i2),k=1,number_of_occ_states)
-      !   enddo
-      !enddo
 
-
-      !-- output to the external files for visualization
+      !-- state-resolved distributions
 
       do i=1,number_of_occ_states
 
-         ichannel_z12 = 10 + 2*i - 1
-         ichannel_zpe = 10 + 2*i
+         ichannel_z12 = 10 + 2*istate_occ(i) - 1
+         ichannel_zpe = 10 + 2*istate_occ(i)
 
          do i1=1,number_of_bins_z12
             do i2=1,number_of_bins_z12
@@ -496,19 +487,47 @@ program analyze_trajectories
 
       enddo
 
+      !-- combined excited states distributions
+
+      do i1=1,number_of_bins_z12
+         write(581,'(3g15.6)') time(1,istep), bin_center_z1(i1), sum(excited_states_histogram_z12(i1,:))
+         write(582,'(3g15.6)') time(1,istep), bin_center_z2(i1), sum(excited_states_histogram_z12(:,i1))
+         do i2=1,number_of_bins_z12
+            !write(571,'(f10.6,1x,f10.6,1x,g15.8)') bin_center_z1(i1), bin_center_z2(i2), excited_states_histogram_z12(i1,i2)
+            write(571) bin_center_z1(i1), bin_center_z2(i2), excited_states_histogram_z12(i1,i2)
+         enddo
+      enddo
+      write(581,*)
+      write(582,*)
+
+      do i1=1,number_of_bins_zpe
+         write(583,'(3g15.6)') time(1,istep), bin_center_zp(i1), sum(excited_states_histogram_zpe(i1,:))
+         write(584,'(3g15.6)') time(1,istep), bin_center_ze(i1), sum(excited_states_histogram_zpe(:,i1))
+         do i2=1,number_of_bins_zpe
+            !write(572,'(f10.6,1x,f10.6,1x,g15.8)') bin_center_zp(i1), bin_center_ze(i2), excited_states_histogram_zpe(i1,i2)
+            write(572) bin_center_zp(i1), bin_center_ze(i2), excited_states_histogram_zpe(i1,i2)
+         enddo
+      enddo
+      write(583,*)
+      write(584,*)
+  
    enddo
-
-   !close(21)
-   !close(22)
-
+   
    do i=1,number_of_occ_states
-      ichannel_z12 = 10 + 2*i - 1
-      ichannel_zpe = 10 + 2*i
+      ichannel_z12 = 10 + 2*istate_occ(i) - 1
+      ichannel_zpe = 10 + 2*istate_occ(i)
       close(ichannel_z12)
       close(ichannel_zpe)
    enddo
-
+   close(571)
+   close(572)
+   close(581)
+   close(582)
+   close(583)
+   close(584)
+   
    deallocate (state_histogram_z12,state_histogram_zpe)
+   deallocate (excited_states_histogram_z12,excited_states_histogram_zpe)
    deallocate (istate_occ)
    time_end = secondi()
    write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
@@ -520,7 +539,7 @@ program analyze_trajectories
    write(*,*)
    write(*,'(1x,"Building global histograms for solvent coordinates... ",$)')
    time_start = secondi()
-
+   
    !-- global 2D-distributions
    allocate(histogram_z12(number_of_bins_z12,number_of_bins_z12))
    allocate(histogram_zpe(number_of_bins_zpe,number_of_bins_zpe))
@@ -538,41 +557,39 @@ program analyze_trajectories
    open(32,file="z2_marg_distribution_global.dat",form="formatted")
    open(33,file="zp_marg_distribution_global.dat",form="formatted")
    open(34,file="ze_marg_distribution_global.dat",form="formatted")
-
+   
    do istep=1,number_of_timesteps
-
+   
       histogram_z12 = 0.d0
       histogram_zpe = 0.d0
       histogram_marg_z1 = 0.d0
       histogram_marg_z2 = 0.d0
       histogram_marg_zp = 0.d0
       histogram_marg_ze = 0.d0
-
+   
       do itraj=1,number_of_traj
-
+   
          z1_curr = z1(itraj,istep)
          z2_curr = z2(itraj,istep)
          zp_curr = zp(itraj,istep)
          ze_curr = ze(itraj,istep)
-
+         
          ibin_1 = nint((z1_curr-z1_min)/bin_width_z1 + 0.5d0)
          ibin_2 = nint((z2_curr-z2_min)/bin_width_z2 + 0.5d0)
-
          histogram_z12(ibin_1,ibin_2) = histogram_z12(ibin_1,ibin_2) + 1.d0
          histogram_marg_z1(ibin_1) = histogram_marg_z1(ibin_1) + 1.d0
          histogram_marg_z2(ibin_2) = histogram_marg_z2(ibin_2) + 1.d0
-
+   
          ibin_p = nint((zp_curr-zp_min)/bin_width_zp + 0.5d0)
          ibin_e = nint((ze_curr-ze_min)/bin_width_ze + 0.5d0)
-
          histogram_zpe(ibin_p,ibin_e) = histogram_zpe(ibin_p,ibin_e) + 1.d0
          histogram_marg_zp(ibin_p) = histogram_marg_zp(ibin_p) + 1.d0
          histogram_marg_ze(ibin_e) = histogram_marg_ze(ibin_e) + 1.d0
-
+   
       enddo
-
+   
       !-- normalize distributions
-
+   
       do i1=1,number_of_bins_z12
          histogram_marg_z1(i1) = histogram_marg_z1(i1)/number_of_traj
          histogram_marg_z2(i1) = histogram_marg_z2(i1)/number_of_traj
@@ -580,7 +597,7 @@ program analyze_trajectories
             histogram_z12(i1,i2) = histogram_z12(i1,i2)/number_of_traj
          enddo
       enddo
-
+   
       do i1=1,number_of_bins_zpe
          histogram_marg_zp(i1) = histogram_marg_zp(i1)/number_of_traj
          histogram_marg_ze(i1) = histogram_marg_ze(i1)/number_of_traj
@@ -588,9 +605,9 @@ program analyze_trajectories
             histogram_zpe(i1,i2) = histogram_zpe(i1,i2)/number_of_traj
          enddo
       enddo
-
+   
       !-- output to the external files for visualization
-
+   
       do i1=1,number_of_bins_z12
          write(31,'(3g15.6)') time(1,istep), bin_center_z1(i1), histogram_marg_z1(i1)
          write(32,'(3g15.6)') time(1,istep), bin_center_z2(i1), histogram_marg_z2(i1)
@@ -601,7 +618,7 @@ program analyze_trajectories
       enddo
       write(31,*)
       write(32,*)
-
+   
       do i1=1,number_of_bins_zpe
          write(33,'(3g15.6)') time(1,istep), bin_center_zp(i1), histogram_marg_zp(i1)
          write(34,'(3g15.6)') time(1,istep), bin_center_ze(i1), histogram_marg_ze(i1)
@@ -612,20 +629,20 @@ program analyze_trajectories
       enddo
       write(33,*)
       write(34,*)
-
+   
    enddo
-
+   
    close(21)
    close(22)
    close(31)
    close(32)
    close(33)
    close(34)
-
+   
    deallocate (histogram_z12,histogram_zpe)
    deallocate (histogram_marg_z1,histogram_marg_z2)
    deallocate (histogram_marg_zp,histogram_marg_ze)
-
+   
    time_end = secondi()
    write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
 
@@ -1080,6 +1097,8 @@ contains
       if (allocated(histogram_marg_ze)) deallocate(histogram_marg_ze)
       if (allocated(state_histogram_z12)) deallocate(state_histogram_z12)
       if (allocated(state_histogram_zpe)) deallocate(state_histogram_zpe)
+      if (allocated(excited_states_histogram_z12)) deallocate(excited_states_histogram_z12)
+      if (allocated(excited_states_histogram_zpe)) deallocate(excited_states_histogram_zpe)
       if (allocated(z1_mean)) deallocate(z1_mean)
       if (allocated(z2_mean)) deallocate(z2_mean)
       if (allocated(zp_mean)) deallocate(zp_mean)
