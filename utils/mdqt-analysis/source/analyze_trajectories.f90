@@ -5,9 +5,13 @@
 !  March 14, 2011
 !
 !  $Author: souda $
-!  $Date: 2011-05-05 03:56:48 $
-!  $Revision: 1.8 $
+!  $Date: 2011-05-05 23:51:57 $
+!  $Revision: 1.9 $
 !  $Log: not supported by cvs2svn $
+!  Revision 1.8  2011/05/05 03:56:48  souda
+!  Added marginal distributions for excited states distributions;
+!  fixed the bug causing a memory leak;
+!  fixed the bug in calculation of state-resolved distributions.
 !
 !======================================================================================
 
@@ -753,9 +757,13 @@ program analyze_trajectories
    !-- output to the external file for visualization
 
    open(2,file="z_var.dat")
-   write(2,'("#",t10,"time(ps)",t30,"sigma(z1)",t50,"sigma(z2)",t68,"cov(z1,z2)",t90,"sigma(zp)",t110,"sigma(ze)",t128,"cov(zp,ze)")')
+   write(2,'("#",t10,"time(ps)",t30,"sigma(z1)",t50,"sigma(z2)",t68,"corr(z1,z2)",t90,"sigma(zp)",t110,"sigma(ze)",t128,"corr(zp,ze)")')
    do istep=1,number_of_timesteps
-       write(2,'(7g20.10)') time(1,istep), z1_var(istep), z2_var(istep), z12_var(istep), zp_var(istep), ze_var(istep), zpe_var(istep)
+       write(2,'(7g20.10)') time(1,istep), &
+       & sqrt(z1_var(istep)), sqrt(z2_var(istep)), &
+       & z12_var(istep)/sqrt(z1_var(istep))/sqrt(z2_var(istep)), &
+       & sqrt(zp_var(istep)), sqrt(ze_var(istep)), &
+       & zpe_var(istep)/sqrt(zp_var(istep))/sqrt(ze_var(istep))
    enddo
    close(2)
 
