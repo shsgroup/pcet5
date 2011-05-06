@@ -5,9 +5,12 @@
 !  March 14, 2011
 !
 !  $Author: souda $
-!  $Date: 2011-05-05 23:51:57 $
-!  $Revision: 1.9 $
+!  $Date: 2011-05-06 21:45:54 $
+!  $Revision: 1.10 $
 !  $Log: not supported by cvs2svn $
+!  Revision 1.9  2011/05/05 23:51:57  souda
+!  now outputs correlation coefficients for solvent coordinates instead of covariances
+!
 !  Revision 1.8  2011/05/05 03:56:48  souda
 !  Added marginal distributions for excited states distributions;
 !  fixed the bug causing a memory leak;
@@ -32,11 +35,12 @@ program analyze_trajectories
    logical :: found
 
    integer :: number_of_traj, number_of_timesteps, number_of_states
-   integer ::  number_of_occ_states
+   integer :: number_of_occ_states
    integer :: itraj, istep, eof=0
-   integer :: i, ii, iocc, k, i1, i2, iargc, nsteps
+   integer :: i, ilargest, ii, iocc, k, i1, i2, iargc, nsteps
    integer :: ibin_1, ibin_2, ibin_p, ibin_e
    integer :: ichannel_z12, ichannel_zpe
+   integer :: ndt, ndt2
 
    real(kind=8) :: z1_min, z1_max, z2_min, z2_max
    real(kind=8) :: zp_min, zp_max, ze_min, ze_max
@@ -49,6 +53,9 @@ program analyze_trajectories
    real(kind=8) :: cd1a1a, cd1b1b, cd2a2a, cd2b2b
    real(kind=8) :: cc1a1b, cc1a2a, cc1a2b, cc1b2a, cc1b2b, cc2a2b
    real(kind=8) :: sq1a, sq1b, sq2a, sq2b
+
+   real(kind=8) :: z1tav, z2tav, z11tav, z22tav, z12tav, c12tav
+   real(kind=8) :: zptav, zetav, zpptav, zeetav, zpetav, cpetav
 
    real(kind=8), dimension(number_of_bins_z12) :: bin_center_z1, bin_center_z2
    real(kind=8), dimension(number_of_bins_zpe) :: bin_center_zp, bin_center_ze
@@ -71,6 +78,7 @@ program analyze_trajectories
    real(kind=8), dimension(:),     allocatable :: z11_tcf, z22_tcf, z12_tcf, zpp_tcf, zee_tcf, zpe_tcf
    real(kind=8), dimension(:),     allocatable :: efe_mean, ekin_mean
    real(kind=8), dimension(:),     allocatable :: w1a_mean, w1b_mean, w2a_mean, w2b_mean
+   real(kind=8), dimension(:),     allocatable :: wh1a_mean, wh1b_mean, wh2a_mean, wh2b_mean
    real(kind=8), dimension(:),     allocatable :: w1ab_mean, w2ab_mean
    real(kind=8), dimension(:,:),   allocatable :: cw_cross
    real(kind=8), dimension(:,:),   allocatable :: pop_ad
@@ -82,6 +90,7 @@ program analyze_trajectories
    character(len=20), dimension(100) :: carr
    integer,           dimension(100) :: iarr
    real(kind=8),      dimension(100) :: rarr
+   real(kind=8),      dimension(4)   :: tmparray
 
 !--------------------------------------------------------------------------------------
 
@@ -398,6 +407,11 @@ program analyze_trajectories
    open(583,file="zp_marg_distribution_excited.dat",form="formatted")
    open(584,file="ze_marg_distribution_excited.dat",form="formatted")
 
+   open(681,file="z1_marg_distribution_ground.dat",form="formatted")
+   open(682,file="z2_marg_distribution_ground.dat",form="formatted")
+   open(683,file="zp_marg_distribution_ground.dat",form="formatted")
+   open(684,file="ze_marg_distribution_ground.dat",form="formatted")
+
    do istep=1,number_of_timesteps
    
       state_histogram_z12 = 0.d0
@@ -491,7 +505,7 @@ program analyze_trajectories
 
       enddo
 
-      !-- combined excited states distributions
+      !-- combined excited states distributions (including marginal distributions)
 
       do i1=1,number_of_bins_z12
          write(581,'(3g15.6)') time(1,istep), bin_center_z1(i1), sum(excited_states_histogram_z12(i1,:))
@@ -514,6 +528,22 @@ program analyze_trajectories
       enddo
       write(583,*)
       write(584,*)
+
+      !-- ground state marginal distributions
+
+      do i=1,number_of_bins_z12
+         write(681,'(3g15.6)') time(1,istep), bin_center_z1(i), sum(state_histogram_z12(1,i,:))
+         write(682,'(3g15.6)') time(1,istep), bin_center_z2(i), sum(state_histogram_z12(1,:,i))
+      enddo
+      write(681,*)
+      write(682,*)
+
+      do i=1,number_of_bins_zpe
+         write(683,'(3g15.6)') time(1,istep), bin_center_zp(i), sum(state_histogram_zpe(1,i,:))
+         write(684,'(3g15.6)') time(1,istep), bin_center_ze(i), sum(state_histogram_zpe(1,:,i))
+      enddo
+      write(683,*)
+      write(684,*)
   
    enddo
    
@@ -529,6 +559,10 @@ program analyze_trajectories
    close(582)
    close(583)
    close(584)
+   close(681)
+   close(682)
+   close(683)
+   close(684)
    
    deallocate (state_histogram_z12,state_histogram_zpe)
    deallocate (excited_states_histogram_z12,excited_states_histogram_zpe)
@@ -772,8 +806,139 @@ program analyze_trajectories
    time_end = secondi()
    write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
 
+   !--------------------------------------------------------------------
+   !--(4)-- Cross-correlations of time-averages of solvent coordinates
+   !--------------------------------------------------------------------
+
+   write(*,'(/1x,"Building cross-correlations of time-averages for solvent coordinates... ",$)')
+   time_start = secondi()
+
+   z1tav = z1_mean(1)
+   z2tav = z2_mean(1)
+   z11tav = z1_mean(1)*z1_mean(1)
+   z22tav = z2_mean(1)*z2_mean(1)
+   z12tav = z1_mean(1)*z2_mean(1)
+
+   zptav = zp_mean(1)
+   zetav = ze_mean(1)
+   zpptav = zp_mean(1)*zp_mean(1)
+   zeetav = ze_mean(1)*ze_mean(1)
+   zpetav = zp_mean(1)*ze_mean(1)
+
+   c12tav = 0.d0
+   cpetav = 0.d0
+
+   open(2,file="z_corr_tav.dat")
+   write(2,'("#",t10,"time(ps)",t30,"<z1tav>",t50,"<z2tav>",t70,"<c12tav>",t90,"<zptav>",t110,"<zetav>",t130,"<cpetav>")')
+   write(2,'(7g20.10)') time(1,1), z1tav, z2tav, c12tav, zptav, zetav, cpetav
+
+   do istep=2,number_of_timesteps
+
+      z1tav = z1tav + z1_mean(istep)
+      z2tav = z2tav + z2_mean(istep)
+      z11tav = z11tav + z1_mean(istep)*z1_mean(istep)
+      z22tav = z22tav + z2_mean(istep)*z2_mean(istep)
+      z12tav = z12tav + z1_mean(istep)*z2_mean(istep)
+
+      zptav = zptav + zp_mean(istep)
+      zetav = zetav + ze_mean(istep)
+      zpptav = zpptav + zp_mean(istep)*zp_mean(istep)
+      zeetav = zeetav + ze_mean(istep)*ze_mean(istep)
+      zpetav = zpetav + zp_mean(istep)*ze_mean(istep)
+
+      c12tav = (z12tav/istep - z1tav*z2tav/istep/istep) / &
+      & sqrt((z11tav/istep - z1tav*z1tav/istep/istep)*(z22tav/istep - z2tav*z2tav/istep/istep))
+
+      cpetav = (zpetav/istep - zptav*zetav/istep/istep) / &
+      & sqrt((zpptav/istep - zptav*zptav/istep/istep)*(zeetav/istep - zetav*zetav/istep/istep))
+
+      write(2,'(7g20.10)') time(1,istep), z1tav/istep, z2tav/istep, c12tav, zptav/istep, zetav/istep, cpetav
+
+   enddo
+
+   close(2)
+
+   time_end = secondi()
+   write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
+
+   !--------------------------------------------------------------------
+   !--(5)-- Cross-correlations of running (local) time-averages
+   !        of solvent coordinates
+   !--------------------------------------------------------------------
+
+   write(*,'(/1x,"Building cross-correlations of running time-averages for solvent coordinates... ",$)')
+   time_start = secondi()
+
+   !-- time interval for averaging (number of timesteps),
+   !   must be an odd number
+
+   ndt = 7
+   ndt2 = (ndt-1)/2
+
+   open(2,file="z_corr_rtav.dat")
+   write(2,'("#--- Time interval for averaging (ps): ",f12.6)') (ndt-1)*(time(1,2)-time(1,1))
+   write(2,'("#",t10,"time(ps)",t30,"<z1tav>",t50,"<z2tav>",t70,"<c12tav>",t90,"<zptav>",t110,"<zetav>",t130,"<cpetav>")')
+   write(2,'(7g20.10)') time(1,1), z1tav, z2tav, c12tav, zptav, zetav, cpetav
+
+   do istep=1+ndt2,number_of_timesteps-ndt2
+
+      z1tav  = 0.d0
+      z2tav  = 0.d0
+      z11tav = 0.d0
+      z22tav = 0.d0
+      z12tav = 0.d0
+
+      zptav  = 0.d0
+      zetav  = 0.d0
+      zpptav = 0.d0
+      zeetav = 0.d0
+      zpetav = 0.d0
+
+      do i=istep-ndt2,istep+ndt2
+
+         z1tav = z1tav + z1_mean(i)
+         z2tav = z2tav + z2_mean(i)
+         z11tav = z11tav + z1_mean(i)*z1_mean(i)
+         z22tav = z22tav + z2_mean(i)*z2_mean(i)
+         z12tav = z12tav + z1_mean(i)*z2_mean(i)
+
+         zptav = zptav + zp_mean(i)
+         zetav = zetav + ze_mean(i)
+         zpptav = zpptav + zp_mean(i)*zp_mean(i)
+         zeetav = zeetav + ze_mean(i)*ze_mean(i)
+         zpetav = zpetav + zp_mean(i)*ze_mean(i)
+
+      enddo
+
+      z1tav  = z1tav/ndt
+      z2tav  = z2tav/ndt
+      z11tav = z11tav/ndt
+      z22tav = z22tav/ndt
+      z12tav = z12tav/ndt
+
+      zptav  = zptav/ndt
+      zetav  = zetav/ndt
+      zpptav = zpptav/ndt
+      zeetav = zeetav/ndt
+      zpetav = zpetav/ndt
+
+      c12tav = (z12tav - z1tav*z2tav) / &
+      & sqrt((z11tav - z1tav*z1tav)*(z22tav - z2tav*z2tav))
+
+      cpetav = (zpetav - zptav*zetav) / &
+      & sqrt((zpptav - zptav*zptav)*(zeetav - zetav*zetav))
+
+      write(2,'(7g20.10)') time(1,istep), z1tav, z2tav, c12tav, zptav, zetav, cpetav
+
+   enddo
+
+   close(2)
+
+   time_end = secondi()
+   write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
+
    !---------------------------------------------------------------
-   !--(4)-- Time-correlation functions of solvent coordinates
+   !--(6)-- Time-correlation functions of solvent coordinates
    !        (not clear what it means...)
    !---------------------------------------------------------------
 
@@ -851,7 +1016,7 @@ program analyze_trajectories
    write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
 
    !---------------------------------------------------------------
-   !--(5)-- Time-dependent average free energy and kinetic energy
+   !--(7)-- Time-dependent average free energy and kinetic energy
    !---------------------------------------------------------------
 
    write(*,'(/1x,"Building average energies... ",$)')
@@ -896,7 +1061,7 @@ program analyze_trajectories
    write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
 
    !---------------------------------------------------------------
-   !--(6)-- Time-dependent EVB weights
+   !--(8)-- Time-dependent EVB weights
    !---------------------------------------------------------------
 
    write(*,'(/1x,"Building average EVB weights... ",$)')
@@ -906,6 +1071,11 @@ program analyze_trajectories
    allocate (w1b_mean(number_of_timesteps))
    allocate (w2a_mean(number_of_timesteps))
    allocate (w2b_mean(number_of_timesteps))
+
+   allocate (wh1a_mean(number_of_timesteps))
+   allocate (wh1b_mean(number_of_timesteps))
+   allocate (wh2a_mean(number_of_timesteps))
+   allocate (wh2b_mean(number_of_timesteps))
 
    allocate (w1ab_mean(number_of_timesteps))
    allocate (w2ab_mean(number_of_timesteps))
@@ -917,6 +1087,11 @@ program analyze_trajectories
       w2a_mean(istep) = 0.d0
       w2b_mean(istep) = 0.d0
 
+      wh1a_mean(istep) = 0.d0
+      wh1b_mean(istep) = 0.d0
+      wh2a_mean(istep) = 0.d0
+      wh2b_mean(istep) = 0.d0
+
       w1ab_mean(istep) = 0.d0
       w2ab_mean(istep) = 0.d0
 
@@ -926,6 +1101,28 @@ program analyze_trajectories
          w1b_mean(istep) = w1b_mean(istep) + w1b(itraj,istep)
          w2a_mean(istep) = w2a_mean(istep) + w2a(itraj,istep)
          w2b_mean(istep) = w2b_mean(istep) + w2b(itraj,istep)
+
+         !-- assign 1 for the largest weight (whXX arrays)
+         tmparray(1) = w1a(itraj,istep)
+         tmparray(2) = w1b(itraj,istep)
+         tmparray(3) = w2a(itraj,istep)
+         tmparray(4) = w2b(itraj,istep)
+
+         ilargest = 1
+         do i=2,4
+            if (tmparray(i).gt.tmparray(ilargest)) ilargest = i
+         enddo
+
+         select case(ilargest)
+            case(1)
+               wh1a_mean(istep) = wh1a_mean(istep) + 1.d0
+            case(2)
+               wh1b_mean(istep) = wh1b_mean(istep) + 1.d0
+            case(3)
+               wh2a_mean(istep) = wh2a_mean(istep) + 1.d0
+            case(4)
+               wh2b_mean(istep) = wh2b_mean(istep) + 1.d0
+         end select
 
          if (w1a(itraj,istep)+w1b(itraj,istep).gt.w2a(itraj,istep)+w2b(itraj,istep)) then
             w1ab_mean(istep) = w1ab_mean(istep) + 1.d0
@@ -940,23 +1137,38 @@ program analyze_trajectories
       w2a_mean(istep) = w2a_mean(istep)/number_of_traj
       w2b_mean(istep) = w2b_mean(istep)/number_of_traj
 
+      wh1a_mean(istep) = wh1a_mean(istep)/number_of_traj
+      wh1b_mean(istep) = wh1b_mean(istep)/number_of_traj
+      wh2a_mean(istep) = wh2a_mean(istep)/number_of_traj
+      wh2b_mean(istep) = wh2b_mean(istep)/number_of_traj
+
       w1ab_mean(istep) = 100.d0*w1ab_mean(istep)/number_of_traj
       w2ab_mean(istep) = 100.d0*w2ab_mean(istep)/number_of_traj
 
    enddo
 
-   !-- output to the external file for visualization
+   !-- output to the external files for visualization
 
    open(2,file="weights_mean.dat")
    write(2,'("#",179("-"))')
-   write(2,'("#",t10,"time",t30,"<1a>",t50,"<1b>",t70,"<2a>",t90,"<2b>",t110,"<1a+1b>",t130,"<2a+2b>",t150,"<1a/1b>",t170,"<2a/2b>")')
+   write(2,'("#",t10,"time",t30,"<1a>",t50,"<1b>",t70,"<2a>",t90,"<2b>",t110,"<1a+1b>",t130,"<2a+2b>")')
    write(2,'("#",179("-"))')
    do istep=1,number_of_timesteps
-      write(2,'(9g20.10)') time(1,istep), w1a_mean(istep),w1b_mean(istep),w2a_mean(istep),w2b_mean(istep), &
-                                        & w1a_mean(istep)+w1b_mean(istep),w2a_mean(istep)+w2b_mean(istep), &
+      write(2,'(7g20.10)') time(1,istep), w1a_mean(istep),w1b_mean(istep),w2a_mean(istep),w2b_mean(istep), &
+                                        & w1a_mean(istep)+w1b_mean(istep),w2a_mean(istep)+w2b_mean(istep)
+   enddo
+   close(2)
+
+   open(2,file="weights_assigned_mean.dat")
+   write(2,'("#",179("-"))')
+   write(2,'("#",t10,"time",t30,"<1a>",t50,"<1b>",t70,"<2a>",t90,"<2b>",t110,"<1a/1b>",t170,"<2a/2b>")')
+   write(2,'("#",179("-"))')
+   do istep=1,number_of_timesteps
+      write(2,'(9g20.10)') time(1,istep), wh1a_mean(istep),wh1b_mean(istep),wh2a_mean(istep),wh2b_mean(istep), &
                                         & w1ab_mean(istep),w2ab_mean(istep)
    enddo
    close(2)
+
 
    time_end = secondi()
    write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
@@ -1033,15 +1245,15 @@ program analyze_trajectories
    time_end = secondi()
    write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
 
-   deallocate (w1a,w1a_mean)
-   deallocate (w1b,w1b_mean)
-   deallocate (w2a,w2a_mean)
-   deallocate (w2b,w2b_mean)
+   deallocate (w1a,w1a_mean,wh1a_mean)
+   deallocate (w1b,w1b_mean,wh1b_mean)
+   deallocate (w2a,w2a_mean,wh2a_mean)
+   deallocate (w2b,w2b_mean,wh2b_mean)
    deallocate (w1ab_mean,w2ab_mean)
    deallocate (cw_cross)
 
    !---------------------------------------------------------------
-   !--(7)-- Time-dependent adiabatic populations
+   !--(9)-- Time-dependent adiabatic populations
    !---------------------------------------------------------------
 
    write(*,'(/1x,"Building time-dependent adiabatic populations... ",$)')
@@ -1129,6 +1341,10 @@ contains
       if (allocated(w1b_mean)) deallocate(w1b_mean)
       if (allocated(w2a_mean)) deallocate(w2a_mean)
       if (allocated(w2b_mean)) deallocate(w2b_mean)
+      if (allocated(w1a_mean)) deallocate(wh1a_mean)
+      if (allocated(w1b_mean)) deallocate(wh1b_mean)
+      if (allocated(w2a_mean)) deallocate(wh2a_mean)
+      if (allocated(w2b_mean)) deallocate(wh2b_mean)
       if (allocated(w1ab_mean)) deallocate(w1ab_mean)
       if (allocated(w2ab_mean)) deallocate(w2ab_mean)
       if (allocated(cw_cross)) deallocate(cw_cross)
