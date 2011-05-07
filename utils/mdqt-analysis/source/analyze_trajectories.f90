@@ -5,9 +5,12 @@
 !  March 14, 2011
 !
 !  $Author: souda $
-!  $Date: 2011-05-07 03:06:28 $
-!  $Revision: 1.12 $
+!  $Date: 2011-05-07 04:38:03 $
+!  $Revision: 1.13 $
 !  $Log: not supported by cvs2svn $
+!  Revision 1.12  2011/05/07 03:06:28  souda
+!  Added combined mean weights 1a/2a and 1b/2b (Sharons suggestion)
+!
 !  Revision 1.11  2011/05/07 00:15:44  souda
 !  Various fixes; EVB weights are probab. units; added cross-corr. for time averaged weights.
 !
@@ -1109,6 +1112,9 @@ program analyze_trajectories
       w1ab_mean(istep) = 0.d0
       w2ab_mean(istep) = 0.d0
 
+      w12a_mean(istep) = 0.d0
+      w12b_mean(istep) = 0.d0
+
       do itraj=1,number_of_traj
 
          w1a_mean(istep) = w1a_mean(istep) + w1a(itraj,istep)
@@ -1355,7 +1361,7 @@ program analyze_trajectories
       & sqrt((w2a2atav/istep - w2atav*w2atav/istep/istep)* &
       &      (w2b2btav/istep - w2btav*w2btav/istep/istep))
 
-      write(2,'(11g20.10)') time(1,1), w1atav/istep, w1btav/istep, w2atav/istep, w2btav/istep, &
+      write(2,'(11g20.10)') time(1,istep), w1atav/istep, w1btav/istep, w2atav/istep, w2btav/istep, &
                                      & c1a1btav, c1a2atav, c1a2btav, c1b2atav, c1b2btav, c2a2btav
 
    enddo
@@ -1435,7 +1441,7 @@ program analyze_trajectories
       & sqrt((w2a2atav/istep - w2atav*w2atav/istep/istep)* &
       &      (w2b2btav/istep - w2btav*w2btav/istep/istep))
 
-      write(2,'(11g20.10)') time(1,1), w1atav/istep, w1btav/istep, w2atav/istep, w2btav/istep, &
+      write(2,'(11g20.10)') time(1,istep), w1atav/istep, w1btav/istep, w2atav/istep, w2btav/istep, &
                                      & c1a1btav, c1a2atav, c1a2btav, c1b2atav, c1b2btav, c2a2btav
 
    enddo
@@ -1472,6 +1478,13 @@ program analyze_trajectories
       w2a2atav = 0.d0
       w2b2btav = 0.d0
 
+      w1a1btav = 0.d0
+      w1a2atav = 0.d0
+      w1a2btav = 0.d0
+      w1b2atav = 0.d0
+      w1b2btav = 0.d0
+      w2a2btav = 0.d0
+
       c1a1btav = 0.d0
       c1a2atav = 0.d0
       c1a2btav = 0.d0
@@ -1480,7 +1493,6 @@ program analyze_trajectories
       c2a2btav = 0.d0
 
       do i=istep-ndt2,istep+ndt2
-
 
          w1atav = w1atav + w1a_mean(i)
          w1btav = w1btav + w1b_mean(i)
@@ -1560,6 +1572,13 @@ program analyze_trajectories
       w1b1btav = 0.d0
       w2a2atav = 0.d0
       w2b2btav = 0.d0
+
+      w1a1btav = 0.d0
+      w1a2atav = 0.d0
+      w1a2btav = 0.d0
+      w1b2atav = 0.d0
+      w1b2btav = 0.d0
+      w2a2btav = 0.d0
 
       c1a1btav = 0.d0
       c1a2atav = 0.d0
