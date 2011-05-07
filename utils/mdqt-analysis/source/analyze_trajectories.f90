@@ -5,9 +5,12 @@
 !  March 14, 2011
 !
 !  $Author: souda $
-!  $Date: 2011-05-07 00:15:44 $
-!  $Revision: 1.11 $
+!  $Date: 2011-05-07 03:06:28 $
+!  $Revision: 1.12 $
 !  $Log: not supported by cvs2svn $
+!  Revision 1.11  2011/05/07 00:15:44  souda
+!  Various fixes; EVB weights are probab. units; added cross-corr. for time averaged weights.
+!
 !  Revision 1.10  2011/05/06 21:45:54  souda
 !  added marginal distributions for ground state distributions;
 !  added correlation coefficients for running time averages of solvent coordinates;
@@ -91,7 +94,7 @@ program analyze_trajectories
    real(kind=8), dimension(:),     allocatable :: efe_mean, ekin_mean
    real(kind=8), dimension(:),     allocatable :: w1a_mean, w1b_mean, w2a_mean, w2b_mean
    real(kind=8), dimension(:),     allocatable :: wh1a_mean, wh1b_mean, wh2a_mean, wh2b_mean
-   real(kind=8), dimension(:),     allocatable :: w1ab_mean, w2ab_mean
+   real(kind=8), dimension(:),     allocatable :: w1ab_mean, w2ab_mean, w12a_mean, w12b_mean
    real(kind=8), dimension(:,:),   allocatable :: cw_cross
    real(kind=8), dimension(:,:),   allocatable :: pop_ad
 
@@ -1088,6 +1091,9 @@ program analyze_trajectories
    allocate (w1ab_mean(number_of_timesteps))
    allocate (w2ab_mean(number_of_timesteps))
 
+   allocate (w12a_mean(number_of_timesteps))
+   allocate (w12b_mean(number_of_timesteps))
+
    do istep=1,number_of_timesteps
 
       w1a_mean(istep) = 0.d0
@@ -1138,6 +1144,12 @@ program analyze_trajectories
             w2ab_mean(istep) = w2ab_mean(istep) + 1.d0
          endif
 
+         if (w1a(itraj,istep)+w2a(itraj,istep).gt.w1b(itraj,istep)+w2b(itraj,istep)) then
+            w12a_mean(istep) = w12a_mean(istep) + 1.d0
+         else
+            w12b_mean(istep) = w12b_mean(istep) + 1.d0
+         endif
+
       enddo
 
       w1a_mean(istep) = w1a_mean(istep)/number_of_traj
@@ -1153,27 +1165,31 @@ program analyze_trajectories
       w1ab_mean(istep) = w1ab_mean(istep)/number_of_traj
       w2ab_mean(istep) = w2ab_mean(istep)/number_of_traj
 
+      w12a_mean(istep) = w12a_mean(istep)/number_of_traj
+      w12b_mean(istep) = w12b_mean(istep)/number_of_traj
+
    enddo
 
    !-- output to the external files for visualization
 
    open(2,file="weights_mean.dat")
    write(2,'("#",179("-"))')
-   write(2,'("#",t10,"time",t30,"<1a>",t50,"<1b>",t70,"<2a>",t90,"<2b>",t110,"<1a+1b>",t130,"<2a+2b>")')
+   write(2,'("#",t10,"time",t30,"<1a>",t50,"<1b>",t70,"<2a>",t90,"<2b>",t110,"<1a+1b>",t130,"<2a+2b>",t150,"<1a+2a>",t170,"<1b+2b>")')
    write(2,'("#",179("-"))')
    do istep=1,number_of_timesteps
-      write(2,'(7g20.10)') time(1,istep), w1a_mean(istep),w1b_mean(istep),w2a_mean(istep),w2b_mean(istep), &
-                                        & w1a_mean(istep)+w1b_mean(istep),w2a_mean(istep)+w2b_mean(istep)
+      write(2,'(9g20.10)') time(1,istep), w1a_mean(istep), w1b_mean(istep),  w2a_mean(istep), w2b_mean(istep), &
+                                        & w1a_mean(istep) + w1b_mean(istep), w2a_mean(istep) + w2b_mean(istep), &
+                                        & w1a_mean(istep) + w2a_mean(istep), w1b_mean(istep) + w2b_mean(istep)
    enddo
    close(2)
 
    open(2,file="weights_assigned_mean.dat")
    write(2,'("#",179("-"))')
-   write(2,'("#",t10,"time",t30,"<1a>",t50,"<1b>",t70,"<2a>",t90,"<2b>",t110,"<1a/1b>",t170,"<2a/2b>")')
+   write(2,'("#",t10,"time",t30,"<1a>",t50,"<1b>",t70,"<2a>",t90,"<2b>",t110,"<1a/1b>",t130,"<2a/2b>",t150,"<1a/2a>",t170,"<1b/2b>")')
    write(2,'("#",179("-"))')
    do istep=1,number_of_timesteps
-      write(2,'(9g20.10)') time(1,istep), wh1a_mean(istep),wh1b_mean(istep),wh2a_mean(istep),wh2b_mean(istep), &
-                                        & w1ab_mean(istep),w2ab_mean(istep)
+      write(2,'(9g20.10)') time(1,istep), wh1a_mean(istep), wh1b_mean(istep), wh2a_mean(istep), wh2b_mean(istep), &
+                                        & w1ab_mean(istep), w2ab_mean(istep), w12a_mean(istep), w12b_mean(istep)
    enddo
    close(2)
 
@@ -1622,6 +1638,7 @@ program analyze_trajectories
    deallocate (w2a_mean,wh2a_mean)
    deallocate (w2b_mean,wh2b_mean)
    deallocate (w1ab_mean,w2ab_mean)
+   deallocate (w12a_mean,w12b_mean)
 
    !---------------------------------------------------------------
    !--(10)-- Time-dependent adiabatic populations
@@ -1718,6 +1735,8 @@ contains
       if (allocated(w2b_mean)) deallocate(wh2b_mean)
       if (allocated(w1ab_mean)) deallocate(w1ab_mean)
       if (allocated(w2ab_mean)) deallocate(w2ab_mean)
+      if (allocated(w12a_mean)) deallocate(w12a_mean)
+      if (allocated(w12b_mean)) deallocate(w12b_mean)
       if (allocated(cw_cross)) deallocate(cw_cross)
       if (allocated(pop_ad)) deallocate(pop_ad)
    end subroutine deallocate_all_arrays
