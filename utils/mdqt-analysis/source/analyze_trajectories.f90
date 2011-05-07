@@ -5,9 +5,15 @@
 !  March 14, 2011
 !
 !  $Author: souda $
-!  $Date: 2011-05-06 21:45:54 $
-!  $Revision: 1.10 $
+!  $Date: 2011-05-07 00:15:44 $
+!  $Revision: 1.11 $
 !  $Log: not supported by cvs2svn $
+!  Revision 1.10  2011/05/06 21:45:54  souda
+!  added marginal distributions for ground state distributions;
+!  added correlation coefficients for running time averages of solvent coordinates;
+!  added mean EVB weights calculated by assignment of state with largest contribution;
+!  (correlation coefficients for mean EVB weights are to be added in the next revision).
+!
 !  Revision 1.9  2011/05/05 23:51:57  souda
 !  now outputs correlation coefficients for solvent coordinates instead of covariances
 !
@@ -27,6 +33,8 @@ program analyze_trajectories
 
    integer, parameter :: number_of_bins_z12=50
    integer, parameter :: number_of_bins_zpe=50
+   integer, parameter :: ndt=27
+   integer, parameter :: ndt2 = (ndt-1)/2
 
    character(len=60)  :: filename
    character(len=200) :: record
@@ -40,7 +48,6 @@ program analyze_trajectories
    integer :: i, ilargest, ii, iocc, k, i1, i2, iargc, nsteps
    integer :: ibin_1, ibin_2, ibin_p, ibin_e
    integer :: ichannel_z12, ichannel_zpe
-   integer :: ndt, ndt2
 
    real(kind=8) :: z1_min, z1_max, z2_min, z2_max
    real(kind=8) :: zp_min, zp_max, ze_min, ze_max
@@ -56,6 +63,11 @@ program analyze_trajectories
 
    real(kind=8) :: z1tav, z2tav, z11tav, z22tav, z12tav, c12tav
    real(kind=8) :: zptav, zetav, zpptav, zeetav, zpetav, cpetav
+
+   real(kind=8) :: w1atav, w1btav, w2atav, w2btav
+   real(kind=8) :: w1a1atav, w1b1btav, w2a2atav, w2b2btav
+   real(kind=8) :: w1a1btav, w1a2atav, w1a2btav, w1b2atav, w1b2btav, w2a2btav
+   real(kind=8) :: c1a1btav, c1a2atav, c1a2btav, c1b2atav, c1b2btav, c2a2btav
 
    real(kind=8), dimension(number_of_bins_z12) :: bin_center_z1, bin_center_z2
    real(kind=8), dimension(number_of_bins_zpe) :: bin_center_zp, bin_center_ze
@@ -199,10 +211,10 @@ program analyze_trajectories
 
          istate(itraj,nsteps) = iarr(1)
  
-         w1a(itraj,nsteps) = rarr(12)
-         w1b(itraj,nsteps) = rarr(13)
-         w2a(itraj,nsteps) = rarr(14)
-         w2b(itraj,nsteps) = rarr(15)
+         w1a(itraj,nsteps) = rarr(12)/100.d0
+         w1b(itraj,nsteps) = rarr(13)/100.d0
+         w2a(itraj,nsteps) = rarr(14)/100.d0
+         w2b(itraj,nsteps) = rarr(15)/100.d0
 
       enddo loop_over_timesteps
 
@@ -872,13 +884,9 @@ program analyze_trajectories
    !-- time interval for averaging (number of timesteps),
    !   must be an odd number
 
-   ndt = 7
-   ndt2 = (ndt-1)/2
-
    open(2,file="z_corr_rtav.dat")
    write(2,'("#--- Time interval for averaging (ps): ",f12.6)') (ndt-1)*(time(1,2)-time(1,1))
    write(2,'("#",t10,"time(ps)",t30,"<z1tav>",t50,"<z2tav>",t70,"<c12tav>",t90,"<zptav>",t110,"<zetav>",t130,"<cpetav>")')
-   write(2,'(7g20.10)') time(1,1), z1tav, z2tav, c12tav, zptav, zetav, cpetav
 
    do istep=1+ndt2,number_of_timesteps-ndt2
 
@@ -1142,8 +1150,8 @@ program analyze_trajectories
       wh2a_mean(istep) = wh2a_mean(istep)/number_of_traj
       wh2b_mean(istep) = wh2b_mean(istep)/number_of_traj
 
-      w1ab_mean(istep) = 100.d0*w1ab_mean(istep)/number_of_traj
-      w2ab_mean(istep) = 100.d0*w2ab_mean(istep)/number_of_traj
+      w1ab_mean(istep) = w1ab_mean(istep)/number_of_traj
+      w2ab_mean(istep) = w2ab_mean(istep)/number_of_traj
 
    enddo
 
@@ -1169,9 +1177,12 @@ program analyze_trajectories
    enddo
    close(2)
 
-
    time_end = secondi()
    write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
+
+   !---------------------------------------------------------------
+   !--(9)-- Time-dependent cross-correlation matrix of EVB weights
+   !---------------------------------------------------------------
 
    write(*,'(/1x,"Building time-dependent cross-correlation matrix of EVB weights... ",$)')
    time_start = secondi()
@@ -1245,15 +1256,375 @@ program analyze_trajectories
    time_end = secondi()
    write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
 
-   deallocate (w1a,w1a_mean,wh1a_mean)
-   deallocate (w1b,w1b_mean,wh1b_mean)
-   deallocate (w2a,w2a_mean,wh2a_mean)
-   deallocate (w2b,w2b_mean,wh2b_mean)
+   deallocate (w1a)
+   deallocate (w1b)
+   deallocate (w2a)
+   deallocate (w2b)
+
+   !------------------------------------------------------------------------------
+   !--(10)-- Time-dependent correlation coefficients of time-averaged EVB weights
+   !------------------------------------------------------------------------------
+
+   write(*,'(/1x,"Building time-dependent cross-correlation matrix of EVB weights... ",$)')
+   time_start = secondi()
+
+   w1atav = w1a_mean(1)
+   w1btav = w1b_mean(1)
+   w2atav = w2a_mean(1)
+   w2btav = w2b_mean(1)
+
+   w1a1atav = w1a_mean(1)*w1a_mean(1)
+   w1b1btav = w1b_mean(1)*w1b_mean(1)
+   w2a2atav = w2a_mean(1)*w2a_mean(1)
+   w2b2btav = w2b_mean(1)*w2b_mean(1)
+
+   w1a1btav = w1a_mean(1)*w1b_mean(1)
+   w1a2atav = w1a_mean(1)*w2a_mean(1)
+   w1a2btav = w1a_mean(1)*w2b_mean(1)
+   w1b2atav = w1b_mean(1)*w2a_mean(1)
+   w1b2btav = w1b_mean(1)*w2b_mean(1)
+   w2a2btav = w2a_mean(1)*w2b_mean(1)
+
+   c1a1btav = 0.d0
+   c1a2atav = 0.d0
+   c1a2btav = 0.d0
+   c1b2atav = 0.d0
+   c1b2btav = 0.d0
+   c2a2btav = 0.d0
+
+   open(2,file="weights_corr_tav.dat")
+   write(2,'("#",t10,"time(ps)",t30,"<w1atav>",t50,"<w1btav>",t70,"<w2atav>",t90,"<w2btav>",t110,"<c1a1btav>",t130,"<c1a2atav>",t150,"<c1a2btav>",t170,"<c1b2atav>",t190,"<c1b2btav>",t210,"<c2a2btav>")')
+   write(2,'(11g20.10)') time(1,1), w1atav, w1btav, w2atav, w2btav, c1a1btav, c1a2atav, c1a2btav, c1b2atav, c1b2btav, c2a2btav
+
+   do istep=2,number_of_timesteps
+
+      w1atav = w1atav + w1a_mean(istep)
+      w1btav = w1btav + w1b_mean(istep)
+      w2atav = w2atav + w2a_mean(istep)
+      w2btav = w2btav + w2b_mean(istep)
+
+      w1a1atav = w1a1atav + w1a_mean(istep)*w1a_mean(istep)
+      w1b1btav = w1b1btav + w1b_mean(istep)*w1b_mean(istep)
+      w2a2atav = w2a2atav + w2a_mean(istep)*w2a_mean(istep)
+      w2b2btav = w2b2btav + w2b_mean(istep)*w2b_mean(istep)
+
+      w1a1btav = w1a1btav + w1a_mean(istep)*w1b_mean(istep)
+      w1a2atav = w1a2atav + w1a_mean(istep)*w2a_mean(istep)
+      w1a2btav = w1a2btav + w1a_mean(istep)*w2b_mean(istep)
+      w1b2atav = w1b2atav + w1b_mean(istep)*w2a_mean(istep)
+      w1b2btav = w1b2btav + w1b_mean(istep)*w2b_mean(istep)
+      w2a2btav = w2a2btav + w2a_mean(istep)*w2b_mean(istep)
+
+      c1a1btav = (w1a1btav/istep - w1atav*w1btav/istep/istep) / &
+      & sqrt((w1a1atav/istep - w1atav*w1atav/istep/istep)* &
+      &      (w1b1btav/istep - w1btav*w1btav/istep/istep))
+
+      c1a2atav = (w1a2atav/istep - w1atav*w2atav/istep/istep) / &
+      & sqrt((w1a1atav/istep - w1atav*w1atav/istep/istep)* &
+      &      (w2a2atav/istep - w2atav*w2atav/istep/istep))
+
+      c1a2btav = (w1a2btav/istep - w1atav*w2btav/istep/istep) / &
+      & sqrt((w1a1atav/istep - w1atav*w1atav/istep/istep)* &
+      &      (w2b2btav/istep - w2btav*w2btav/istep/istep))
+
+      c1b2atav = (w1b2atav/istep - w1btav*w2atav/istep/istep) / &
+      & sqrt((w1b1btav/istep - w1btav*w1btav/istep/istep)* &
+      &      (w2a2atav/istep - w2atav*w2atav/istep/istep))
+
+      c1b2btav = (w1b2btav/istep - w1btav*w2btav/istep/istep) / &
+      & sqrt((w1b1btav/istep - w1btav*w1btav/istep/istep)* &
+      &      (w2b2btav/istep - w2btav*w2btav/istep/istep))
+
+      c2a2btav = (w2a2btav/istep - w2atav*w2btav/istep/istep) / &
+      & sqrt((w2a2atav/istep - w2atav*w2atav/istep/istep)* &
+      &      (w2b2btav/istep - w2btav*w2btav/istep/istep))
+
+      write(2,'(11g20.10)') time(1,1), w1atav/istep, w1btav/istep, w2atav/istep, w2btav/istep, &
+                                     & c1a1btav, c1a2atav, c1a2btav, c1b2atav, c1b2btav, c2a2btav
+
+   enddo
+
+   close(2)
+
+   !-- for mean weights calculated by assignment
+
+   w1atav = wh1a_mean(1)
+   w1btav = wh1b_mean(1)
+   w2atav = wh2a_mean(1)
+   w2btav = wh2b_mean(1)
+
+   w1a1atav = wh1a_mean(1)*wh1a_mean(1)
+   w1b1btav = wh1b_mean(1)*wh1b_mean(1)
+   w2a2atav = wh2a_mean(1)*wh2a_mean(1)
+   w2b2btav = wh2b_mean(1)*wh2b_mean(1)
+
+   w1a1btav = wh1a_mean(1)*wh1b_mean(1)
+   w1a2atav = wh1a_mean(1)*wh2a_mean(1)
+   w1a2btav = wh1a_mean(1)*wh2b_mean(1)
+   w1b2atav = wh1b_mean(1)*wh2a_mean(1)
+   w1b2btav = wh1b_mean(1)*wh2b_mean(1)
+   w2a2btav = wh2a_mean(1)*wh2b_mean(1)
+
+   c1a1btav = 0.d0
+   c1a2atav = 0.d0
+   c1a2btav = 0.d0
+   c1b2atav = 0.d0
+   c1b2btav = 0.d0
+   c2a2btav = 0.d0
+
+   open(2,file="weights_assigned_corr_tav.dat")
+   write(2,'("#",t10,"time(ps)",t30,"<w1atav>",t50,"<w1btav>",t70,"<w2atav>",t90,"<w2btav>",t110,"<c1a1btav>",t130,"<c1a2atav>",t150,"<c1a2btav>",t170,"<c1b2atav>",t190,"<c1b2btav>",t210,"<c2a2btav>")')
+   write(2,'(11g20.10)') time(1,1), w1atav, w1btav, w2atav, w2btav, c1a1btav, c1a2atav, c1a2btav, c1b2atav, c1b2btav, c2a2btav
+
+   do istep=2,number_of_timesteps
+
+      w1atav = w1atav + wh1a_mean(istep)
+      w1btav = w1btav + wh1b_mean(istep)
+      w2atav = w2atav + wh2a_mean(istep)
+      w2btav = w2btav + wh2b_mean(istep)
+
+      w1a1atav = w1a1atav + wh1a_mean(istep)*wh1a_mean(istep)
+      w1b1btav = w1b1btav + wh1b_mean(istep)*wh1b_mean(istep)
+      w2a2atav = w2a2atav + wh2a_mean(istep)*wh2a_mean(istep)
+      w2b2btav = w2b2btav + wh2b_mean(istep)*wh2b_mean(istep)
+
+      w1a1btav = w1a1btav + wh1a_mean(istep)*wh1b_mean(istep)
+      w1a2atav = w1a2atav + wh1a_mean(istep)*wh2a_mean(istep)
+      w1a2btav = w1a2btav + wh1a_mean(istep)*wh2b_mean(istep)
+      w1b2atav = w1b2atav + wh1b_mean(istep)*wh2a_mean(istep)
+      w1b2btav = w1b2btav + wh1b_mean(istep)*wh2b_mean(istep)
+      w2a2btav = w2a2btav + wh2a_mean(istep)*wh2b_mean(istep)
+
+      c1a1btav = (w1a1btav/istep - w1atav*w1btav/istep/istep) / &
+      & sqrt((w1a1atav/istep - w1atav*w1atav/istep/istep)* &
+      &      (w1b1btav/istep - w1btav*w1btav/istep/istep))
+
+      c1a2atav = (w1a2atav/istep - w1atav*w2atav/istep/istep) / &
+      & sqrt((w1a1atav/istep - w1atav*w1atav/istep/istep)* &
+      &      (w2a2atav/istep - w2atav*w2atav/istep/istep))
+
+      c1a2btav = (w1a2btav/istep - w1atav*w2btav/istep/istep) / &
+      & sqrt((w1a1atav/istep - w1atav*w1atav/istep/istep)* &
+      &      (w2b2btav/istep - w2btav*w2btav/istep/istep))
+
+      c1b2atav = (w1b2atav/istep - w1btav*w2atav/istep/istep) / &
+      & sqrt((w1b1btav/istep - w1btav*w1btav/istep/istep)* &
+      &      (w2a2atav/istep - w2atav*w2atav/istep/istep))
+
+      c1b2btav = (w1b2btav/istep - w1btav*w2btav/istep/istep) / &
+      & sqrt((w1b1btav/istep - w1btav*w1btav/istep/istep)* &
+      &      (w2b2btav/istep - w2btav*w2btav/istep/istep))
+
+      c2a2btav = (w2a2btav/istep - w2atav*w2btav/istep/istep) / &
+      & sqrt((w2a2atav/istep - w2atav*w2atav/istep/istep)* &
+      &      (w2b2btav/istep - w2btav*w2btav/istep/istep))
+
+      write(2,'(11g20.10)') time(1,1), w1atav/istep, w1btav/istep, w2atav/istep, w2btav/istep, &
+                                     & c1a1btav, c1a2atav, c1a2btav, c1b2atav, c1b2btav, c2a2btav
+
+   enddo
+
+   close(2)
+
+   time_end = secondi()
+   write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
+
+   !--------------------------------------------------------------------
+   !--(11)-- Cross-correlations of running (local) time-averages
+   !         of EVB weights
+   !--------------------------------------------------------------------
+
+   write(*,'(/1x,"Building cross-correlations of running time-averages for EVB weights... ",$)')
+   time_start = secondi()
+
+   !-- time interval for averaging (number of timesteps),
+   !   must be an odd number
+
+   open(2,file="weights_corr_rtav.dat")
+   write(2,'("#--- Time interval for averaging (ps): ",f12.6)') (ndt-1)*(time(1,2)-time(1,1))
+   write(2,'("#",t10,"time(ps)",t30,"<w1atav>",t50,"<w1btav>",t70,"<w2atav>",t90,"<w2btav>",t110,"<c1a1btav>",t130,"<c1a2atav>",t150,"<c1a2btav>",t170,"<c1b2atav>",t190,"<c1b2btav>",t210,"<c2a2btav>")')
+
+   do istep=1+ndt2,number_of_timesteps-ndt2
+
+      w1atav  = 0.d0
+      w1btav  = 0.d0
+      w2atav  = 0.d0
+      w2btav  = 0.d0
+
+      w1a1atav = 0.d0
+      w1b1btav = 0.d0
+      w2a2atav = 0.d0
+      w2b2btav = 0.d0
+
+      c1a1btav = 0.d0
+      c1a2atav = 0.d0
+      c1a2btav = 0.d0
+      c1b2atav = 0.d0
+      c1b2btav = 0.d0
+      c2a2btav = 0.d0
+
+      do i=istep-ndt2,istep+ndt2
+
+
+         w1atav = w1atav + w1a_mean(i)
+         w1btav = w1btav + w1b_mean(i)
+         w2atav = w2atav + w2a_mean(i)
+         w2btav = w2btav + w2b_mean(i)
+
+         w1a1atav = w1a1atav + w1a_mean(i)*w1a_mean(i)
+         w1b1btav = w1b1btav + w1b_mean(i)*w1b_mean(i)
+         w2a2atav = w2a2atav + w2a_mean(i)*w2a_mean(i)
+         w2b2btav = w2b2btav + w2b_mean(i)*w2b_mean(i)
+
+         w1a1btav = w1a1btav + w1a_mean(i)*w1b_mean(i)
+         w1a2atav = w1a2atav + w1a_mean(i)*w2a_mean(i)
+         w1a2btav = w1a2btav + w1a_mean(i)*w2b_mean(i)
+         w1b2atav = w1b2atav + w1b_mean(i)*w2a_mean(i)
+         w1b2btav = w1b2btav + w1b_mean(i)*w2b_mean(i)
+         w2a2btav = w2a2btav + w2a_mean(i)*w2b_mean(i)
+
+      enddo
+
+      w1atav = w1atav/ndt
+      w1btav = w1btav/ndt
+      w2atav = w2atav/ndt
+      w2btav = w2btav/ndt
+
+      w1a1atav = w1a1atav/ndt
+      w1b1btav = w1b1btav/ndt
+      w2a2atav = w2a2atav/ndt
+      w2b2btav = w2b2btav/ndt
+
+      w1a1btav = w1a1btav/ndt
+      w1a2atav = w1a2atav/ndt
+      w1a2btav = w1a2btav/ndt
+      w1b2atav = w1b2atav/ndt
+      w1b2btav = w1b2btav/ndt
+      w2a2btav = w2a2btav/ndt
+
+      c1a1btav = (w1a1btav - w1atav*w1btav) / &
+      & sqrt((w1a1atav - w1atav*w1atav)*(w1b1btav - w1btav*w1btav))
+
+      c1a2atav = (w1a2atav - w1atav*w2atav) / &
+      & sqrt((w1a1atav - w1atav*w1atav)*(w2a2atav - w2atav*w2atav))
+
+      c1a2btav = (w1a2btav - w1atav*w2btav) / &
+      & sqrt((w1a1atav - w1atav*w1atav)*(w2b2btav - w2btav*w2btav))
+
+      c1b2atav = (w1b2atav - w1btav*w2atav) / &
+      & sqrt((w1b1btav - w1btav*w1btav)*(w2a2atav - w2atav*w2atav))
+
+      c1b2btav = (w1b2btav - w1btav*w2btav) / &
+      & sqrt((w1b1btav - w1btav*w1btav)*(w2b2btav - w2btav*w2btav))
+
+      c2a2btav = (w2a2btav - w2atav*w2btav) / &
+      & sqrt((w2a2atav - w2atav*w2atav)*(w2b2btav - w2btav*w2btav))
+
+      write(2,'(11g20.10)') time(1,istep), w1atav, w1btav, w2atav, w2btav, c1a1btav, c1a2atav, c1a2btav, c1b2atav, c1b2btav, c2a2btav
+
+   enddo
+
+   close(2)
+
+
+   !-- for mean weights calculated by assignment
+
+   open(2,file="weights_assigned_corr_rtav.dat")
+   write(2,'("#--- Time interval for averaging (ps): ",f12.6)') (ndt-1)*(time(1,2)-time(1,1))
+   write(2,'("#",t10,"time(ps)",t30,"<w1atav>",t50,"<w1btav>",t70,"<w2atav>",t90,"<w2btav>",t110,"<c1a1btav>",t130,"<c1a2atav>",t150,"<c1a2btav>",t170,"<c1b2atav>",t190,"<c1b2btav>",t210,"<c2a2btav>")')
+
+   do istep=1+ndt2,number_of_timesteps-ndt2
+
+      w1atav  = 0.d0
+      w1btav  = 0.d0
+      w2atav  = 0.d0
+      w2btav  = 0.d0
+
+      w1a1atav = 0.d0
+      w1b1btav = 0.d0
+      w2a2atav = 0.d0
+      w2b2btav = 0.d0
+
+      c1a1btav = 0.d0
+      c1a2atav = 0.d0
+      c1a2btav = 0.d0
+      c1b2atav = 0.d0
+      c1b2btav = 0.d0
+      c2a2btav = 0.d0
+
+      do i=istep-ndt2,istep+ndt2
+
+         w1atav = w1atav + wh1a_mean(i)
+         w1btav = w1btav + wh1b_mean(i)
+         w2atav = w2atav + wh2a_mean(i)
+         w2btav = w2btav + wh2b_mean(i)
+
+         w1a1atav = w1a1atav + wh1a_mean(i)*wh1a_mean(i)
+         w1b1btav = w1b1btav + wh1b_mean(i)*wh1b_mean(i)
+         w2a2atav = w2a2atav + wh2a_mean(i)*wh2a_mean(i)
+         w2b2btav = w2b2btav + wh2b_mean(i)*wh2b_mean(i)
+
+         w1a1btav = w1a1btav + wh1a_mean(i)*wh1b_mean(i)
+         w1a2atav = w1a2atav + wh1a_mean(i)*wh2a_mean(i)
+         w1a2btav = w1a2btav + wh1a_mean(i)*wh2b_mean(i)
+         w1b2atav = w1b2atav + wh1b_mean(i)*wh2a_mean(i)
+         w1b2btav = w1b2btav + wh1b_mean(i)*wh2b_mean(i)
+         w2a2btav = w2a2btav + wh2a_mean(i)*wh2b_mean(i)
+
+      enddo
+
+      w1atav = w1atav/ndt
+      w1btav = w1btav/ndt
+      w2atav = w2atav/ndt
+      w2btav = w2btav/ndt
+
+      w1a1atav = w1a1atav/ndt
+      w1b1btav = w1b1btav/ndt
+      w2a2atav = w2a2atav/ndt
+      w2b2btav = w2b2btav/ndt
+
+      w1a1btav = w1a1btav/ndt
+      w1a2atav = w1a2atav/ndt
+      w1a2btav = w1a2btav/ndt
+      w1b2atav = w1b2atav/ndt
+      w1b2btav = w1b2btav/ndt
+      w2a2btav = w2a2btav/ndt
+
+      c1a1btav = (w1a1btav - w1atav*w1btav) / &
+      & sqrt((w1a1atav - w1atav*w1atav)*(w1b1btav - w1btav*w1btav))
+
+      c1a2atav = (w1a2atav - w1atav*w2atav) / &
+      & sqrt((w1a1atav - w1atav*w1atav)*(w2a2atav - w2atav*w2atav))
+
+      c1a2btav = (w1a2btav - w1atav*w2btav) / &
+      & sqrt((w1a1atav - w1atav*w1atav)*(w2b2btav - w2btav*w2btav))
+
+      c1b2atav = (w1b2atav - w1btav*w2atav) / &
+      & sqrt((w1b1btav - w1btav*w1btav)*(w2a2atav - w2atav*w2atav))
+
+      c1b2btav = (w1b2btav - w1btav*w2btav) / &
+      & sqrt((w1b1btav - w1btav*w1btav)*(w2b2btav - w2btav*w2btav))
+
+      c2a2btav = (w2a2btav - w2atav*w2btav) / &
+      & sqrt((w2a2atav - w2atav*w2atav)*(w2b2btav - w2btav*w2btav))
+
+      write(2,'(11g20.10)') time(1,istep), w1atav, w1btav, w2atav, w2btav, c1a1btav, c1a2atav, c1a2btav, c1b2atav, c1b2btav, c2a2btav
+
+   enddo
+
+   close(2)
+
+   time_end = secondi()
+   write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
+
+   deallocate (w1a_mean,wh1a_mean)
+   deallocate (w1b_mean,wh1b_mean)
+   deallocate (w2a_mean,wh2a_mean)
+   deallocate (w2b_mean,wh2b_mean)
    deallocate (w1ab_mean,w2ab_mean)
-   deallocate (cw_cross)
 
    !---------------------------------------------------------------
-   !--(9)-- Time-dependent adiabatic populations
+   !--(10)-- Time-dependent adiabatic populations
    !---------------------------------------------------------------
 
    write(*,'(/1x,"Building time-dependent adiabatic populations... ",$)')
