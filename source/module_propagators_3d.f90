@@ -5,9 +5,12 @@ module propagators_3d
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2011-04-13 23:49:48 $
-   !  $Revision: 5.15 $
+   !  $Date: 2011-06-03 05:05:45 $
+   !  $Revision: 5.16 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.15  2011/04/13 23:49:48  souda
+   !  Minor restructuring of modules and addition of LAPACK diagonalization wrappers
+   !
    !  Revision 5.14  2011/03/28 20:58:46  souda
    !  changes caused by the changes in random_generators module
    !
@@ -1176,13 +1179,13 @@ contains
    !-- Runge-Cutta 2-nd order for overdamped Langevin equation
    !   [Honeycutt, Phys. Rev. A, 1992, 45, 600]
    !--------------------------------------------------------------------
-   subroutine langevin_debye_2d(istate,kg,z1,z2,vz1,vz2,dt,temp,ekin,efes)
+   subroutine langevin_debye_2d(istate,kg,z1,z2,vz1,vz2,dt,temp,ekin1,ekin2,efes)
 
       implicit none
       integer, intent(in)    :: istate, kg
       real(8), intent(in)    :: dt, temp
       real(8), intent(inout) :: z1, z2, vz1, vz2
-      real(8), intent(out)   :: ekin, efes
+      real(8), intent(out)   :: ekin1, ekin2, efes
 
       integer :: i, ndabf
       real(8) :: d, psi, psi_factor             !, zp, ze, gp, ge
@@ -1240,12 +1243,9 @@ contains
       !-- current free energy (PMF)
       efes = fe(istate)
 
-      !-- calculate kinetic energy
-      ekin = 0.d0
-      do i=1,2
-         ekin = ekin + v(i)*v(i)
-      enddo
-      ekin = half*f0*tau0*taul*ekin
+      !-- calculate kinetic energies for both degrees of freedom
+      ekin1 = half*f0*tau0*taul*v(1)*v(1)
+      ekin2 = half*f0*tau0*taul*v(2)*v(2)
 
    end subroutine langevin_debye_2d
 
@@ -1254,13 +1254,13 @@ contains
    !   for Onodera model
    !   [Chem. Phys. Lett., 2006, 429, 310-316, Eq.23]
    !--------------------------------------------------------------------
-   subroutine langevin_onodera_2d(istate,kg,z1,z2,vz1,vz2,dt,temp,ekin,efes)
+   subroutine langevin_onodera_2d(istate,kg,z1,z2,vz1,vz2,dt,temp,ekin1,ekin2,efes)
 
       implicit none
       integer, intent(in)    :: istate, kg
       real(8), intent(in)    :: dt, temp
       real(8), intent(inout) :: z1, z2, vz1, vz2
-      real(8), intent(out)   :: ekin, efes
+      real(8), intent(out)   :: ekin1, ekin2, efes
 
       real(8), parameter :: half=0.5d0
       real(8), parameter :: eighth=1.d0/8.d0
@@ -1386,12 +1386,9 @@ contains
       vz1 = v(1)
       vz2 = v(2)
 
-      !-- calculate kinetic energy
-      ekin = 0.d0
-      do i=1,2
-         ekin = ekin + v(i)*v(i)
-      enddo
-      ekin = half*f0*tau0*taul*ekin
+      !-- calculate kinetic energies for both degrees of freedom
+      ekin1 = half*f0*tau0*taul*v(1)*v(1)
+      ekin2 = half*f0*tau0*taul*v(2)*v(2)
 
    end subroutine langevin_onodera_2d
    !--------------------------------------------------------------------

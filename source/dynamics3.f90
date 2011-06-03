@@ -140,9 +140,12 @@ subroutine dynamics3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-04-13 23:49:48 $
-!  $Revision: 5.16 $
+!  $Date: 2011-06-03 05:05:45 $
+!  $Revision: 5.17 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.16  2011/04/13 23:49:48  souda
+!  Minor restructuring of modules and addition of LAPACK diagonalization wrappers
+!
 !  Revision 5.15  2011/03/28 21:34:53  souda
 !  List of additions:
 !  (1) keyword DUNISEEDS for manual input of random seeds for DUNI generator;
@@ -257,7 +260,8 @@ subroutine dynamics3
    real(8) :: zeit_start, zeit_end, zeit_total, traj_time_start, traj_time_end
    real(8) :: zeit, zeit_prev
    real(8) :: zeitq, zeitq_prev
-   real(8) :: z1, z2, zp, ze, vz1, vz2, vzp, vze, z10, z20, zp0, ze0, ekin, efes
+   real(8) :: z1, z2, zp, ze, vz1, vz2, vzp, vze, z10, z20, zp0, ze0
+   real(8) :: ekin, ekin1, ekin2, efes
    real(8) :: vz1_prev, vz2_prev
    real(8) :: pump_e, pump_w, vib_linewidth
    real(8) :: qtstep_var
@@ -1476,11 +1480,11 @@ subroutine dynamics3
       write(itraj_channel,'("#   Data for the trajectory #",i6.6)') itraj
       if (weights) then
          write(itraj_channel,'("#",168("-"))')
-         write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"z2",t44,"vz1",t56,"vz2",t68,"zp",t80,"ze",t92,"vzp",t103,"vze",t115,"Ekin",t126,"Efe",t135,"occ.",t142,"EVB weights (1a,1b,2a,2b)")')
+         write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"z2",t44,"vz1",t56,"vz2",t68,"zp",t80,"ze",t92,"vzp",t103,"vze",t115,"Ekin",t126,"Efe",t135,"occ.",t142,"EVB weights (1a,1b,2a,2b)       Ekin1      Ekin2")')
          write(itraj_channel,'("#",168("-"))')
       else
          write(itraj_channel,'("#",141("-"))')
-         write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"z2",t44,"vz1",t56,"vz2",t68,"zp",t80,"ze",t92,"vzp",t103,"vze",t115,"Ekin",t126,"Efe",t135,"occ.")')
+         write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"z2",t44,"vz1",t56,"vz2",t68,"zp",t80,"ze",t92,"vzp",t103,"vze",t115,"Ekin",t126,"Efe",t135,"occ.",t144,"Ekin1",t153,"Ekin2")')
          write(itraj_channel,'("#",141("-"))')
       endif
 
@@ -1502,14 +1506,16 @@ subroutine dynamics3
       efes = get_free_energy(istate)
 
       !-- initial kinetic energy                                                                                                                           
-      ekin = half*f0*tau0*taul*(vz1*vz1 + vz2*vz2)
+      ekin1 = half*f0*tau0*taul*vz1*vz1
+      ekin2 = half*f0*tau0*taul*vz2*vz2
+      ekin = ekin1 + ekin2
 
       if (weights) then
-          write(itraj_channel,'(f12.6,10f12.5,i5,4f8.3)') &
-          & 0.d0, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn)
+          write(itraj_channel,'(f12.6,10f12.5,i5,4f8.3,2f12.5)') &
+          & 0.d0, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn), ekin1, ekin2
       else
-          write(itraj_channel,'(f12.6,10f12.5,i5)') &
-          & 0.d0, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate
+          write(itraj_channel,'(f12.6,10f12.5,i5,2f12.5)') &
+          & 0.d0, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate, ekin1, ekin2
       endif
 
       number_of_switches = 0
@@ -1543,26 +1549,30 @@ subroutine dynamics3
          if (solvent_model.eq."DEBYE") then
          
             !-- overdamped Langevin equation (pure Debye model)
-            call langevin_debye_2d(istate,kg0,z1,z2,vz1,vz2,tstep,temp,ekin,efes)
+            call langevin_debye_2d(istate,kg0,z1,z2,vz1,vz2,tstep,temp,ekin1,ekin2,efes)
+            ekin = ekin1 + ekin2
 
          elseif (solvent_model.eq."DEBYE2") then
 
             !-- overdamped Langevin equation with memory friction
             !   (Debye model with two relaxation periods)
-            !call langevin_debye2_2d(istate,kg0,z1,z2,vz1,vz2,tstep,temp,ekin,efes)
+            !call langevin_debye2_2d(istate,kg0,z1,z2,vz1,vz2,tstep,temp,ekin1,ekin2,efes)
+            !ekin = ekin1 + ekin2
             write(*,'(/1x,"DYNAMICS3: Debye2 propagator is not coded yet...")')
             call clean_exit
 
          elseif (solvent_model.eq."ONODERA") then
 
             !-- ordinary Langevin equation (Onodera model)
-            call langevin_onodera_2d(istate,kg0,z1,z2,vz1,vz2,tstep,temp,ekin,efes)
+            call langevin_onodera_2d(istate,kg0,z1,z2,vz1,vz2,tstep,temp,ekin1,ekin2,efes)
+            ekin = ekin1 + ekin2
 
          elseif (solvent_model.eq."ONODERA2") then
 
             !-- ordinary Langevin equation with memory friction
             !   (Onodera model with two relaxation periods)
-            !call langevin_onodera2_2d(istate,kg0,z1,z2,vz1,vz2,tstep,temp,ekin,efes)
+            !call langevin_onodera2_2d(istate,kg0,z1,z2,vz1,vz2,tstep,temp,ekin1,ekin2,efes)
+            !ekin = ekin1 + ekin2
             write(*,'(/1x,"DYNAMICS3: Onodera2 propagator is not coded yet...")')
             call clean_exit
 
@@ -1745,11 +1755,11 @@ subroutine dynamics3
 
          if (mod(istep,ndump).eq.0) then
             if (weights) then
-               write(itraj_channel,'(f12.6,10f12.5,i5,4f8.3)') &
-               & zeit, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn)
+               write(itraj_channel,'(f12.6,10f12.5,i5,4f8.3,2f12.5)') &
+               & zeit, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn), ekin1, ekin2
             else
-               write(itraj_channel,'(f12.6,10f12.5,i5)') &
-               & zeit, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate
+               write(itraj_channel,'(f12.6,10f12.5,i5,2f12.5)') &
+               & zeit, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate, ekin1, ekin2
             endif
          endif
 
