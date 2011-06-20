@@ -5,9 +5,12 @@
 !  March 14, 2011
 !
 !  $Author: souda $
-!  $Date: 2011-05-07 04:38:03 $
-!  $Revision: 1.13 $
+!  $Date: 2011-06-20 22:04:39 $
+!  $Revision: 1.14 $
 !  $Log: not supported by cvs2svn $
+!  Revision 1.13  2011/05/07 04:38:03  souda
+!  Several silly bugs fixed (sorry, analysis to be rerun...)
+!
 !  Revision 1.12  2011/05/07 03:06:28  souda
 !  Added combined mean weights 1a/2a and 1b/2b (Sharons suggestion)
 !
@@ -58,7 +61,7 @@ program analyze_trajectories
    real(kind=8) :: z1_min, z1_max, z2_min, z2_max
    real(kind=8) :: zp_min, zp_max, ze_min, ze_max
    real(kind=8) :: z1_curr, z2_curr, zp_curr, ze_curr
-   real(kind=8) :: z1_0, z2_0, zp_0, ze_0, efe_curr, ekin_curr
+   real(kind=8) :: z1_0, z2_0, zp_0, ze_0, efe_curr, ekin_curr, ekin_z1_curr, ekin_z2_curr
    real(kind=8) :: time_start, time_end, total_time_start, total_time_end
 
    real(kind=8) :: bin_width_z1, bin_width_z2, bin_width_zp, bin_width_ze
@@ -81,7 +84,7 @@ program analyze_trajectories
    real(kind=8), dimension(:,:),   allocatable :: time
    real(kind=8), dimension(:,:),   allocatable :: z1, z2
    real(kind=8), dimension(:,:),   allocatable :: zp, ze
-   real(kind=8), dimension(:,:),   allocatable :: ekin, efe
+   real(kind=8), dimension(:,:),   allocatable :: ekin, ekin_z1, ekin_z2, efe
    real(kind=8), dimension(:,:),   allocatable :: w1a, w1b, w2a, w2b
    real(kind=8), dimension(:,:),   allocatable :: histogram_z12
    real(kind=8), dimension(:,:),   allocatable :: histogram_zpe
@@ -94,7 +97,7 @@ program analyze_trajectories
    real(kind=8), dimension(:),     allocatable :: z1_mean, z2_mean, zp_mean, ze_mean
    real(kind=8), dimension(:),     allocatable :: z1_var, z2_var, z12_var, zp_var, ze_var, zpe_var
    real(kind=8), dimension(:),     allocatable :: z11_tcf, z22_tcf, z12_tcf, zpp_tcf, zee_tcf, zpe_tcf
-   real(kind=8), dimension(:),     allocatable :: efe_mean, ekin_mean
+   real(kind=8), dimension(:),     allocatable :: efe_mean, ekin_mean, ekin_z1_mean, ekin_z2_mean
    real(kind=8), dimension(:),     allocatable :: w1a_mean, w1b_mean, w2a_mean, w2b_mean
    real(kind=8), dimension(:),     allocatable :: wh1a_mean, wh1b_mean, wh2a_mean, wh2b_mean
    real(kind=8), dimension(:),     allocatable :: w1ab_mean, w2ab_mean, w12a_mean, w12b_mean
@@ -157,6 +160,8 @@ program analyze_trajectories
    allocate(zp(number_of_traj,number_of_timesteps))
    allocate(ze(number_of_traj,number_of_timesteps))
    allocate(ekin(number_of_traj,number_of_timesteps))
+   allocate(ekin_z1(number_of_traj,number_of_timesteps))
+   allocate(ekin_z2(number_of_traj,number_of_timesteps))
    allocate(efe(number_of_traj,number_of_timesteps))
    allocate(istate(number_of_traj,number_of_timesteps))
    allocate(w1a(number_of_traj,number_of_timesteps))
@@ -191,7 +196,7 @@ program analyze_trajectories
          !-- skip comments and empty lines
          if (record(1:1).eq."#".or.record.eq."") cycle
 
-         call readrec(record,"rrrrrrrrrrrirrrr",carr,iarr,rarr)
+         call readrec(record,"rrrrrrrrrrrirrrrrr",carr,iarr,rarr)
 
          nsteps = nsteps + 1
 
@@ -221,6 +226,9 @@ program analyze_trajectories
          w1b(itraj,nsteps) = rarr(13)/100.d0
          w2a(itraj,nsteps) = rarr(14)/100.d0
          w2b(itraj,nsteps) = rarr(15)/100.d0
+
+         ekin_z1(itraj,nsteps) = rarr(16)
+         ekin_z2(itraj,nsteps) = rarr(17)
 
       enddo loop_over_timesteps
 
@@ -1039,20 +1047,31 @@ program analyze_trajectories
    allocate (efe_mean(number_of_timesteps))
    allocate (ekin_mean(number_of_timesteps))
 
+   allocate (ekin_z1_mean(number_of_timesteps))
+   allocate (ekin_z2_mean(number_of_timesteps))
+
    do istep=1,number_of_timesteps
 
       efe_mean(istep) = 0.d0
       ekin_mean(istep) = 0.d0
+      ekin_z1_mean(istep) = 0.d0
+      ekin_z2_mean(istep) = 0.d0
 
       do itraj=1,number_of_traj
          efe_curr = efe(itraj,istep)
          ekin_curr = ekin(itraj,istep)
+         ekin_z1_curr = ekin_z1(itraj,istep)
+         ekin_z2_curr = ekin_z2(itraj,istep)
          efe_mean(istep) = efe_mean(istep) + efe_curr
          ekin_mean(istep) = ekin_mean(istep) + ekin_curr
+         ekin_z1_mean(istep) = ekin_z1_mean(istep) + ekin_z1_curr
+         ekin_z2_mean(istep) = ekin_z2_mean(istep) + ekin_z2_curr
       enddo
 
       efe_mean(istep) = efe_mean(istep)/number_of_traj
       ekin_mean(istep) = ekin_mean(istep)/number_of_traj
+      ekin_z1_mean(istep) = ekin_z1_mean(istep)/number_of_traj
+      ekin_z2_mean(istep) = ekin_z2_mean(istep)/number_of_traj
 
    enddo
 
@@ -1060,16 +1079,16 @@ program analyze_trajectories
 
    open(2,file="ene_mean.dat")
    write(2,'("#",79("-"))')
-   write(2,'("#",t10,"time",t25,"Free energy",t45,"Kinetic energy")')
-   write(2,'("#",t10,"(ps)",t25,"(kcal/mol) ",t45,"  (kcal/mol)  ")')
+   write(2,'("#",t10,"time",t25,"Free energy",t45,"Kinetic energy",t65,"Kinetic (z1)",t85,"Kinetic (z2)")')
+   write(2,'("#",t10,"(ps)",t25,"(kcal/mol) ",t45,"  (kcal/mol)  ",t65,"  (kcal/mol)  ",t85,"  (kcal/mol)  ")')
    write(2,'("#",79("-"))')
    do istep=1,number_of_timesteps
-      write(2,'(3g20.10)') time(1,istep), efe_mean(istep), ekin_mean(istep)
+      write(2,'(5g20.10)') time(1,istep), efe_mean(istep), ekin_mean(istep), ekin_z1_mean(istep), ekin_z2_mean(istep)
    enddo
    close(2)
 
    deallocate (efe_mean)
-   deallocate (ekin_mean)
+   deallocate (ekin_mean, ekin_z1_mean, ekin_z2_mean)
 
    time_end = secondi()
    write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
@@ -1270,7 +1289,7 @@ program analyze_trajectories
    write(2,'("#",t10,"time(ps)",t30,"1a-1b",t50,"1a-2a",t70,"1a-2b",t90,"1b-2a",t110,"1b-2b",t130,"2a-2b")')
    write(2,'("#",139("-"))')
    do istep=1,number_of_timesteps
-      write(2,'(7g20.10)') time(1,istep), (cw_cross(k,istep),k=1,6)
+      write(2,'(8g20.10)') time(1,istep), (cw_cross(k,istep),k=1,6)
    enddo
    write(2,'("#",139("-"))')
    close(2)
@@ -1708,6 +1727,8 @@ contains
       if (allocated(zp)) deallocate(zp)
       if (allocated(ze)) deallocate(ze)
       if (allocated(ekin)) deallocate(ekin)
+      if (allocated(ekin_z1)) deallocate(ekin_z1)
+      if (allocated(ekin_z2)) deallocate(ekin_z2)
       if (allocated(efe)) deallocate(efe)
       if (allocated(istate)) deallocate(istate)
       if (allocated(istate_occ)) deallocate(istate_occ)
@@ -1743,6 +1764,8 @@ contains
       if (allocated(zee_tcf)) deallocate(zee_tcf)
       if (allocated(zpe_tcf)) deallocate(zpe_tcf)
       if (allocated(ekin_mean)) deallocate(ekin_mean)
+      if (allocated(ekin_z1_mean)) deallocate(ekin_z1_mean)
+      if (allocated(ekin_z2_mean)) deallocate(ekin_z2_mean)
       if (allocated(efe_mean)) deallocate(efe_mean)
       if (allocated(w1a_mean)) deallocate(w1a_mean)
       if (allocated(w1b_mean)) deallocate(w1b_mean)
