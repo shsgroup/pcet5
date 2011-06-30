@@ -45,9 +45,15 @@ subroutine surface2
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-20 00:58:11 $
-!  $Revision: 5.3 $
+!  $Date: 2011-06-30 20:37:09 $
+!  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.3  2011/02/20 00:58:11  souda
+!  Major additions/modifications:
+!  (1) precalculation of the proton vibrational basis functions for METHOD=1
+!  (2) Franck-Condon initial excitation added to DYNAMICS3
+!  (3) addition of the module timers: module_timers.f90 (changes in Makefile!)
+!
 !  Revision 5.2  2010/10/28 21:29:37  souda
 !  First (working and hopefully bug-free) source of PCET 5.x
 !
@@ -67,7 +73,7 @@ subroutine surface2
    implicit none
 
    character(1024) :: options
-   character(  40) :: fname
+   character( 160) :: fname
    character(  20) :: zdim
    character(   5) :: mode
 

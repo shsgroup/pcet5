@@ -42,9 +42,15 @@ subroutine surface3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-20 00:58:11 $
-!  $Revision: 5.3 $
+!  $Date: 2011-06-30 20:37:09 $
+!  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.3  2011/02/20 00:58:11  souda
+!  Major additions/modifications:
+!  (1) precalculation of the proton vibrational basis functions for METHOD=1
+!  (2) Franck-Condon initial excitation added to DYNAMICS3
+!  (3) addition of the module timers: module_timers.f90 (changes in Makefile!)
+!
 !  Revision 5.2  2010/10/28 21:29:37  souda
 !  First (working and hopefully bug-free) source of PCET 5.x
 !
@@ -65,7 +71,7 @@ subroutine surface3
    implicit none
 
    character(1024) :: options
-   character(  40) :: fname
+   character( 160) :: fname
    character(  20) :: zdim
    character(   5) :: mode
 
@@ -522,9 +528,9 @@ subroutine surface3
 
             call feszz3(mode,1,kg,zp0,ze0,nstates,fe,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
             if (gatedim) then
-               write(1,'(3f10.3,2x,20(1x,g15.9))') z1,z2,rkg,(fe(i),i=1,nstates)
+               write(1,'(3f10.3,2x,40(1x,g15.9))') z1,z2,rkg,(fe(i),i=1,nstates)
             else
-               write(1,'(2f10.3,2x,20(1x,g15.9))') z1,z2,(fe(i),i=1,nstates)     !, fe(2)-fe(1)  !===DEBUG
+               write(1,'(2f10.3,2x,40(1x,g15.9))') z1,z2,(fe(i),i=1,nstates)     !, fe(2)-fe(1)  !===DEBUG
             endif
 
             if (weights) then
@@ -585,11 +591,11 @@ subroutine surface3
                   enddo
                endif
                if (gatedim) then
-                  write(11,'(2f10.3,30(1x,g15.9))') z1,z2,rkg,&
+                  write(11,'(2f10.3,40(1x,g15.9))') z1,z2,rkg,&
                   &(dklp(npair(i,1),npair(i,2)),dkle(npair(i,1),npair(i,2)),&
                   &sqrt(dklp(npair(i,1),npair(i,2))**2 + dkle(npair(i,1),npair(i,2))**2),i=1,ndkl)
                else
-                  write(11,'(2f10.3,30(1x,g15.9))') z1,z2,&
+                  write(11,'(2f10.3,40(1x,g15.9))') z1,z2,&
                   &(dklp(npair(i,1),npair(i,2)),dkle(npair(i,1),npair(i,2)),&
                   &sqrt(dklp(npair(i,1),npair(i,2))**2 + dkle(npair(i,1),npair(i,2))**2),i=1,ndkl)
                   !&(dklp_num(npair(i,1),npair(i,2)),dkle_num(npair(i,1),npair(i,2)),&                        !===DEBUG
@@ -600,9 +606,9 @@ subroutine surface3
             if (diab2) then
                call feszz3(mode,2,kg,zp0,ze0,nstates,fe,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
                if (gatedim) then
-                  write(2,'(3f10.3,2x,20g15.9)') z1,z2,rkg,(fe(i),i=1,nstates)
+                  write(2,'(3f10.3,2x,40g15.9)') z1,z2,rkg,(fe(i),i=1,nstates)
                else
-                  write(2,'(2f10.3,2x,20g15.9)') z1,z2,(fe(i),i=1,nstates)
+                  write(2,'(2f10.3,2x,40g15.9)') z1,z2,(fe(i),i=1,nstates)
                endif
                if (weights) then
                   call evbwei(mode,2,nstates,ndabf,z,ielst,psiel,psipr,wght)
@@ -618,23 +624,23 @@ subroutine surface3
 
                call feszz3(mode,2,kg,zp0,ze0,nstates,fe,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
                if (gatedim) then
-                  write(2,'(3f10.3,2x,20g15.9)') z1,z2,rkg,(fe(i),i=1,nstates)
+                  write(2,'(3f10.3,2x,40g15.9)') z1,z2,rkg,(fe(i),i=1,nstates)
                else
-                  write(2,'(2f10.3,2x,20g15.9)') z1,z2,(fe(i),i=1,nstates)
+                  write(2,'(2f10.3,2x,40g15.9)') z1,z2,(fe(i),i=1,nstates)
                endif
 
                call feszz3(mode,3,kg,zp0,ze0,nstates,fe,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
                if (gatedim) then
-                  write(3,'(3f10.3,2x,20g15.9)') z1,z2,rkg,(fe(i),i=1,nstates)
+                  write(3,'(3f10.3,2x,40g15.9)') z1,z2,rkg,(fe(i),i=1,nstates)
                else
-                  write(3,'(2f10.3,2x,20g15.9)') z1,z2,(fe(i),i=1,nstates)
+                  write(3,'(2f10.3,2x,40g15.9)') z1,z2,(fe(i),i=1,nstates)
                endif
 
                call feszz3(mode,4,kg,zp0,ze0,nstates,fe,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
                if (gatedim) then
-                  write(4,'(3f10.3,2x,20g15.9)') z1,z2,rkg,(fe(i),i=1,nstates)
+                  write(4,'(3f10.3,2x,40g15.9)') z1,z2,rkg,(fe(i),i=1,nstates)
                else
-                  write(4,'(2f10.3,2x,20g15.9)') z1,z2,(fe(i),i=1,nstates)
+                  write(4,'(2f10.3,2x,40g15.9)') z1,z2,(fe(i),i=1,nstates)
                endif
             endif
 
