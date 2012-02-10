@@ -5,9 +5,12 @@
 !  March 14, 2011
 !
 !  $Author: souda $
-!  $Date: 2011-06-20 22:04:39 $
-!  $Revision: 1.14 $
+!  $Date: 2012-02-10 22:03:44 $
+!  $Revision: 1.15 $
 !  $Log: not supported by cvs2svn $
+!  Revision 1.14  2011/06/20 22:04:39  souda
+!  added mean components of kinetic energy (global)
+!
 !  Revision 1.13  2011/05/07 04:38:03  souda
 !  Several silly bugs fixed (sorry, analysis to be rerun...)
 !
@@ -96,7 +99,8 @@ program analyze_trajectories
    real(kind=8), dimension(:,:),   allocatable :: excited_states_histogram_zpe
    real(kind=8), dimension(:),     allocatable :: z1_mean, z2_mean, zp_mean, ze_mean
    real(kind=8), dimension(:),     allocatable :: z1_var, z2_var, z12_var, zp_var, ze_var, zpe_var
-   real(kind=8), dimension(:),     allocatable :: z11_tcf, z22_tcf, z12_tcf, zpp_tcf, zee_tcf, zpe_tcf
+   real(kind=8), dimension(:),     allocatable :: z11_tcf, z22_tcf, z12_tcf, z21_tcf
+   real(kind=8), dimension(:),     allocatable :: zpp_tcf, zee_tcf, zpe_tcf, zep_tcf
    real(kind=8), dimension(:),     allocatable :: efe_mean, ekin_mean, ekin_z1_mean, ekin_z2_mean
    real(kind=8), dimension(:),     allocatable :: w1a_mean, w1b_mean, w2a_mean, w2b_mean
    real(kind=8), dimension(:),     allocatable :: wh1a_mean, wh1b_mean, wh2a_mean, wh2b_mean
@@ -960,7 +964,8 @@ program analyze_trajectories
    write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
 
    !---------------------------------------------------------------
-   !--(6)-- Time-correlation functions of solvent coordinates
+   !--(6)-- Non-equilibrium time-correlation functions
+   !        of solvent coordinates
    !        (not clear what it means...)
    !---------------------------------------------------------------
 
@@ -970,18 +975,22 @@ program analyze_trajectories
    allocate (z11_tcf(number_of_timesteps))
    allocate (z22_tcf(number_of_timesteps))
    allocate (z12_tcf(number_of_timesteps))
+   allocate (z21_tcf(number_of_timesteps))
    allocate (zpp_tcf(number_of_timesteps))
    allocate (zee_tcf(number_of_timesteps))
    allocate (zpe_tcf(number_of_timesteps))
+   allocate (zep_tcf(number_of_timesteps))
 
    do istep=1,number_of_timesteps
 
       z11_tcf(istep) = 0.d0
       z22_tcf(istep) = 0.d0
       z12_tcf(istep) = 0.d0
+      z21_tcf(istep) = 0.d0
       zpp_tcf(istep) = 0.d0
       zee_tcf(istep) = 0.d0
       zpe_tcf(istep) = 0.d0
+      zep_tcf(istep) = 0.d0
 
       do itraj=1,number_of_traj
 
@@ -998,38 +1007,44 @@ program analyze_trajectories
          z11_tcf(istep) = z11_tcf(istep) + z1_0*z1_curr
          z22_tcf(istep) = z22_tcf(istep) + z2_0*z2_curr
          z12_tcf(istep) = z12_tcf(istep) + z1_0*z2_curr
+         z21_tcf(istep) = z21_tcf(istep) + z2_0*z1_curr
 
          zpp_tcf(istep) = zpp_tcf(istep) + zp_0*zp_curr
          zee_tcf(istep) = zee_tcf(istep) + ze_0*ze_curr
          zpe_tcf(istep) = zpe_tcf(istep) + zp_0*ze_curr
+         zep_tcf(istep) = zep_tcf(istep) + ze_0*zp_curr
 
       enddo
 
       z11_tcf(istep) = z11_tcf(istep)/number_of_traj
       z22_tcf(istep) = z22_tcf(istep)/number_of_traj
       z12_tcf(istep) = z12_tcf(istep)/number_of_traj
+      z21_tcf(istep) = z21_tcf(istep)/number_of_traj
 
       zpp_tcf(istep) = zpp_tcf(istep)/number_of_traj
       zee_tcf(istep) = zee_tcf(istep)/number_of_traj
       zpe_tcf(istep) = zpe_tcf(istep)/number_of_traj
+      zep_tcf(istep) = zep_tcf(istep)/number_of_traj
 
    enddo
 
    !-- output to the external file for visualization
 
    open(2,file="z_tcf.dat")
-   write(2,'("#",t10,"time(ps)",t25,"<z1(0)z1(t)>",t45,"<z2(0)z2(t)>",t65,"<z1(0)z2(t)>",t85,"<zp(0)zp(t)>",t105,"<ze(0)ze(t)>",t125,"<zp(0)ze(t)>")')
+   write(2,'("#",t10,"time(ps)",t25,"<z1(0)z1(t)>",t45,"<z2(0)z2(t)>",t65,"<z1(0)z2(t)>",t85,"<z2(0)z1(t)>",t105,"<zp(0)zp(t)>",t125,"<ze(0)ze(t)>",t145,"<zp(0)ze(t)>",t165,"<ze(0)zp(t)>")')
    do istep=1,number_of_timesteps
-       write(2,'(7g20.10)') time(1,istep), z11_tcf(istep), z22_tcf(istep), z12_tcf(istep), zpp_tcf(istep), zee_tcf(istep), zpe_tcf(istep)
+       write(2,'(9g20.10)') time(1,istep), z11_tcf(istep), z22_tcf(istep), z12_tcf(istep), z21_tcf(istep), zpp_tcf(istep), zee_tcf(istep), zpe_tcf(istep), zep_tcf(istep)
    enddo
    close(2)
 
    deallocate (z11_tcf)
    deallocate (z22_tcf)
    deallocate (z12_tcf)
+   deallocate (z21_tcf)
    deallocate (zpp_tcf)
    deallocate (zee_tcf)
    deallocate (zpe_tcf)
+   deallocate (zep_tcf)
 
    deallocate (z1, z2, zp, ze)
    deallocate (z1_mean, z2_mean, zp_mean, ze_mean)
