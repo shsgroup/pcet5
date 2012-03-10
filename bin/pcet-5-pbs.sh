@@ -10,14 +10,16 @@
 HERE=`pwd`
 
 #-- directory where pcet executables reside (change it if needed)
-BINDIR=/home/souda/PCET/pcet-5/bin
+BINDIR=/home/souda/PCET/pcet-5-onodera2/bin
 
 #-- defaults
 NODEID="bigmem"
 PBSQUEUE="batch"
 WALLTIME="720:00:00"
 COMP="intel"
+SCRBASE="local"
 THREADS=1
+NJOBS=1
 
 #-- help
 if [ x$1 == x ]; then
@@ -33,6 +35,7 @@ if [ x$1 == x ]; then
     echo "-s | --scratch-base  : global/local - base scratch directory (default local)"
     echo "-c | --compiler      : intel/pgi - build compiler (default intel)"
     echo "-t | --threads       : number of OpenMP threads used by diagonalization routines"
+    echo "-j | --jobs          : number of jobs to submit (default 1)"
     echo "================================================================================="
     exit 0
 fi
@@ -47,6 +50,7 @@ case $1 in
 -s | --scratch-base ) shift; SCRBASE="$1" ;;
 -c | --compiler ) shift; COMP="$1" ;;
 -t | --threads ) shift; THREADS="$1" ;;
+-j | --jobs ) shift; NJOBS="$1" ;;
 esac
 shift
 done
@@ -56,34 +60,36 @@ if [ ! -e $INPUTFILE ]; then
     exit 1
 fi
 
-INPUTNAME=${INPUTFILE%.*}
-JOBNAME=${INPUTNAME}_$$
-JOBDIR=${INPUTNAME}_$$
-LOGFILE=${INPUTNAME}.log
-
-if [ x$SCRBASE == xglobal ]; then
-   echo Scratch directory - global scratch space on the master node: /scratch/${USER}/${JOBDIR}
-   SCRATCH=/scratch
-elif [ x$SCRBASE == xlocal ]; then
-   echo Scratch directory - local scratch space on the compute node: /scr/${USER}/${JOBDIR}
-   SCRATCH=/scr
-else
-   echo Default scratch directory - local scratch space on the compute node: /scr/${USER}/${JOBDIR}
-   SCRATCH=/scr
-fi
-
-
 if [ x$COMP == xintel ]; then
+   /usr/bin/modulecmd bash load intel/2011_sp1.7.256
    if [ "$THREADS" -gt "1" ]; then
-      EXEC=$BINDIR/pcet_5.1_intel_11.1-x86_64.omp.x
+      EXEC=$BINDIR/pcet_5.2a_intel_2011_sp1-x86_64.omp.x
+      modulecmd sh load mkl/2011_sp1.7.256
    else
-      EXEC=$BINDIR/pcet_5.1_intel_11.1-x86_64.x
+      EXEC=$BINDIR/pcet_5.2a_intel_2011_sp1-x86_64.x
    fi
+   /usr/bin/modulecmd bash list
 elif [ x$COMP == xpgi ]; then
-   EXEC=$BINDIR/pcet_5.1_pgi-9.02-x86_64.x
+   /usr/bin/modulecmd bash load pgi64
+   /usr/bin/modulecmd bash list
+   EXEC=$BINDIR/pcet_5.2a_pgi-9.02-x86_64.x
 else
    echo "Unknown build version: " $COMP
    exit 1
+fi
+
+INPUTNAME=${INPUTFILE%.*}
+LOGFILE=${INPUTNAME}.log
+
+if [ x$SCRBASE == xglobal ]; then
+   echo Scratch directory - global scratch space on the master node: /scratch/${USER}
+   SCRATCH=/scratch
+elif [ x$SCRBASE == xlocal ]; then
+   echo Scratch directory - local scratch space on the compute node: /scr/${USER}
+   SCRATCH=/scr
+else
+   echo Default scratch directory - local scratch space on the compute node: /scr/${USER}
+   SCRATCH=/scr
 fi
 
 echo
@@ -100,8 +106,15 @@ echo "PBSQUEUE  = " $PBSQUEUE
 echo "----------------------------------------"
 echo
 
+
+for job in `seq 1 $NJOBS`
+do
+
+JOBNAME=${INPUTNAME}_$$_job_$job
+JOBDIR=${INPUTNAME}_$$_job_$job
+
 #########################
-# create the PBS script #--------------->
+# create the PBS script 
 #########################
 
 cat << EnD > $JOBNAME.pbs
@@ -112,6 +125,10 @@ cat << EnD > $JOBNAME.pbs
 #PBS -l nodes=1:ppn=$THREADS:$NODEID
 #PBS -j oe
 #PBS -V
+
+modulecmd sh load intel/2011_sp1.7.256
+#modulecmd sh load openmpi/intel/1.5.3
+modulecmd sh load mkl/2011_sp1.7.256
 
 # define and create the scratch directories
 SCRDIR=$SCRATCH/\${PBS_O_LOGNAME}/\${PBS_JOBNAME}_\${PBS_JOBID}
@@ -190,9 +207,14 @@ cp $JOBNAME.tar.gz \$PBS_O_WORKDIR
 echo "Removing scratch directories..."
 rm -rf \$SCRDIR
 
+modulecmd bash purge
+
 EnD
 
 qsub ${HERE}/${JOBNAME}.pbs
+
+done
+
 echo
-echo `date` : The job ${JOBNAME} has been submitted to ${PBSQUEUE} queue
+echo `date` : ${NJOBS} jobs has been submitted to ${PBSQUEUE} queue
 exit 0
