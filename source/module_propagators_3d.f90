@@ -5,9 +5,12 @@ module propagators_3d
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2011-06-03 05:05:45 $
-   !  $Revision: 5.16 $
+   !  $Date: 2012-03-13 22:07:18 $
+   !  $Revision: 5.17 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.16  2011/06/03 05:05:45  souda
+   !  Kinetic energy components are calculated and added to the trajectory data
+   !
    !  Revision 5.15  2011/04/13 23:49:48  souda
    !  Minor restructuring of modules and addition of LAPACK diagonalization wrappers
    !
@@ -172,6 +175,7 @@ module propagators_3d
    public :: get_vibronic_coupling
    public :: langevin_debye_2d
    public :: langevin_onodera_2d
+   public :: langevin_onodera2_2d
    public :: print_propagators_3d
    public :: tdse_derivatives
    public :: propagate_amplitudes_rk4
@@ -630,24 +634,24 @@ contains
 
       !-- Print normalized Franck-Condon probabilities
 
-      write(*,'(/1x,100("="))')
+      write(*,'(/1x,130("="))')
       write(*,'( 1x," Franck-Condon factors (probabilities) for the initial state")')
-      write(*,'( 1x,100("-"))')
+      write(*,'( 1x,130("-"))')
       write(*,'( 1x," Norm of the initial wavefunction before renormalization: ",g20.10)') pnorm
-      write(*,'( 1x,100("-"))')
+      write(*,'( 1x,130("-"))')
 
       do n=1,nstates/10
-         write(6,'(/1x,10i10)') (i,i=(n-1)*10+1,n*10)
-         write(6,'(1x,10f10.6)') (fc_prob(i),i=(n-1)*10+1,n*10)
+         write(6,'(/1x,10i13)') (i,i=(n-1)*10+1,n*10)
+         write(6,'(1x,10f13.6)') (fc_prob(i),i=(n-1)*10+1,n*10)
       enddo
 
       n = mod(nstates,10)
       if (n.gt.0) then
-         write(6,'(/1x,10i10)') (i,i=nstates-n+1,nstates)
-         write(6,'(1x,10f10.6)') (fc_prob(i),i=nstates-n+1,nstates)
+         write(6,'(/1x,10i13)') (i,i=nstates-n+1,nstates)
+         write(6,'(1x,10f13.6)') (fc_prob(i),i=nstates-n+1,nstates)
       endif
 
-      write(*,'(/1x,100("-")/)')
+      write(*,'(/1x,130("-")/)')
 
       !-- renormalization
       !   (we don't normalize here: normalize the initial wavefunction later)
@@ -757,20 +761,20 @@ contains
       enddo
 
       do n=1,nstates/10
-         write(ichannel,'(/1x,10i10)') (i,i=(n-1)*10+1,n*10)
-         write(ichannel,'(1x,10f10.6)') (real(amplitude(i)),i=(n-1)*10+1,n*10)
+         write(ichannel,'(/1x,10i13)') (i,i=(n-1)*10+1,n*10)
+         write(ichannel,'(1x,10f13.6)') (real(amplitude(i)),i=(n-1)*10+1,n*10)
       enddo
 
       n = mod(nstates,10)
       if (n.gt.0) then
-         write(ichannel,'(/1x,10i10)') (i,i=nstates-n+1,nstates)
-         write(ichannel,'(1x,10f10.6)') (real(amplitude(i)),i=nstates-n+1,nstates)
+         write(ichannel,'(/1x,10i13)') (i,i=nstates-n+1,nstates)
+         write(ichannel,'(1x,10f13.6)') (real(amplitude(i)),i=nstates-n+1,nstates)
       endif
       write(6,'(/)')
 
-      write(ichannel,'("#",100("-"))')
+      write(ichannel,'("#",130("-"))')
       write(ichannel,'("#",t10,"Norm:",f15.6)') pnorm
-      write(ichannel,'("#",100("="))')
+      write(ichannel,'("#",130("="))')
 
    end subroutine print_initial_amplitudes
 
@@ -1394,6 +1398,407 @@ contains
    !--------------------------------------------------------------------
 
    !--------------------------------------------------------------------
+   !-- Vanden-Eijnden and Ciccotti 2-nd order propagator
+   !   for Onodera2 model (with two auxiliary variables)
+   !   [Chem. Phys. Lett., 2006, 429, 310-316, Eq.23]
+   !--------------------------------------------------------------------
+   subroutine langevin_onodera2_2d(istate,kg,z1,z2,y1,y2,vz1,vz2,dt,temp,ekin1,ekin2,efes)
+
+      implicit none
+      integer, intent(in)    :: istate, kg
+      real(8), intent(in)    :: dt, temp
+      real(8), intent(inout) :: z1, z2, y1, y2, vz1, vz2
+      real(8), intent(out)   :: ekin1, ekin2, efes
+
+      real(8), parameter :: half=0.5d0
+      real(8), parameter :: eighth=1.d0/8.d0
+      real(8), parameter :: fourth=0.25d0
+      real(8), parameter :: e32=1.5d0
+
+      integer :: i, ndabf
+      real(8) :: sq3
+      real(8) :: d, dy, psi_factor, f1, f2, fr, ynew
+      real(8), dimension(2) :: x, y, v, vy, f, fy, g, mass, gammaz, sigmaz
+      real(8), dimension(2) :: ksiz, etaz, psiy, vhalf
+      real(8) :: dt2, sqdt, dt32                       !, zp, ze, gp, ge
+
+      !-- DEBUG variables
+      !real(8) :: zinc, tr1b, tr2a, fplus, fminus, gzp, gze, gselfzp, gselfze
+
+      sq3 = sqrt(3.d0)
+
+      dt2 = dt*dt
+      sqdt = sqrt(dt)
+      dt32 = dt*sqdt
+
+      x(1) = z1
+      x(2) = z2
+      v(1) = vz1
+      v(2) = vz2
+      y(1) = y1
+      y(2) = y2
+      mass(1) = effmass1
+      mass(2) = effmass2
+
+      !-- define Ciccotti constants
+      gammaz(1) = etax/effmass1
+      gammaz(2) = etax/effmass2
+      sigmaz(1) = sqrt(2*kb*temp*gammaz(1)/effmass1)
+      sigmaz(2) = sqrt(2*kb*temp*gammaz(2)/effmass2)
+
+      !-- define Honeycutt constants
+      if (abs(etay).gt.1.d-20) then
+         d = kb*temp/etay
+      else
+         d = 0.d0
+      endif
+      psi_factor = sqrt(2.d0*d*dt)
+
+      !-- generate two independent random variables ksiz and etaz
+      !   from univariate Gaussian distributions
+      do i=1,2
+         ksiz(i) = gaussdist_boxmuller()
+         etaz(i) = gaussdist_boxmuller()
+      enddo
+
+      !-- generate independent random variables psiy
+      !   from univariate Gaussian distributions (for auxiliary variables)
+      do i=1,2
+         psiy(i) = gaussdist_boxmuller()
+      enddo
+
+
+      !-- regular forces from the self-energy
+      do i=1,2
+         f(i) = -f0*x(i)/mass(i)
+      enddo
+
+
+      !-- regular forces from the effective potential
+      do i=1,2
+         f(i) = f(i) - gamma*(x(i) + y(i))/mass(i)
+      enddo
+
+      !-- calculate vibronic states and vibronic free energies
+      !   REUSE THE VIBRONIC STATES FROM THE END OF THE PREVIOUS TIMESTEP
+      !---(AVS)-call calculate_vibronic_states(kg,x(1),x(2))-------------
+
+      !-- calculate gradients
+      call calculate_gradient(istate,g(1),g(2))
+
+      !=== DEBUG ===> Check numerical gradients ----------------------------------------------------
+      !-zinc = 1.d-4
+      !-tr1b = tr(1,2,32,1)
+      !-tr2a = tr(1,3,32,1)
+      !-call feszz3(mode,iset,kg,zp+zinc/2.d0,ze,nstates,fe,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
+      !-fplus = fe(istate)
+      !-call feszz3(mode,iset,kg,zp-zinc/2.d0,ze,nstates,fe,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
+      !-fminus = fe(istate)
+      !-gzp = (fplus-fminus)/zinc
+      !-gselfzp = 0.5d0*(erx*(tr2a+ze) - eret*(tr1b+zp))/(erx*erx - erpt*eret)
+      !-gzp = gzp - gselfzp
+      !-call feszz3(mode,iset,kg,zp,ze+zinc/2.d0,nstates,fe,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
+      !-fplus = fe(istate)
+      !-call feszz3(mode,iset,kg,zp,ze-zinc/2.d0,nstates,fe,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
+      !-fminus = fe(istate)
+      !-gze = (fplus-fminus)/zinc
+      !-gselfze = 0.5d0*(erx*(tr1b+zp) - erpt*(tr2a+ze))/(erx*erx - erpt*eret)
+      !-gze = gze - gselfze
+      !-write(*,*) "======== DEBUG =====> numerical vs. analytical gradient"
+      !-write(*,'(1x,"Analytical (gp,ge) : ",2f20.10)') gp, ge
+      !-write(*,'(1x,"Numerical (gzp,gze): ",2f20.10)') gzp, gze
+      !=== END DEBUG ===> Check numerical gradients --------------------------------------------------
+
+
+      !-- add forces from the vibronic surface
+      do i=1,2
+         f(i) = f(i) - g(i)/mass(i)
+      enddo
+
+      !-- regular forces for auxiliary variables
+      do i=1,2
+         fy(i) = -gamma*(x(i) + y(i))
+      enddo
+
+      !-- propagate velocities for half-step
+      do i=1,2
+         vhalf(i) = v(i) + half*dt*f(i) - half*dt*gammaz(i)*v(i) &
+         &               + half*sqdt*sigmaz(i)*ksiz(i) &
+         &               - eighth*dt2*gammaz(i)*(f(i) - gammaz(i)*v(i)) &
+         &               - fourth*dt32*gammaz(i)*sigmaz(i)*(half*ksiz(i) + etaz(i)/sq3)
+      enddo
+
+      !-- Honeycutt RK2 propagation for auxiliary variables
+      if (abs(etay).gt.1.d-20) then
+         do i=1,2
+            f1 = fy(i)/etay
+            fr = psi_factor*psiy(i)
+            ynew = y(i) + f1*dt + fr
+            f2 = -gamma*(x(i) + ynew)/etay
+            dy = 0.5d0*dt*(f1 + f2) + fr
+            y(i) = y(i) + dy
+         enddo
+      endif
+
+      !-- propagate positions for one step
+      do i=1,2
+         x(i) = x(i) + dt*vhalf(i) + half*dt32*sigmaz(i)*etaz(i)/sq3
+      enddo
+
+      !-- calculate regular forces at a new position
+      do i=1,2
+         f(i) = -f0*x(i)/mass(i) - gamma*(x(i) + y(i))/mass(i)
+      enddo
+
+      !-- calculate vibronic states and vibronic free energies at new positions
+      call calculate_vibronic_states(kg,x(1),x(2))
+
+      !-- current free energy (PMF)
+      efes = fe(istate)
+
+      !-- calculate gradients
+      call calculate_gradient(istate,g(1),g(2))
+
+      !-- add regular forces from the vibronic surface
+      do i=1,2
+         f(i) = f(i) - g(i)/mass(i)
+      enddo
+
+      !-- propagate velocities for a remaining half step
+      do i=1,2
+         v(i) = vhalf(i) + half*dt*f(i) - half*dt*gammaz(i)*vhalf(i) &
+         &               + half*sqdt*sigmaz(i)*ksiz(i) &
+         &               - eighth*dt2*gammaz(i)*(f(i) - gammaz(i)*vhalf(i)) &
+         &               - fourth*dt32*gammaz(i)*sigmaz(i)*(half*ksiz(i) + etaz(i)/sq3)
+      enddo
+
+      z1 = x(1)
+      z2 = x(2)
+      vz1 = v(1)
+      vz2 = v(2)
+      y1 = y(1)
+      y2 = y(2)
+
+      !-- calculate kinetic energies for both degrees of freedom
+      ekin1 = half*effmass1*v(1)*v(1)
+      ekin2 = half*effmass2*v(2)*v(2)
+
+   end subroutine langevin_onodera2_2d
+   !--------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   !--------------------------------------------------------------------
+   !-- Runge-Cutta 2-nd order for coupled overdamped Langevin equation
+   !   with exponential memory kernel
+   !   [Basilevsky, Chudinov, Mol. Phys. 1990?]
+   !   [Honeycutt, Phys. Rev. A, 1992, 45, 600]
+   !--------------------------------------------------------------------
+   subroutine langevin_debye2_2d(istate,kg,z1,z2,y1,y2,vz1,vz2,dt,temp,ekin1,ekin2,efes)
+
+      implicit none
+      integer, intent(in)    :: istate, kg
+      real(8), intent(in)    :: dt, temp
+      real(8), intent(inout) :: z1, z2, y1, y2, vz1, vz2
+      real(8), intent(out)   :: ekin1, ekin2, efes
+
+      real(8), parameter :: half=0.5d0
+
+      integer :: i
+      real(8) :: ddx, ddy, dx, dy, psi_factor_x, psi_factor_y
+      real(8), dimension(2) :: x, y, v, xtmp, ytmp, g, f1, f2, f1y, f2y
+      real(8), dimension(2) :: psix, psiy
+
+      x(1) = z1
+      x(2) = z2
+      v(1) = vz1
+      v(2) = vz2
+      y(1) = y1
+      y(2) = y2
+
+      !-- define Honeycutt constants for x and y coordinates
+
+      if (abs(etax).gt.1.d-20) then
+         ddx = kb*temp/etax
+      else
+         ddx = 0.d0
+      endif
+      psi_factor_x = sqrt(2.d0*ddx*dt)
+
+      if (abs(etay).gt.1.d-20) then
+         ddy = kb*temp/etay
+      else
+         ddy = 0.d0
+      endif
+      psi_factor_y = sqrt(2.d0*ddy*dt)
+
+      !-- generate independent random variables psiy and psix
+      !   from univariate Gaussian distributions (for z and auxiliary variables)
+      do i=1,2
+         psix(i) = gaussdist_boxmuller()
+         psiy(i) = gaussdist_boxmuller()
+      enddo
+
+      !-- regular forces from the self-energy
+      do i=1,2
+         f1(i) = -f0*x(i)
+      enddo
+
+      !-- regular forces from the effective potential
+      do i=1,2
+         f1(i) = f1(i) - gamma*(x(i) + y(i))
+      enddo
+
+      !-- calculate vibronic states and vibronic free energies
+      !   REUSE THE VIBRONIC STATES FROM THE END OF THE PREVIOUS TIMESTEP
+      !---(AVS)-call calculate_vibronic_states(kg,x(1),x(2))-------------
+
+      !-- calculate gradients
+      call calculate_gradient(istate,g(1),g(2))
+
+      !-- add forces from the vibronic surface
+      do i=1,2
+         f1(i) = f1(i) - g(i)
+      enddo
+
+      !-- divide forces by friction coefficient
+      do i=1,2
+         f1(i) = f1(i)/etax
+      enddo
+
+      !-- regular forces for auxiliary variables
+      do i=1,2
+         f1y(i) = -gamma*(x(i) + y(i))
+         f1y(i) = f1y(i)/etay
+      enddo
+
+      !-- propagate coordinates to obtain an intermediate point for force evaluation
+
+      do i=1,2
+         xtmp(i) = x(i) + dt*f1(i)  + psi_factor_x*psix(i)
+         ytmp(i) = y(i) + dt*f1y(i) + psi_factor_y*psiy(i)
+      enddo
+
+      !-- calculate forces at the intermidiate point (F_2 in Honeycutt notations)
+      do i=1,2
+         f2(i)  = - f0*xtmp(i) - gamma*(xtmp(i) + ytmp(i))
+         f2y(i) = - gamma*(xtmp(i) + ytmp(i))
+         f2y(i) = f2y(i)/etay
+      enddo
+
+      call calculate_vibronic_states(kg,xtmp(1),xtmp(2))
+      call calculate_gradient(istate,g(1),g(2))
+
+      !-- add forces from the vibronic surface
+      do i=1,2
+         f2(i) = f2(i) - g(i)
+         f2(i) = f2(i)/etax
+      enddo
+
+      !-- Honeycutt RK2 propagation for x and y variables
+
+      do i=1,2
+         dx = half*dt*(f1(i)+f2(i))   + psi_factor_x*psix(i)
+         dy = half*dt*(f1y(i)+f2y(i)) + psi_factor_y*psiy(i)
+         x(i) = x(i) + dx
+         y(i) = y(i) + dy
+         v(i) = dx/dt
+      enddo
+
+      !-- calculate vibronic states and vibronic free energies at new positions
+      call calculate_vibronic_states(kg,x(1),x(2))
+
+      !-- current free energy (PMF)
+      efes = fe(istate)
+
+      z1 = x(1)
+      z2 = x(2)
+      vz1 = v(1)
+      vz2 = v(2)
+      y1 = y(1)
+      y2 = y(2)
+
+      !-- kinetic energies are zero for overdamped mption
+      ekin1 = 0.d0
+      ekin2 = 0.d0
+
+   end subroutine langevin_debye2_2d
+   !--------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   !--------------------------------------------------------------------
    !-- Right-hand side (time derivative) of von-Neumann equation
    !   for density matrix
    !--------------------------------------------------------------------
@@ -1563,18 +1968,19 @@ contains
       real(8), intent(inout) :: vz1, vz2
       logical, intent(out)   :: success
 
-      real(8) :: dkl_z1, dkl_z2, dkl_sq
-      real(8) :: vdkl, ekl, discr
+      real(8) :: dkl_z1, dkl_z2
+      real(8) :: akl, bkl, ekl, discr
       real(8) :: gamma
 
       dkl_z1 = coupz1(istate,new_state)
       dkl_z2 = coupz2(istate,new_state)
-      dkl_sq = dkl_z1*dkl_z1 + dkl_z2*dkl_z2
 
-      vdkl  = v_dot_d(istate,new_state)
+      akl = dkl_z1*dkl_z1/effmass1 + dkl_z2*dkl_z2/effmass2
+
+      bkl  = v_dot_d(istate,new_state)
       ekl = fe(istate) - fe(new_state)
 
-      discr = vdkl*vdkl + 2.d0*dkl_sq*ekl/effmass
+      discr = bkl*bkl + 2.d0*akl*ekl
 
       if (discr.lt.0.d0) then
 
@@ -1592,16 +1998,16 @@ contains
       else
 
          !-- calculate adjustment coefficient
-         gamma = vdkl/dkl_sq
-         if (vdkl.lt.0) then
-            gamma = gamma + sqrt(discr)/dkl_sq
+         gamma = bkl/akl
+         if (bkl.lt.0) then
+            gamma = gamma + sqrt(discr)/akl
          else
-            gamma = gamma - sqrt(discr)/dkl_sq
+            gamma = gamma - sqrt(discr)/akl
          endif
 
          !-- adjust velocities
-         vz1 = vz1 - gamma*dkl_z1
-         vz2 = vz2 - gamma*dkl_z2
+         vz1 = vz1 - gamma*dkl_z1/effmass1
+         vz2 = vz2 - gamma*dkl_z2/effmass2
 
          success = .true.
 
@@ -1611,11 +2017,11 @@ contains
          write(*,*) "Switch: ",istate," --->", new_state
          write(*,*) "Nonadiabatic coupling: d_z1 = ", dkl_z1
          write(*,*) "                       d_z2 = ", dkl_z2
-         write(*,*) "                       |d|  = ", sqrt(dkl_sq)
+         write(*,*) "                       |d|  = ", sqrt(dkl_z1*dkl_z1 + dkl_z2*dkl_z2)
          write(*,*) "Switch probability: ", switch_prob(new_state)
          write(*,*) "Kinetic energy gain (loss if negative): ", ekl, " kcal/mol"
-         write(*,*) "Velocity adjustments: vz1 = vz1 + ", -gamma*dkl_z1
-         write(*,*) "                      vz2 = vz2 + ", -gamma*dkl_z2
+         write(*,*) "Velocity adjustments: vz1 = vz1 + ", -gamma*dkl_z1/effmass1
+         write(*,*) "                      vz2 = vz2 + ", -gamma*dkl_z2/effmass2
          write(*,'(137("-"))')
          !=== end DEBUG ===============================================================
 
