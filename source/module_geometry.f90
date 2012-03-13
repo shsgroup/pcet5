@@ -5,9 +5,12 @@ module geometry
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-12-15 21:24:55 $
-!  $Revision: 5.4 $
+!  $Date: 2012-03-13 22:05:20 $
+!  $Revision: 5.5 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.4  2010/12/15 21:24:55  souda
+!  various fixes (non-critical)
+!
 !  Revision 5.3  2010/11/24 22:37:40  souda
 !  workaround for optional input of custom VdW radii for FRCM calculation
 !
@@ -38,8 +41,8 @@ contains
       integer, intent(in) :: in
 
       character( 1 ) :: keychar
-      character(120) :: line
-      character(121) :: keywr0
+      character(480) :: line
+      character(481) :: keywr0
       integer        :: length, icount, i, io_status
 
       length = 1
@@ -53,7 +56,7 @@ contains
       read(in,'(a)') title
       read(in,'(a)') title2
 
-      ! read a line with keywords (length < 120)
+      ! read a line with keywords (length < 480)
       ! empty line or end of file terminates the loop
 
       do
@@ -62,7 +65,7 @@ contains
 
          ! remove double spaces and forbidden symbols
 
-         icount = 120
+         icount = 480
          call rmdbsp(line,icount)
 
          if (line(1:1).ne.space) then
@@ -79,7 +82,7 @@ contains
 
       keywrd = keywrd(2:length)
 
-      do i=481,1,-1
+      do i=1024,1,-1
          keychar = keywrd(i:i)
          if (index(allow1,keychar).ne.0.or.index(allow2,keychar).ne.0) then
             length = i
@@ -342,12 +345,12 @@ contains
 
          if (dif.gt.1.0d-2) then
 
-            write(*,'(/'' CAUTION! Sum of atomic charges ('',F6.3,'')'',&
+            write(*,'(/'' CAUTION! Sum of atomic charges ('',F10.3,'')'',&
             &'' in column '',I2,'' of the input file'',&
             &'' is different''/'' from the charge'',&
-            &'' specified in keyword ('',F6.3,''). The program'',&
+            &'' specified in keyword ('',F10.3,''). The program'',&
             &'' considers this''/'' difference (''&
-            &,F6.3,'' as result of an error in the input file'')')&
+            &,F10.3,'' as result of an error in the input file'')')&
             tach,i,charge,dif
             write(6,'('' program execution is terminated'')')
             write(6,'('' check charges in the input file'')')
@@ -357,9 +360,9 @@ contains
 
             ! Normalization of charge will be performed
 
-            write(6,'(/'' ATTENTION! Sum of atomic charges ('',F8.5,&
+            write(6,'(/'' ATTENTION! Sum of atomic charges ('',F12.5,&
             &'') is slightly different''/&
-            &'' from the charge specified in keyword ('',F8.5,'').'')')&
+            &'' from the charge specified in keyword ('',F12.5,'').'')')&
             tach,charge
 
             call normch(nchr,charge,qatom)
@@ -490,7 +493,7 @@ contains
             j = natoms_ - 1
             write(6,'('' data currently read in are '')')
             do k=1,j
-               write(6,'(i4,2x,3(f10.5,4x),3(i2,1x))')&
+               write(6,'(i4,2x,3(f12.5,4x),3(i2,1x))')&
                labels_(k),(geo(j,k),j=1,3),na(k),nb(k),nc(k)
             enddo
             stop 'at the getcoo routine...'
@@ -548,7 +551,7 @@ contains
                j = natoms_ - 1
                write(6,'('' data currently read in are '')')
                do k=1,j
-                  write(6,'(i4,2x,3(f10.5,4x),3(i2,1x))')&
+                  write(6,'(i4,2x,3(f12.5,4x),3(i2,1x))')&
                   labels_(k),(geo(j,k),j=1,3),na(k),nb(k),nc(k)
                enddo
                stop 'at the getcoo routine...'
@@ -582,7 +585,7 @@ contains
                j = natoms_ - 1
                write(6,'('' data currently read in are '')')
                do k=1,j
-                  write(6,'(i4,2x,3(f10.5,4x),3(i2,1x))')&
+                  write(6,'(i4,2x,3(f12.5,4x),3(i2,1x))')&
                   labels_(k),(geo(j,k),j=1,3),na(k),nb(k),nc(k)
                enddo
                stop 'at the get routine...'
@@ -738,8 +741,8 @@ contains
          qq2 = qq2 + qatom(i)
       enddo
 
-      write (6,'(/17x,''charge of solute in keyword = '',f9.5)') charge_
-      write (6,'(14x,''sum of atomic charges on input = '',f9.5)') qq2
+      write (6,'(/17x,''charge of solute in keyword = '',f12.5)') charge_
+      write (6,'(14x,''sum of atomic charges on input = '',f12.5)') qq2
 
       dc = dabs(qq2-charge_)
       if (dabs(charge_).gt.1.d0) dc = dc/dabs(charge_)
@@ -785,7 +788,7 @@ contains
           charge1 = charge1+qatom(i)
       enddo
 
-      write (6,'(4x,''sum of atomic charges after compensation = '',f9.5)') charge1
+      write (6,'(4x,''sum of atomic charges after compensation = '',f12.5)') charge1
 
       return
 
@@ -946,7 +949,7 @@ contains
                      write(6,'(i6,f16.5,2f13.5)') j,(coord(k,j),k=1,3)
                   enddo
                   write(6,'(//6x,'' atoms'',i3,'','',i3,'', and'',i3,&
-                  &'' are within'',f7.4,'' Angstroms of a straight line'')')&
+                  &'' are within'',f11.4,'' Angstroms of a straight line'')')&
                   mc,mb,ma,yza
                   stop
 
@@ -1136,7 +1139,7 @@ contains
 
       !-- Print banner
 
-      call banner(5.1)
+      call banner(5.2)
 
       write(6,'(3x,"Title of the job:  ",a)') title (1:itit)
       write(6,'(22x,a)')                      title2(1:itit2)
