@@ -60,9 +60,12 @@ subroutine et2
 !----------------------------------------------------------------------C
 !
 !  $Author: souda $
-!  $Date: 2010-12-15 21:24:55 $
-!  $Revision: 5.3 $
+!  $Date: 2012-03-13 21:59:47 $
+!  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.3  2010/12/15 21:24:55  souda
+!  various fixes (non-critical)
+!
 !  Revision 5.2  2010/10/28 21:29:35  souda
 !  First (working and hopefully bug-free) source of PCET 5.x
 !
@@ -193,7 +196,7 @@ subroutine et2
          alin = 0.d0
       endif
 
-      write(6,'(1x,''Inner sphere reorganization energy (kcal/mol): '',g12.6)') alin
+      write(6,'(1x,''Inner sphere reorganization energy (kcal/mol): '',g13.6)') alin
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ! Output file for free energy plots
@@ -215,7 +218,7 @@ subroutine et2
 
    endif
 
-   write(6,'(/1x,''Proton coordinates: '',3F8.3)') xxp,yyp,zzp
+   write(6,'(/1x,''Proton coordinates: '',3F10.3)') xxp,yyp,zzp
    write(6,'( 1x,''Reactant EVB state: '',I3)') ireac
    write(6,'( 1x,''Product  EVB state: '',I3)') iprod
 
@@ -223,8 +226,8 @@ subroutine et2
       write(6,'( 1x,''Left  limit for ZE: -3*Er'')')
       write(6,'( 1x,''Right limit for ZE:  3*Er'')')
    else
-      write(6,'( 1x,''Left  limit for ZE: '',F8.3)') ze1
-      write(6,'( 1x,''Right limit for ZE: '',F8.3)') ze2
+      write(6,'( 1x,''Left  limit for ZE: '',F10.3)') ze1
+      write(6,'( 1x,''Right limit for ZE: '',F10.3)') ze2
    endif
 
    write(6,'( 1x,''Number of points:   '',I5)') nze
@@ -357,8 +360,8 @@ subroutine et2
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    er = tk(ireac,ireac) + tk(iprod,iprod) - 2.d0*tk(ireac,iprod)
    er = er/2.d0 + alin
-   write(6,'(/1x,"ET reorganization energy      : ",T35,F12.6," kcal/mol")') er
-   write(6,'( 1x,"Stokes shift (linear response): ",T35,F12.6," cm^-1")') 2.d0*er*cal2ev*ev2cm
+   write(6,'(/1x,"ET reorganization energy      : ",T35,F13.6," kcal/mol")') er
+   write(6,'( 1x,"Stokes shift (linear response): ",T35,F13.6," cm^-1")') 2.d0*er*cal2ev*ev2cm
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Free energy curves
@@ -412,7 +415,7 @@ subroutine et2
       !~~~~~~~~~~~~~~~~~~~~~~~~
       ! Print out to FNAME file
       !~~~~~~~~~~~~~~~~~~~~~~~~
-      write(1,'(5g12.6)') ze,ureac,uprod,uground,uexcite
+      write(1,'(5g13.6)') ze,ureac,uprod,uground,uexcite
 
    enddo
 
@@ -439,19 +442,19 @@ subroutine et2
       ! Reaction free energy
       !~~~~~~~~~~~~~~~~~~~~~
       dg0 = hprod - hreac - 0.5d0*(tk(iprod,iprod)-tk(ireac,ireac))
-      write(6,'(1x,''ET reaction free energy: '',T35,F12.6,'' kcal/mol'')') dg0
+      write(6,'(1x,''ET reaction free energy: '',T35,F13.6,'' kcal/mol'')') dg0
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~
       ! Marcus activation energy
       !~~~~~~~~~~~~~~~~~~~~~~~~~
       ea = (er + dg0)**2/er/4.d0
-      write(6,'(1x,''ET activation free energy: '',T35,F12.6,'' kcal/mol'')') ea
+      write(6,'(1x,''ET activation free energy: '',T35,F13.6,'' kcal/mol'')') ea
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ! Nonadiabatic rate (1/picoseconds)
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       wps = prefac*beta*beta*dexp(-ea/(kb*temp))/dsqrt(er)
-      write(6,'(/1x,''ET nonadiabatic rate  (1/sec) at '',F8.3,'' K: '',E20.9)') temp,wps*1.d12
+      write(6,'(/1x,''ET nonadiabatic rate  (1/sec) at '',F10.3,'' K: '',E20.9)') temp,wps*1.d12
 
    endif
 
