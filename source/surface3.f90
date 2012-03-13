@@ -42,9 +42,12 @@ subroutine surface3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-06-30 20:37:09 $
-!  $Revision: 5.4 $
+!  $Date: 2012-03-13 21:58:25 $
+!  $Revision: 5.5 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.4  2011/06/30 20:37:09  souda
+!  allowing longer job directory names
+!
 !  Revision 5.3  2011/02/20 00:58:11  souda
 !  Major additions/modifications:
 !  (1) precalculation of the proton vibrational basis functions for METHOD=1
@@ -217,15 +220,15 @@ subroutine surface3
    if (.not.transform) then
 
       write(6,'(/1x,"Surface grid specification:",/,&
-      &" along ZP: ",I3," points from ",F7.3," to ",F7.3,2X,A,/,&
-      &" along ZE: ",I3," points from ",F7.3," to ",F7.3,2X,A)')&
+      &" along ZP: ",I3," points from ",F10.3," to ",F10.3,2X,A,/,&
+      &" along ZE: ",I3," points from ",F10.3," to ",F10.3,2X,A)')&
       &  NZP,ZP1,ZP2,ZDIM,NZE,ZE1,ZE2,ZDIM
 
    else
 
       write(6,'(/1x,"Surface grid specification:",/,&
-      &" along z1: ",I3," points from ",F7.3," to ",F7.3,2X,A,/,&
-      &" along z2: ",I3," points from ",F7.3," to ",F7.3,2X,A)')&
+      &" along z1: ",I3," points from ",F10.3," to ",F10.3,2X,A,/,&
+      &" along z2: ",I3," points from ",F10.3," to ",F10.3,2X,A)')&
       &  NZP,ZP1,ZP2,ZDIM,NZE,ZE1,ZE2,ZDIM
 
    endif
@@ -244,11 +247,11 @@ subroutine surface3
    if (npntsg.gt.1) then
       gatedim = .true.
       write(6,'(/1x,"Gating grid specification:",/,&
-      &" gating: ",i3," points from ",f7.3," to ",f7.3,2x,"A")')&
+      &" gating: ",i3," points from ",f10.3," to ",f10.3,2x,"A")')&
       &npntsg,glist(1)*bohr2a,glist(npntsg)*bohr2a
    else
       gatedim = .false.
-      write(6,'(/1x,"Gating coordinate value:",f7.3,2x,"A")') abs(xyzgas(1,iptgas(3)) - xyzgas(1,iptgas(1)))
+      write(6,'(/1x,"Gating coordinate value:",f10.3,2x,"A")') abs(xyzgas(1,iptgas(3)) - xyzgas(1,iptgas(1)))
    endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -521,16 +524,16 @@ subroutine surface3
 
             icount = icount + 1
             if (gatedim) then
-               write(*,'(49("\b"),i10,":(",3f12.6,")",$)') icount,rkg,z1,z2
+               write(*,'(49("\b"),i10,":(",3f13.6,")",$)') icount,rkg,z1,z2
             else
-               write(*,'(49("\b"),i10,":(",2f12.6,")",12x,$)') icount,z1,z2
+               write(*,'(49("\b"),i10,":(",2f13.6,")",12x,$)') icount,z1,z2
             endif
 
             call feszz3(mode,1,kg,zp0,ze0,nstates,fe,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
             if (gatedim) then
-               write(1,'(3f10.3,2x,40(1x,g15.9))') z1,z2,rkg,(fe(i),i=1,nstates)
+               write(1,'(3f10.3,2x,40(1x,g16.9))') z1,z2,rkg,(fe(i),i=1,nstates)
             else
-               write(1,'(2f10.3,2x,40(1x,g15.9))') z1,z2,(fe(i),i=1,nstates)     !, fe(2)-fe(1)  !===DEBUG
+               write(1,'(2f10.3,2x,40(1x,g16.9))') z1,z2,(fe(i),i=1,nstates)     !, fe(2)-fe(1)  !===DEBUG
             endif
 
             if (weights) then
@@ -591,11 +594,11 @@ subroutine surface3
                   enddo
                endif
                if (gatedim) then
-                  write(11,'(2f10.3,40(1x,g15.9))') z1,z2,rkg,&
+                  write(11,'(2f10.3,40(1x,g16.9))') z1,z2,rkg,&
                   &(dklp(npair(i,1),npair(i,2)),dkle(npair(i,1),npair(i,2)),&
                   &sqrt(dklp(npair(i,1),npair(i,2))**2 + dkle(npair(i,1),npair(i,2))**2),i=1,ndkl)
                else
-                  write(11,'(2f10.3,40(1x,g15.9))') z1,z2,&
+                  write(11,'(2f10.3,40(1x,g16.9))') z1,z2,&
                   &(dklp(npair(i,1),npair(i,2)),dkle(npair(i,1),npair(i,2)),&
                   &sqrt(dklp(npair(i,1),npair(i,2))**2 + dkle(npair(i,1),npair(i,2))**2),i=1,ndkl)
                   !&(dklp_num(npair(i,1),npair(i,2)),dkle_num(npair(i,1),npair(i,2)),&                        !===DEBUG
@@ -606,9 +609,9 @@ subroutine surface3
             if (diab2) then
                call feszz3(mode,2,kg,zp0,ze0,nstates,fe,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
                if (gatedim) then
-                  write(2,'(3f10.3,2x,40g15.9)') z1,z2,rkg,(fe(i),i=1,nstates)
+                  write(2,'(3f10.3,2x,40g16.9)') z1,z2,rkg,(fe(i),i=1,nstates)
                else
-                  write(2,'(2f10.3,2x,40g15.9)') z1,z2,(fe(i),i=1,nstates)
+                  write(2,'(2f10.3,2x,40g16.9)') z1,z2,(fe(i),i=1,nstates)
                endif
                if (weights) then
                   call evbwei(mode,2,nstates,ndabf,z,ielst,psiel,psipr,wght)
@@ -624,23 +627,23 @@ subroutine surface3
 
                call feszz3(mode,2,kg,zp0,ze0,nstates,fe,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
                if (gatedim) then
-                  write(2,'(3f10.3,2x,40g15.9)') z1,z2,rkg,(fe(i),i=1,nstates)
+                  write(2,'(3f10.3,2x,40g16.9)') z1,z2,rkg,(fe(i),i=1,nstates)
                else
-                  write(2,'(2f10.3,2x,40g15.9)') z1,z2,(fe(i),i=1,nstates)
+                  write(2,'(2f10.3,2x,40g16.9)') z1,z2,(fe(i),i=1,nstates)
                endif
 
                call feszz3(mode,3,kg,zp0,ze0,nstates,fe,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
                if (gatedim) then
-                  write(3,'(3f10.3,2x,40g15.9)') z1,z2,rkg,(fe(i),i=1,nstates)
+                  write(3,'(3f10.3,2x,40g16.9)') z1,z2,rkg,(fe(i),i=1,nstates)
                else
-                  write(3,'(2f10.3,2x,40g15.9)') z1,z2,(fe(i),i=1,nstates)
+                  write(3,'(2f10.3,2x,40g16.9)') z1,z2,(fe(i),i=1,nstates)
                endif
 
                call feszz3(mode,4,kg,zp0,ze0,nstates,fe,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
                if (gatedim) then
-                  write(4,'(3f10.3,2x,40g15.9)') z1,z2,rkg,(fe(i),i=1,nstates)
+                  write(4,'(3f10.3,2x,40g16.9)') z1,z2,rkg,(fe(i),i=1,nstates)
                else
-                  write(4,'(2f10.3,2x,40g15.9)') z1,z2,(fe(i),i=1,nstates)
+                  write(4,'(2f10.3,2x,40g16.9)') z1,z2,(fe(i),i=1,nstates)
                endif
             endif
 

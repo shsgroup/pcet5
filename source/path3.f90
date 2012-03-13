@@ -40,9 +40,15 @@ subroutine path3
 !--------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-20 00:58:11 $
-!  $Revision: 5.3 $
+!  $Date: 2012-03-13 21:58:25 $
+!  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.3  2011/02/20 00:58:11  souda
+!  Major additions/modifications:
+!  (1) precalculation of the proton vibrational basis functions for METHOD=1
+!  (2) Franck-Condon initial excitation added to DYNAMICS3
+!  (3) addition of the module timers: module_timers.f90 (changes in Makefile!)
+!
 !  Revision 5.2  2010/10/28 21:29:36  souda
 !  First (working and hopefully bug-free) source of PCET 5.x
 !
@@ -179,7 +185,7 @@ subroutine path3
       enddo
 
       write(6,'(/1x,''Straight line path through the points'')')
-      write(6,'( 1x,''('',F7.3,'','',F7.3,'') and ('',F7.3,'','',F7.3,'')'')') zp1,ze1,zp2,ze2
+      write(6,'( 1x,''('',F10.3,'','',F10.3,'') and ('',F10.3,'','',F10.3,'')'')') zp1,ze1,zp2,ze2
       write(6,'( 1x,''Number of points in between: '',I3)') npath
       write(6,'( 1x,''Total number of points: '',I3)') npoints
 
@@ -454,7 +460,7 @@ subroutine path3
          rr = glist(kg)*bohr2a
 
          call feszz3(mode,1,kg,zp,ze,nstates,f,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
-         write(1,'(i10,3f10.3,2x,20g15.9)') iz,zp,ze,rr,(f(i),i=1,nstates)
+         write(1,'(i10,3f10.3,2x,20g16.9)') iz,zp,ze,rr,(f(i),i=1,nstates)
 
          if (weights) then
             call evbwei(mode,1,nstates,ndabf,z,ielst,psiel,psipr,wght)
@@ -463,7 +469,7 @@ subroutine path3
 
          if (diab2) then
             call feszz3(mode,2,kg,zp,ze,nstates,f,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
-            write(2,'(i10,3f10.3,2x,20g15.9)') iz,zp,ze,rr,(f(i),i=1,nstates)
+            write(2,'(i10,3f10.3,2x,20g16.9)') iz,zp,ze,rr,(f(i),i=1,nstates)
             if (weights) then
                call evbwei(mode,2,nstates,ndabf,z,ielst,psiel,psipr,wght)
                write(22,'(3f10.3,2x,40g20.6)') zp,ze,rr,((wght(ievb,i),ievb=1,4),i=1,nstates)
@@ -472,16 +478,16 @@ subroutine path3
 
          if (diab4) then
             call feszz3(mode,2,kg,zp,ze,nstates,f,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
-            write(2,'(i10,3f10.3,2x,20g15.9)') iz,zp,ze,rr,(f(i),i=1,nstates)
+            write(2,'(i10,3f10.3,2x,20g16.9)') iz,zp,ze,rr,(f(i),i=1,nstates)
             call feszz3(mode,3,kg,zp,ze,nstates,f,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
-            write(3,'(i10,3f10.3,2x,20g15.9)') iz,zp,ze,rr,(f(i),i=1,nstates)
+            write(3,'(i10,3f10.3,2x,20g16.9)') iz,zp,ze,rr,(f(i),i=1,nstates)
             call feszz3(mode,4,kg,zp,ze,nstates,f,nzdim,z,ndabf,ielst,enel,envib,psiel,psipr)
-            write(4,'(i10,3f10.3,2x,20g15.9)') iz,zp,ze,rr,(f(i),i=1,nstates)
+            write(4,'(i10,3f10.3,2x,20g16.9)') iz,zp,ze,rr,(f(i),i=1,nstates)
          endif
 
          if (dkl) then
              call zcoup         !(ndabf,f,z,psiel,psipr,ndkl,npair,dklp,dkle)
-             !write(11,'(2f10.3,30g15.9)') zp,ze, (dklp(i),dkle(i),dsqrt(dklp(i)**2+dkle(i)**2),i=1,ndkl)
+             !write(11,'(2f10.3,30g16.9)') zp,ze, (dklp(i),dkle(i),dsqrt(dklp(i)**2+dkle(i)**2),i=1,ndkl)
          endif
 
       enddo

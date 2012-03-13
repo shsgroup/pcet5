@@ -14,9 +14,12 @@ subroutine weight3(nout,kg,zp,ze,mode,iset,istate)
 !--------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-04-13 23:49:48 $
-!  $Revision: 5.3 $
+!  $Date: 2012-03-13 21:58:25 $
+!  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.3  2011/04/13 23:49:48  souda
+!  Minor restructuring of modules and addition of LAPACK diagonalization wrappers
+!
 !  Revision 5.2  2010/10/28 21:29:37  souda
 !  First (working and hopefully bug-free) source of PCET 5.x
 !
@@ -70,7 +73,7 @@ subroutine weight3(nout,kg,zp,ze,mode,iset,istate)
 
    write(nout,'(/1x,60("-"))')
    write(nout,'(1x,"WAVEFUNCTION ANALYSIS at R=",f6.3)') rr
-   write(nout,'(1x,"mode=",a5,3x,"iset=",i1,3x,"istate=",i2,3x,"zp=",f8.3,3x,"ze=",f8.3)')&
+   write(nout,'(1x,"mode=",a5,3x,"iset=",i1,3x,"istate=",i2,3x,"zp=",f10.3,3x,"ze=",f10.3)')&
    &mode,iset,istate,zp,ze
    write(nout,'(1x,60("-"))')
 
@@ -127,7 +130,7 @@ subroutine weight3(nout,kg,zp,ze,mode,iset,istate)
          ievbshift = ievb + 2*iset - 2
          ivib = jndex - (ievb-1)*nprst
          sumc = sumc + contrib
-         write(nout,'(1x,t7,a2,t20,i3,t42,f8.3)') evb(ievbshift),ivib,contrib*100.d0
+         write(nout,'(1x,t7,a2,t20,i3,t42,f10.3)') evb(ievbshift),ivib,contrib*100.d0
       enddo
       write(nout,'(1x,60("-"))')
 
@@ -142,7 +145,7 @@ subroutine weight3(nout,kg,zp,ze,mode,iset,istate)
             toti = toti + vect2(kk)
          enddo
 
-         write(nout,'(1x,"EVB state (",a2,"): ",f8.3," %")') evb(ishift),toti*100.d0
+         write(nout,'(1x,"EVB state (",a2,"): ",f10.3," %")') evb(ishift),toti*100.d0
 
       enddo
 
@@ -172,7 +175,7 @@ subroutine weight3(nout,kg,zp,ze,mode,iset,istate)
 
          enddo
 
-         write(nout,'(1x,"EVB state (",a2,"): ",f8.3," %")') evb(ishift),toti*100.d0
+         write(nout,'(1x,"EVB state (",a2,"): ",f10.3," %")') evb(ishift),toti*100.d0
 
       enddo
 

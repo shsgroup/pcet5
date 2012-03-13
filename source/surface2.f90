@@ -45,9 +45,12 @@ subroutine surface2
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-06-30 20:37:09 $
-!  $Revision: 5.4 $
+!  $Date: 2012-03-13 21:58:25 $
+!  $Revision: 5.5 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.4  2011/06/30 20:37:09  souda
+!  allowing longer job directory names
+!
 !  Revision 5.3  2011/02/20 00:58:11  souda
 !  Major additions/modifications:
 !  (1) precalculation of the proton vibrational basis functions for METHOD=1
@@ -219,15 +222,15 @@ subroutine surface2
    if (.not.transform) then
 
       write(6,'(/1x,"Surface grid specification:",/,&
-      &" along ZP: ",I3," points from ",F7.3," to ",F7.3,2X,A,/,&
-      &" along ZE: ",I3," points from ",F7.3," to ",F7.3,2X,A)')&
+      &" along ZP: ",I3," points from ",F10.3," to ",F10.3,2X,A,/,&
+      &" along ZE: ",I3," points from ",F10.3," to ",F10.3,2X,A)')&
       &  NZP,ZP1,ZP2,ZDIM,NZE,ZE1,ZE2,ZDIM
 
    else
 
       write(6,'(/1x,"Surface grid specification:",/,&
-      &" along z1: ",I3," points from ",F7.3," to ",F7.3,2X,A,/,&
-      &" along z2: ",I3," points from ",F7.3," to ",F7.3,2X,A)')&
+      &" along z1: ",I3," points from ",F10.3," to ",F10.3,2X,A,/,&
+      &" along z2: ",I3," points from ",F10.3," to ",F10.3,2X,A)')&
       &  NZP,ZP1,ZP2,ZDIM,NZE,ZE1,ZE2,ZDIM
 
    endif
@@ -539,8 +542,8 @@ subroutine surface2
          call feszz2(mode,1,zp0,ze0,nstates,nf,f,nz,z,ndabf,&
                     &ielst,enel,envib,envibg,psiel,psipr,npsiga,psiga)
          timep2 = second()
-         write(1,'(2f10.3,2x,20g15.9)') z1,z2,(f(i),i=1,nstates_tot)
-         write(*,'(f20.3,2x,2f10.3,2x,10g15.9)') timep2-timep1,z1,z2,(f(i),i=1,nstates_tot)
+         write(1,'(2f10.3,2x,20g16.9)') z1,z2,(f(i),i=1,nstates_tot)
+         write(*,'(f20.3,2x,2f10.3,2x,10g16.9)') timep2-timep1,z1,z2,(f(i),i=1,nstates_tot)
 
          if (weights) then
             call evbweig(mode,1,nstates_tot,ndabf,nz,z,ielst,psiel,psipr,npsiga,psiga,wght)
@@ -553,8 +556,8 @@ subroutine surface2
             call feszz2(mode,2,zp0,ze0,nstates,nf,f,nz,z,ndabf,&
                        &ielst,enel,envib,envibg,psiel,psipr,npsiga,psiga)
             timep2 = second()
-            write(2,'(2f10.3,2x,20g15.9)') z1,z2,(f(i),i=1,nstates_tot)
-            write(*,'(f20.3,2x,2f10.3,2x,20g15.9)') timep2-timep1,z1,z2,(f(i),i=1,nstates_tot)
+            write(2,'(2f10.3,2x,20g16.9)') z1,z2,(f(i),i=1,nstates_tot)
+            write(*,'(f20.3,2x,2f10.3,2x,20g16.9)') timep2-timep1,z1,z2,(f(i),i=1,nstates_tot)
 
             if (weights) then
                call evbweig(mode,2,nstates_tot,ndabf,nz,z,ielst,psiel,psipr,npsiga,psiga,wght)
@@ -566,15 +569,15 @@ subroutine surface2
          if (diab4) then
             call feszz2(mode,3,zp0,ze0,nstates,nf,f,nz,z,ndabf,&
                        &ielst,enel,envib,envibg,psiel,psipr,npsiga,psiga)
-            write(3,'(2f10.3,2x,20g15.9)') z1,z2,(f(i),i=1,nstates_tot)
+            write(3,'(2f10.3,2x,20g16.9)') z1,z2,(f(i),i=1,nstates_tot)
             call feszz2(mode,4,zp0,ze0,nstates,nf,f,nz,z,ndabf,&
                        &ielst,enel,envib,envibg,psiel,psipr,npsiga,psiga)
-            write(4,'(2f10.3,2x,20g15.9)') z1,z2,(f(i),i=1,nstates_tot)
+            write(4,'(2f10.3,2x,20g16.9)') z1,z2,(f(i),i=1,nstates_tot)
          endif
 
          if (dkl) then
             call zcoup   !(ndabf1,f1,z,psiel,psipr,ndkl,npair,dklp,dkle)
-            !write(11,'(2f10.3,30g15.9)') z1,z2,(dklp(i),dkle(i),dsqrt(dklp(i)**2+dkle(i)**2),i=1,ndkl)
+            !write(11,'(2f10.3,30g16.9)') z1,z2,(dklp(i),dkle(i),dsqrt(dklp(i)**2+dkle(i)**2),i=1,ndkl)
          endif
 
       enddo

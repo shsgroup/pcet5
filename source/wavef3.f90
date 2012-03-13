@@ -28,9 +28,12 @@ subroutine wavef3
 !--------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:37 $
-!  $Revision: 5.2 $
+!  $Date: 2012-03-13 21:58:25 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:37  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !====================================================================
 
@@ -124,7 +127,7 @@ subroutine wavef3
       ze = reada(options,ize+4)
 
       write(6,'(/1x,''Values for solvent coordinates:'')')
-      write(6,'( 1x,''zp='',f8.3,'' kcal/mol'',1x,''ze='',f8.3,'' kcal/mol''/)') zp,ze
+      write(6,'( 1x,''zp='',f10.3,'' kcal/mol'',1x,''ze='',f10.3,'' kcal/mol''/)') zp,ze
 
    else
 

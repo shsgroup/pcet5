@@ -128,9 +128,12 @@ subroutine rateb
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:37 $
-!  $Revision: 5.2 $
+!  $Date: 2012-03-13 21:59:10 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:37  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !=======================================================================
 
@@ -429,12 +432,12 @@ subroutine rateb
    endif
 
    if (trange) then
-      write(log_channel,'(/1x,"Temperature range (K):",i3," steps from",f8.3," to",f8.3)')&
+      write(log_channel,'(/1x,"Temperature range (K):",i3," steps from",f10.3," to",f10.3)')&
       n_t, t_start, t_end
    elseif (tlist) then
-      write(log_channel,'(/1x,"Temperature list (K):",/,(5f8.3))') (ti(i),i=1,n_t)
+      write(log_channel,'(/1x,"Temperature list (K):",/,(5f10.3))') (ti(i),i=1,n_t)
    else
-      write(log_channel,'(/1x,"Temperature (K):",f8.3)') t_start
+      write(log_channel,'(/1x,"Temperature (K):",f10.3)') t_start
    endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -470,8 +473,8 @@ subroutine rateb
       rrsucc0 = reada(options,islash2+1)
 
       write(log_channel,'(/1x,"Initial guesses for minima (kcal/mol):")')
-      write(log_channel,'( 1x,"Reactant=(",f8.3,",",f8.3,",",f8.3,")",&
-                 &" and Product=(",f8.3,",",f8.3,",",f8.3,")")')&
+      write(log_channel,'( 1x,"Reactant=(",f10.3,",",f10.3,",",f10.3,")",&
+                 &" and Product=(",f10.3,",",f10.3,",",f10.3,")")')&
                  & zpprec0,zeprec0,rrprec0, &
                  & zpsucc0,zesucc0,rrsucc0
 
@@ -527,7 +530,7 @@ subroutine rateb
          slim = 1.d-1
       endif
 
-      write(log_channel,'(/1x,"Maximum length of the Newton-Raphson step: ",g12.6)') slim
+      write(log_channel,'(/1x,"Maximum length of the Newton-Raphson step: ",g13.6)') slim
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ! Accuracy of the minimization
@@ -538,7 +541,7 @@ subroutine rateb
       else
          acc = 1.d-6
       endif
-      write(log_channel,'(1x,"Accuracy of the minimization: ",g12.6)') acc
+      write(log_channel,'(1x,"Accuracy of the minimization: ",g13.6)') acc
 
    elseif (iminim.eq.2) then
 
@@ -573,7 +576,7 @@ subroutine rateb
       else
          factr = 1.d+6
       endif
-      write(6,'(/1X,"LBFGS tolerance: ",G12.6)') factr
+      write(6,'(/1X,"LBFGS tolerance: ",G13.6)') factr
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ! LBFGS projected gradient tolerance
@@ -584,7 +587,7 @@ subroutine rateb
       else
          pgtol = 1.d-6
       endif
-      write(6,'(/1X,"LBFGS gradient tolerance: ",G12.6)') pgtol
+      write(6,'(/1X,"LBFGS gradient tolerance: ",G13.6)') pgtol
 
    endif
 
@@ -597,7 +600,7 @@ subroutine rateb
    else
       xacc = 1.d-3
    endif
-   write(log_channel,'(1x,"Accuracy of the crossing point location: ",g12.6)') xacc
+   write(log_channel,'(1x,"Accuracy of the crossing point location: ",g13.6)') xacc
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Maximum number of iterations in searching minima
@@ -627,7 +630,7 @@ subroutine rateb
    izps = index(options,' ZPS=')
    if (izps.ne.0.and.iminim.eq.1) then
       zps = reada(options,izps+5)
-      write(log_channel,'(1x,"Scaling factor for ZP coordinate: ",g12.6)') zps
+      write(log_channel,'(1x,"Scaling factor for ZP coordinate: ",g13.6)') zps
    else
       zps = 1.d0
    endif
@@ -635,7 +638,7 @@ subroutine rateb
    izes = index(options,' ZES=')
    if (izes.ne.0.and.iminim.eq.1) then
       zes = reada(options,izes+5)
-      write(log_channel,'(1x,"Scaling factor for ZE coordinate: ",g12.6)') zes
+      write(log_channel,'(1x,"Scaling factor for ZE coordinate: ",g13.6)') zes
    else
       zes = 1.d0
    endif
@@ -643,7 +646,7 @@ subroutine rateb
    ilin = index(options,' ALIN=')
    if (ilin.ne.0) then
       alin = reada(options,ilin+6)
-      write(log_channel,'(1x,"Inner sphere reorganization energy added (kcal/mol): ",g12.6)') alin
+      write(log_channel,'(1x,"Inner sphere reorganization energy added (kcal/mol): ",g13.6)') alin
    else
       alin = 0.d0
    endif
@@ -850,10 +853,10 @@ subroutine rateb
                              - two*eret*elyr(i)*elyr(i) &
                              - four*erx*elxr(i)*elyr(i)    ! R-mode force constant (kcal/mol/A^2)
       if (verbose) then
-         write(log_channel,'(/1x,"R-mode frequency (1/cm)             : ",f12.6)') omegar(i)
-         write(log_channel,'( 1x,"R-mode force constant (kcal/mol/A^2): ",f12.6)') frr(i)
-         write(log_channel,'( 1x,"Lambda_xR (1/A^2): ",f12.6)') elxr(i)
-         write(log_channel,'( 1x,"Lambda_yR (1/A^2): ",f12.6)') elyr(i)
+         write(log_channel,'(/1x,"R-mode frequency (1/cm)             : ",f13.6)') omegar(i)
+         write(log_channel,'( 1x,"R-mode force constant (kcal/mol/A^2): ",f13.6)') frr(i)
+         write(log_channel,'( 1x,"Lambda_xR (1/A^2): ",f13.6)') elxr(i)
+         write(log_channel,'( 1x,"Lambda_yR (1/A^2): ",f13.6)') elyr(i)
       endif
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -862,7 +865,7 @@ subroutine rateb
       if (weights.and.verbose) then
          write(log_channel,'(/1x,70("="))')
          write(log_channel,'(1x,"EVB weights at the minimum of the ",i2,a3," reactant state")') i,th(i)
-         write(log_channel,'(1x,"zp(precursor)=",f9.3,5x,"ze(precursor)=",f9.3/)') zpprec,zeprec
+         write(log_channel,'(1x,"zp(precursor)=",f10.3,5x,"ze(precursor)=",f10.3/)') zpprec,zeprec
          call weight3(log_channel,kgprec,zpprec,zeprec,mode,1,i)
       endif
 
@@ -899,7 +902,7 @@ subroutine rateb
             if (weights.and.verbose) then
                write(log_channel,'(/1x,70("="))')
                write(log_channel,'(1x,"EVB weights at the minimum of the ",i2,a3," product state")') j,th(j)
-               write(log_channel,'(1x,"zp(successor)=",f9.3,5x,"ze(successor)=",f9.3/)') zpsucc,zesucc
+               write(log_channel,'(1x,"zp(successor)=",f10.3,5x,"ze(successor)=",f10.3/)') zpsucc,zesucc
                call weight3(log_channel,kgsucc,zpsucc,zesucc,mode,2,j)
             endif
 
@@ -938,15 +941,15 @@ subroutine rateb
             write(log_channel,'(/1x,"Quantities related to reorganization energies")')
             write(log_channel,'( 1x,"---------------------------------------------")')
 
-            write(log_channel,'(/1x,"Delta R (A): ",f12.6)') drrij
+            write(log_channel,'(/1x,"Delta R (A): ",f13.6)') drrij
 
-            write(log_channel,'(/1x,"Lambda_x (          ): ",f12.6)') el_x(i,j)
-            write(log_channel,'( 1x,"Lambda_y (          ): ",f12.6)') el_y(i,j)
-            write(log_channel,'( 1x,"Lambda_R (kcal/mol/A): ",f12.6)') el_y(i,j)
+            write(log_channel,'(/1x,"Lambda_x (          ): ",f13.6)') el_x(i,j)
+            write(log_channel,'( 1x,"Lambda_y (          ): ",f13.6)') el_y(i,j)
+            write(log_channel,'( 1x,"Lambda_R (kcal/mol/A): ",f13.6)') el_y(i,j)
 
-            write(log_channel,'(/1x,"Lambda0_xy (kcal/mol): ",f12.6)') el0_xy(i,j)
-            write(log_channel,'( 1x,"Lambda0_R  (kcal/mol): ",f12.6)') el0_r(i,j)
-            write(log_channel,'( 1x,"Lambda0_zR (kcal/mol): ",f12.6)') el0_zr(i,j)
+            write(log_channel,'(/1x,"Lambda0_xy (kcal/mol): ",f13.6)') el0_xy(i,j)
+            write(log_channel,'( 1x,"Lambda0_R  (kcal/mol): ",f13.6)') el0_r(i,j)
+            write(log_channel,'( 1x,"Lambda0_zR (kcal/mol): ",f13.6)') el0_zr(i,j)
 
 	 endif
 
@@ -1083,7 +1086,7 @@ subroutine rateb
             write(log_channel,'(/1x,70("="))')
             write(log_channel,'(1x,"EVB weights at the crossing point between ",i2,a3,&
             &" reactant and ",i2,a3," product states")') i,th(i),j,th(j)
-            write(log_channel,'(1x,"zp(x-ing point)=",f9.3,5x,"ze(xing point)=",f9.3/)') zpij, zeij
+            write(log_channel,'(1x,"zp(x-ing point)=",f10.3,5x,"ze(xing point)=",f10.3/)') zpij, zeij
             call weight3(log_channel,kgprec,zpij,zeij,mode,1,i)
             call weight3(log_channel,kgprec,zpij,zeij,mode,2,j)
          endif
@@ -1096,8 +1099,8 @@ subroutine rateb
 
          if (verbose)&
             &write(log_channel,'(/1x,"The activation energy for the pair of states ",i2,"-",i2,":",/,&
-            &" numerical (from the crossing point): ",f12.6,/,&
-            &" analytical (from Marcus expression): ",f12.6/)') i, j, eaijn, eaija
+            &" numerical (from the crossing point): ",f13.6,/,&
+            &" analytical (from Marcus expression): ",f13.6/)') i, j, eaijn, eaija
 
          if (eanumer) then
             ea(i,j) = eaijn   ! numerical estimate
@@ -1183,7 +1186,7 @@ subroutine rateb
       write(log_channel,'(1x,70("-"))')
       do i=iprec,nprec
          do j=1,nsucc
-            write(log_channel,'(1x,i2,"-",i2,3(f10.3,5x),g12.6)')&
+            write(log_channel,'(1x,i2,"-",i2,3(f10.3,5x),g13.6)')&
             &i,j,zpx(i,j),zex(i,j),fex(i,j),v2(i,j)
          enddo
       enddo
@@ -1200,7 +1203,7 @@ subroutine rateb
       write(log_channel,'(1x,70("-"))')
       do i=iprec,nprec
          do j=1,nsucc
-            write(log_channel,'(1x,i2,"-",i2,3(f10.3,5x),g12.6)')&
+            write(log_channel,'(1x,i2,"-",i2,3(f10.3,5x),g13.6)')&
             &i,j,alpha(i,j),erq(i,j)
          enddo
       enddo
@@ -1269,7 +1272,7 @@ subroutine rateb
       beta = 1.d0/(kb*temp)
 
       write(log_channel,'(/1x,70("*"))')
-      write(log_channel,'( 1x,"RATE ANALYSIS AT ",f8.3," K")') temp
+      write(log_channel,'( 1x,"RATE ANALYSIS AT ",f10.3," K")') temp
       write(log_channel,'(/1x,70("*"))')
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

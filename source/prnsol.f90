@@ -11,9 +11,12 @@ subroutine prnsol
 !--------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:37 $
-!  $Revision: 5.3 $
+!  $Date: 2012-03-13 21:58:25 $
+!  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.3  2010/10/28 21:29:37  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !===================================================================C
 
@@ -72,10 +75,10 @@ subroutine prnsol
    IF (IPTSOL.EQ.0) THEN
 
       WRITE(6,'(/1X,''Solvated profiles along H coordinate '',&
-      &''for zp='',f7.3,'' and ze='',f7.3,/,1x,&
+      &''for zp='',f10.3,'' and ze='',f10.3,/,1x,&
       &''are written to the external file <'',a,''>'')')&
       &zp,ze,job(1:ljob)//'/'//'ptsol.dat'
-      write(6,'(1x,''zp='',f7.3,'' ze='',f7.3)') zp,ze
+      write(6,'(1x,''zp='',f10.3,'' ze='',f10.3)') zp,ze
       open(1,file=job(1:ljob)//'/'//'ptsol.dat',status='new')
 
    else
@@ -85,7 +88,7 @@ subroutine prnsol
       lenf = ispa - 1
       call locase(fname,lenf)
       write(6,'(/1X,''Solvated profiles along H coordinate '',&
-      &''for ZP='',F7.3,'' and ZE='',F7.3,/,1X,&
+      &''for ZP='',F10.3,'' and ZE='',F10.3,/,1X,&
       &''are written to the external file <'',a,''>'')')&
       &zp,ze,job(1:ljob)//'/'//fname(1:lenf)
       open(1,file=job(1:ljob)//'/'//fname(1:lenf),status='new')

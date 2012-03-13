@@ -148,9 +148,12 @@ subroutine rate3
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:37 $
-!  $Revision: 5.2 $
+!  $Date: 2012-03-13 21:59:10 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:37  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !=======================================================================
 
@@ -565,12 +568,12 @@ subroutine rate3
    endif
 
    if (trange) then
-      write(log,'(/1x,"Temperature range (K):",i3," steps from",f8.3," to",f8.3)')&
+      write(log,'(/1x,"Temperature range (K):",i3," steps from",f10.3," to",f10.3)')&
       n_t, t_start, t_end
    elseif (tlist) then
-      write(log,'(/1x,"Temperature list (K):",/,(5f8.3))') (ti(i),i=1,n_t)
+      write(log,'(/1x,"Temperature list (K):",/,(5f10.3))') (ti(i),i=1,n_t)
    else
-      write(log,'(/1x,"Temperature (K):",f8.3)') t_start
+      write(log,'(/1x,"Temperature (K):",f10.3)') t_start
    endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -598,7 +601,7 @@ subroutine rate3
       zesucc0 = reada(options,izsucc1+islash)
 
       write(log,'(/1x,"Initial guesses for minima (kcal/mol):")')
-      write(log,'( 1x,"Reactant=(",f8.3,",",f8.3,") and Product=(",f8.3,",",f8.3,")")')&
+      write(log,'( 1x,"Reactant=(",f10.3,",",f10.3,") and Product=(",f10.3,",",f10.3,")")')&
       zpprec0,zeprec0,zpsucc0,zesucc0
 
    else
@@ -643,7 +646,7 @@ subroutine rate3
          slim = 1.d-1
       endif
 
-      write(log,'(/1x,"Maximum length of the Newton-Raphson step: ",g12.6)') slim
+      write(log,'(/1x,"Maximum length of the Newton-Raphson step: ",g13.6)') slim
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ! Accuracy of the minimization
@@ -654,7 +657,7 @@ subroutine rate3
       else
          acc = 1.d-6
       endif
-      write(log,'(1x,"Accuracy of the minimization: ",g12.6)') acc
+      write(log,'(1x,"Accuracy of the minimization: ",g13.6)') acc
 
    elseif (iminim.eq.2) then
 
@@ -689,7 +692,7 @@ subroutine rate3
       else
          factr = 1.d+6
       endif
-      write(6,'(/1X,"LBFGS tolerance: ",G12.6)') factr
+      write(6,'(/1X,"LBFGS tolerance: ",G13.6)') factr
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ! LBFGS projected gradient tolerance
@@ -700,7 +703,7 @@ subroutine rate3
       else
          pgtol = 1.d-6
       endif
-      write(6,'(/1X,"LBFGS gradient tolerance: ",G12.6)') pgtol
+      write(6,'(/1X,"LBFGS gradient tolerance: ",G13.6)') pgtol
 
    endif
 
@@ -713,7 +716,7 @@ subroutine rate3
    else
       xacc = 1.d-3
    endif
-   write(log,'(1x,"Accuracy of the crossing point location: ",g12.6)') xacc
+   write(log,'(1x,"Accuracy of the crossing point location: ",g13.6)') xacc
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Maximum number of iterations in searching minima
@@ -743,7 +746,7 @@ subroutine rate3
    izps = index(options,' ZPS=')
    if (izps.ne.0.and.iminim.eq.1) then
       zps = reada(options,izps+5)
-      write(log,'(1x,"Scaling factor for ZP coordinate: ",g12.6)') zps
+      write(log,'(1x,"Scaling factor for ZP coordinate: ",g13.6)') zps
    else
       zps = 1.d0
    endif
@@ -751,7 +754,7 @@ subroutine rate3
    izes = index(options,' ZES=')
    if (izes.ne.0.and.iminim.eq.1) then
       zes = reada(options,izes+5)
-      write(log,'(1x,"Scaling factor for ZE coordinate: ",g12.6)') zes
+      write(log,'(1x,"Scaling factor for ZE coordinate: ",g13.6)') zes
    else
       zes = 1.d0
    endif
@@ -759,7 +762,7 @@ subroutine rate3
    ilin = index(options,' ALIN=')
    if (ilin.ne.0) then
       alin = reada(options,ilin+6)
-      write(log,'(1x,"Inner sphere reorganization energy added (kcal/mol): ",g12.6)') alin
+      write(log,'(1x,"Inner sphere reorganization energy added (kcal/mol): ",g13.6)') alin
    else
       alin = 0.d0
    endif
@@ -934,7 +937,7 @@ subroutine rate3
          if (weights.and.verbose) then
             write(log,'(/1x,70("="))')
             write(log,'(1x,"EVB weights at the minimum of the ",i2,a3," reactant state")') i,th(i)
-            write(log,'(1x,"zp(precursor)=",f9.3,5x,"ze(precursor)=",f9.3/)') zpprec,zeprec
+            write(log,'(1x,"zp(precursor)=",f10.3,5x,"ze(precursor)=",f10.3/)') zpprec,zeprec
             call weight3(log,kg,zpprec,zeprec,mode,1,i)
          endif
 
@@ -997,7 +1000,7 @@ subroutine rate3
                if (weights.and.verbose) then
                   write(log,'(/1x,70("="))')
                   write(log,'(1x,"EVB weights at the minimum of the ",i2,a3," product state")') j,th(j)
-                  write(log,'(1x,"zp(successor)=",f9.3,5x,"ze(successor)=",f9.3/)') zpsucc,zesucc
+                  write(log,'(1x,"zp(successor)=",f10.3,5x,"ze(successor)=",f10.3/)') zpsucc,zesucc
                   call weight3(log,kg,zpsucc,zesucc,mode,2,j)
                endif
 
@@ -1092,7 +1095,7 @@ subroutine rate3
                write(log,'(/1x,70("="))')
                write(log,'(1x,"EVB weights at the crossing point between ",i2,a3,&
                &" reactant and ",i2,a3," product states")') i,th(i),j,th(j)
-               write(log,'(1x,"zp(x-ing point)=",f9.3,5x,"ze(xing point)=",f9.3/)') zpij, zeij
+               write(log,'(1x,"zp(x-ing point)=",f10.3,5x,"ze(xing point)=",f10.3/)') zpij, zeij
                call weight3(log,kg,zpij,zeij,mode,1,i)
                call weight3(log,kg,zpij,zeij,mode,2,j)
             endif
@@ -1113,13 +1116,13 @@ subroutine rate3
             if (verbose) then
 	       if (igr.ne.4) then
                   write(log,'(/1x,"The activation energy for the pair of states ",i2,"-",i2,":",/,&
-                  &" numerical (from the crossing point): ",f12.6,/,&
-                  &" analytical (from Marcus expression): ",f12.6/)') i, j, eaijn, eaija
+                  &" numerical (from the crossing point): ",f13.6,/,&
+                  &" analytical (from Marcus expression): ",f13.6/)') i, j, eaijn, eaija
                else
                   write(log,'(/1x,"The activation energy for the pair of states ",i2,"-",i2,":",/,&
-                  &" numerical (from the crossing point): ",f12.6,/,&
-                  &" analytical (Low temperature limit) : ",f12.6,/,&
-                  &" analytical (High temperature limit): ",f12.6/)') i, j, eaijn, eaija_high, eaija_low
+                  &" numerical (from the crossing point): ",f13.6,/,&
+                  &" analytical (Low temperature limit) : ",f13.6,/,&
+                  &" analytical (High temperature limit): ",f13.6/)') i, j, eaijn, eaija_high, eaija_low
 	       endif
 	    endif
 
@@ -1242,7 +1245,7 @@ subroutine rate3
          write(log,'(1x,70("-"))')
          do i=iprec,nprec
             do j=1,nsucc
-               write(log,'(1x,i2,"-",i2,3(f10.3,5x),g12.6)')&
+               write(log,'(1x,i2,"-",i2,3(f10.3,5x),g13.6)')&
                &i,j,zpx(kg,i,j),zex(kg,i,j),fex(kg,i,j),v2(kg,i,j)
             enddo
          enddo
@@ -1352,9 +1355,9 @@ subroutine rate3
          write(74,'("# harmonic approximation for the gating potential")')
          write(74,'("# k_tot = int[dr*g(r)*k(r)]")')
          write(74,'("# g(r) is a quantum distribution function for harmonic oscillator:")')
-         write(74,'("# oscillator mass (daltons)  :",f8.3)') gmass/dalton
-         write(74,'("# oscillator frequency (1/cm):",f8.3)') gfreq
-         write(74,'("# equilibrium r distance (a) :",f8.3)') gaver
+         write(74,'("# oscillator mass (daltons)  :",f10.3)') gmass/dalton
+         write(74,'("# oscillator frequency (1/cm):",f10.3)') gfreq
+         write(74,'("# equilibrium r distance (a) :",f10.3)') gaver
          write(74,'("#")')
          write(74,'("# 5 columns:")')
          write(74,'("#")')
@@ -1394,7 +1397,7 @@ subroutine rate3
       endif
 
       write(log,'(/1x,70("*"))')
-      write(log,'( 1x,"RATE ANALYSIS AT ",f8.3," K")') temp
+      write(log,'( 1x,"RATE ANALYSIS AT ",f10.3," K")') temp
       write(log,'(/1x,70("*"))')
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1478,7 +1481,7 @@ subroutine rate3
 
          if (verbose) then
             write(log,'(/1x,79("="))')
-            write(log,'(1x,"RATE CONTRIBUTIONS, R=",f8.3," A")') rr
+            write(log,'(1x,"RATE CONTRIBUTIONS, R=",f10.3," A")') rr
             write(log,'(1x,79("="))')
             write(log,'(1x,"column headers:",/,&
             &1X,"J   - successor state",/,&
@@ -1571,7 +1574,7 @@ subroutine rate3
 
             totalrate = totalrate + wtotal*gr*gint
             write(74,'(5g20.6)') rr,gr/bohr2a,wtotal*1.d12,wtotal*gr*gint*1.d12,totalrate*1.d12
-            write(log,'(1x,"(igr=1/2) Rate (1/sec) at R=",f6.3,": ",e20.9)') rr,wtotal*1.d12
+            write(log,'(1x,"(igr=1/2) Rate (1/sec) at R=",f10.3,": ",e20.9)') rr,wtotal*1.d12
 
          elseif (igr.eq.3) then
 
@@ -1581,7 +1584,7 @@ subroutine rate3
             if (totalout.lt.1.d-20) totalout = 0.d0
             if (wrout.lt.1.d-20) wrout = 0.d0
             write(74,'(5g20.6)') rr,wrout,totalout
-            write(log,'(1x,"(igr=3)   Rate (1/sec) at R=",f6.3,": ",e20.9)') rr,wr*1.d12
+            write(log,'(1x,"(igr=3)   Rate (1/sec) at R=",f10.3,": ",e20.9)') rr,wr*1.d12
 
 	 elseif (igr.eq.4) then
 
@@ -1596,8 +1599,8 @@ subroutine rate3
             if (wrout.lt.1.d-20) wrout = 0.d0
             if (wrout_low.lt.1.d-20) wrout_low = 0.d0
             write(74,'(5g20.6)') rr,totalout,totalout_low
-            write(log,'(1x,"(igr=4) High-T Rate (1/sec) at R=",f6.3,": ",e20.9)') rr,wr*1.d12
-            write(log,'(1x,"(igr=4) Low-T  Rate (1/sec) at R=",f6.3,": ",e20.9)') rr,wr_low*1.d12
+            write(log,'(1x,"(igr=4) High-T Rate (1/sec) at R=",f10.3,": ",e20.9)') rr,wr*1.d12
+            write(log,'(1x,"(igr=4) Low-T  Rate (1/sec) at R=",f10.3,": ",e20.9)') rr,wr_low*1.d12
 
          endif
 
