@@ -63,9 +63,12 @@ subroutine minima2
 !--------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:36 $
-!  $Revision: 5.2 $
+!  $Date: 2012-03-13 22:01:18 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:36  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !====================================================================
 
@@ -216,8 +219,8 @@ subroutine minima2
       if (iminim.eq.2) zes = 1.d0
 
       write(6,'(/1x,"initial values for solvent coordinates:")')
-      write(6,'( 1x,"zp0=",f8.3," kcal/mol  ;  scaling factor: ",f8.3,/,&
-                &1x,"ze0=",f8.3," kcal/mol  ;  scaling factor: ",f8.3,/)')&
+      write(6,'( 1x,"zp0=",f10.3," kcal/mol  ;  scaling factor: ",f10.3,/,&
+                &1x,"ze0=",f10.3," kcal/mol  ;  scaling factor: ",f10.3,/)')&
                 &zp0,zps,ze0,zes
 
    else
@@ -241,7 +244,7 @@ subroutine minima2
          slim = 1.d-1
       endif
 
-      write(6,'(/1x,"Maximum length of the Newton-Raphson step: ",g12.6)') slim
+      write(6,'(/1x,"Maximum length of the Newton-Raphson step: ",g13.6)') slim
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ! Accuracy of the minimization
@@ -252,7 +255,7 @@ subroutine minima2
       ELSE
          ACC = 1.D-6
       ENDIF
-      WRITE(6,'(/1X,"Accuracy of the minimization: ",G12.6)') ACC
+      WRITE(6,'(/1X,"Accuracy of the minimization: ",G13.6)') ACC
 
    elseif (iminim.eq.2) then
 
@@ -287,7 +290,7 @@ subroutine minima2
       else
          factr = 1.d+6
       endif
-      write(6,'(/1X,"LBFGS tolerance: ",G12.6)') factr
+      write(6,'(/1X,"LBFGS tolerance: ",G13.6)') factr
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ! LBFGS projected gradient tolerance
@@ -298,7 +301,7 @@ subroutine minima2
       else
          pgtol = 1.d-6
       endif
-      write(6,'(/1X,"LBFGS gradient tolerance: ",G12.6)') pgtol
+      write(6,'(/1X,"LBFGS gradient tolerance: ",G13.6)') pgtol
 
    endif
 
@@ -337,10 +340,10 @@ subroutine minima2
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    write(6,'(/1x,"RESULTS OF THE MINIMIZATION (kcal/mol):"/)')
-   write(6,'(1x,"Coordinates at the min: ",2f12.6)') zpmin,zemin
-   write(6,'(1x,"Free energy at the min: ", f12.6)') femin
-   write(6,'(1x,"Gradient: ",              2f12.6)') dzpmin,dzemin
-   write(6,'(1x,"Hessian (11,22,12): ",    3f12.6)') d2zpmin,d2zemin,d2zpzemin
+   write(6,'(1x,"Coordinates at the min: ",2f13.6)') zpmin,zemin
+   write(6,'(1x,"Free energy at the min: ", f13.6)') femin
+   write(6,'(1x,"Gradient: ",              2f13.6)') dzpmin,dzemin
+   write(6,'(1x,"Hessian (11,22,12): ",    3f13.6)') d2zpmin,d2zemin,d2zpzemin
    write(6,'(/)')
 
    if (ierr.ne.0) then
