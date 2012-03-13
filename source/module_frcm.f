@@ -13,9 +13,12 @@
       !----------------------------------------------------------------|
       !
       !  $Author: souda $
-      !  $Date: 2011-04-29 22:36:24 $
-      !  $Revision: 5.8 $
+      !  $Date: 2012-03-13 22:04:48 $
+      !  $Revision: 5.9 $
       !  $Log: not supported by cvs2svn $
+      !  Revision 5.8  2011/04/29 22:36:24  souda
+      !  fixed some typos in the output
+      !
       !  Revision 5.7  2011/04/21 22:59:51  souda
       !  slight modification of FRCM parameters (for consistency with version 4.0)
       !
@@ -335,11 +338,11 @@ C         N1=1
      *      ''polarization field described by the following '',
      *      ''parameters:''/)')
             WRITE(6,'(7x,''Dielectric permittivity in Volume 3 ='',
-     *      F7.3)')EPS
+     *      F10.3)')EPS
             WRITE(6,'(7x,''Dielectric permittivity in Volume 2 ='',
-     *      F7.3)')EPSEL
-            WRITE(6,'(36x,'' KAPPA ='',F7.3)')FACTOR
-            WRITE(6,'(35x,'' DELTA ='',F7.3)')FACTOR2
+     *      F10.3)')EPSEL
+            WRITE(6,'(36x,'' KAPPA ='',F10.3)')FACTOR
+            WRITE(6,'(35x,'' DELTA ='',F10.3)')FACTOR2
             WRITE(6,'(/,24X,''The integral RO('',I2,'')*FI('',I2,'') =''
      *      ,F8.4,'' eV'')')J,J,T(J,J)
             WRITE(6,'(/81(''-''))')
@@ -400,13 +403,13 @@ C         N1=1
      *         ''polarization field described by the following '',
      *         ''parameters:''/)')
                WRITE(6,'(7x,''Dielectric permittivity in Volume 3 ='',
-     *         F7.3)')EPSEL
+     *         F10.3)')EPSEL
                WRITE(6,'(7x,''Dielectric permittivity in Volume 2 ='',
-     *         F7.3)')EPS2
-               WRITE(6,'(36x,'' KAPPA ='',F7.3)')FACTOR
-               WRITE(6,'(35x,'' DELTA ='',F7.3)')FACTOR2
+     *         F10.3)')EPS2
+               WRITE(6,'(36x,'' KAPPA ='',F10.3)')FACTOR
+               WRITE(6,'(35x,'' DELTA ='',F10.3)')FACTOR2
                WRITE(6,'(/,24X,''The integral RO('',I2,'')*FI_el('',I2,
-     *         '') ='',F8.4,'' eV'')')J,J,TEL(J,J)
+     *         '') ='',F11.4,'' eV'')')J,J,TEL(J,J)
                WRITE(6,'(/81(''-''))')
             ENDIF
 
@@ -952,8 +955,8 @@ C
       TIMEB=SECOND()
       TSFE=TSFE+TIMEB-TIMEA
       IF(TIMES) THEN
-          WRITE(6,'(''##### TIME TOTAL IS  '',F8.2,
-     1    ''    SFERE   '',F8.2)')TIMEB-TIME0,TIMEB-TIMEA
+          WRITE(6,'(''##### TIME TOTAL IS  '',F10.3,
+     1    ''    SFERE   '',F10.3)')TIMEB-TIME0,TIMEB-TIMEA
       END IF
       RETURN
       END SUBROUTINE FRCMDR
@@ -1270,10 +1273,10 @@ C              SUBPROGRAM SFERA1 ( I,XIN,X0,XOUT,YIN,Y0,YOUT,ZIN,
 C              Z0,ZOUT,AS,PIMPOU ) ON FORMAT 2X,I4,2X,11F9.4  .
 C    'TESS2'   WRITING ALL INFORMATION ABOUT ALL TESSERAE IN
 C              SUBPROGRAM SFERA2 ( I,X0,Y0,Z0,AS,PIMPOU,QS)
-C              ON FORMAT 4X,I4,9F8.3,2F9.5.
+C              ON FORMAT 4X,I4,9F10.3,2F9.5.
 C    'TESS3'   WRITING SOME INFORMATION ABOUT ALL TESSERAE IN
 C              SUBPROGRAM SFERA3 ( I,X0,Y0,Z0,QS,AS)
-C              ON FORMAT 6X,I3,3F10.3,F11.5,F10.3   .
+C              ON FORMAT 6X,I3,3F10.3,F12.5,F10.3   .
 C     ***************************************************************
 C     OPTIONS ...
 C     ***************************************************************
@@ -1548,13 +1551,13 @@ C  120 FORMAT(    4F10.6)
       WRITE (6,'(//'' *********     PARAMETERS FOR THE SOLVATION'',
      *   '' CALCULATION     *********''/)')
       WRITE (6,'('' STATIC DIELECTRIC PERMITTIVITY,'',21X,''EPS = '',
-     *F6.3)')EPS
+     *F10.3)')EPS
       WRITE (6,'('' OPTICAL DIELECTRIC PERMITTIVITY,'',18X,''EPSEL = '',
-     *F6.3)')EPSEL
+     *F10.3)')EPSEL
       WRITE (6,'('' PARAMETER FOR INNER CAVITY SPHERES RADII,'',8X,
-     *'' KAPPA = '',F6.3)')FACTOR
+     *'' KAPPA = '',F10.3)')FACTOR
       WRITE (6,'('' PARAMETER FOR OUTER CAVITY SPHERES RADII,'',8X,
-     *'' DELTA = '',F6.3,'' ANGSTROEMS'')')FACTOR2
+     *'' DELTA = '',F10.3,'' ANGSTROEMS'')')FACTOR2
       WRITE(6,'(/'' POLAR. PROCEDURE CRITERION,'',21X,'' SELFCR = '',
      *D9.2)')SELFCR
       WRITE (6,'('' MAXIMUM NUMBER OF ITERATION IN POLAR.'',
@@ -1573,9 +1576,9 @@ C  120 FORMAT(    4F10.6)
          WRITE (6,'(/'' INNER SPHERE PARAMETERS:'')')
          IF(INDEX(KEYWRD,'NOSMOOTH').EQ.0) THEN
             WRITE (6,'('' EFFECTIVE RADIUS OF THE SOLVENT MOLECULE,'',
-     *      9X,''SOLRD = '',F6.3)') RSOLV
+     *      9X,''SOLRD = '',F10.3)') RSOLV
             WRITE (6,'('' MIN. UNREACHABLE VOLUME TO INCLUDE EXTRA'',
-     *      '' SPHERES, EXVOL = '',F6.3)') VSOLV
+     *      '' SPHERES, EXVOL = '',F10.3)') VSOLV
          ENDIF
          IF(ITE1.EQ.6) THEN
          WRITE (6,'('' PARAMETER OF TESSERA SIZES'',23X,''MODFE1 = '',
@@ -1614,7 +1617,7 @@ C  120 FORMAT(    4F10.6)
          ENDIF
          WRITE(6,'(39x,''PARAMETER NTETFI2 = '',I2)')NCFINR2
       ENDIF
-    8 FORMAT(2X,I4,2X, 5F9.4)
+    8 FORMAT(2X,I4,2X, 5F10.3)
 
 
       WRITE(6,'(//5X,''CARTESIAN COORDINATES, RADII, AND ATOMIC'',
@@ -1924,7 +1927,7 @@ C         PRNT=.FALSE.
   102 FORMAT (/
      *' MINIMUM DISTANCE BETWEEN SECTIONS SMALLER THAN THE STANDARD BY',
      *F6.2,' TIMES',
-     *' COEFFICIENT OF THE SMALL SECTOR DSMIN=',F6.3/
+     *' COEFFICIENT OF THE SMALL SECTOR DSMIN=',F10.3/
      *' ARRAY OF THE EXCESS OF THE STEP WRT FI OVER ',
      *' THE STEP WRT TETA DPRAM:'/1X,20F6.2)
       RETURN
@@ -2188,7 +2191,7 @@ C
                WRITE (6,'('' KK='',I4,
      *            '' LARGE SECTOR  K='',I3,'' I='',I3,
      *            '' J='',I3,'' K1='',I3,'' N='',
-     *            I4,'' S='',F7.4,'' S/S0='',F7.4)')
+     *            I4,'' S='',F11.4,'' S/S0='',F11.4)')
      *            KK,K,I,J,K1,KSECT(ISFDL+J),
      *            SSECT(ISFDL+J),SSECT(ISFDL+J)/DDS
             ELSE
@@ -2196,7 +2199,7 @@ C
                WRITE (6,'('' KK='',I4,
      *            '' SMALL SECTOR  K='',I3,'' I='',I3,
      *            '' J='',I3,'' K2='',I3,'' N='',
-     *            I4,'' S='',F7.4,'' S/S0='',F7.4)')
+     *            I4,'' S='',F11.4,'' S/S0='',F11.4)')
      *            KK,K,I,J,K2,KSECT(ISFDL+J),
      *            SSECT(ISFDL+J),SSECT(ISFDL+J)/DDS
             ENDIF
@@ -2466,30 +2469,30 @@ C
             KK=KK+1
             IF(SSECT(ISFDL+J).GT.DDS) THEN
                WRITE (6,'('' KK='',I4,
-     *            '' LARGE SECTOR K='',I3,'' I='',I3,
-     *            '' J='',I3,'' K1='',I3,'' N='',
-     *            I4,'' S='',F7.4,'' S/S0='',F7.4,
-     *            '' INCREMENT N='',I3,'' DS='',F7.4,'' DS/S='',F7.4)')
-     *            KK,K,I,J,K1,KSECT(ISFDL+J),
-     *            SSECT(ISFDL+J),SSECT(ISFDL+J)/DDS,
-     *            KSECT(ISFDL+J)-KOTL(ISFDL+J),
-     *            SSECT(ISFDL+J)-SOTL(ISFDL+J),
-     *            (SSECT(ISFDL+J)-SOTL(ISFDL+J))/SOTL(ISFDL+J)
+     *          '' LARGE SECTOR K='',I3,'' I='',I3,
+     *          '' J='',I3,'' K1='',I3,'' N='',
+     *          I4,'' S='',F11.4,'' S/S0='',F11.4,
+     *          '' INCREMENT N='',I3,'' DS='',F11.4,'' DS/S='',F11.4)')
+     *          KK,K,I,J,K1,KSECT(ISFDL+J),
+     *          SSECT(ISFDL+J),SSECT(ISFDL+J)/DDS,
+     *          KSECT(ISFDL+J)-KOTL(ISFDL+J),
+     *          SSECT(ISFDL+J)-SOTL(ISFDL+J),
+     *          (SSECT(ISFDL+J)-SOTL(ISFDL+J))/SOTL(ISFDL+J)
                SASS=SSECT(ISFDL+J)/DDS
                SXA=SXA+SASS
                SXB=SXB+SASS*SASS
             ELSE
                K2=K2+1
                WRITE (6,'('' KK='',I4,
-     *            '' SMALL SECTOR K='',I3,'' I='',I3,
-     *            '' J='',I3,'' K2='',I3,'' N='',
-     *            I4,'' S='',F7.4,'' S/S0='',F7.4,
-     *            '' INCREMENT N='',I3,'' DS='',F7.4,'' DS/S='',F7.4)')
-     *            KK,K,I,J,K1,KSECT(ISFDL+J),
-     *            SSECT(ISFDL+J),SSECT(ISFDL+J)/DDS,
-     *            KSECT(ISFDL+J)-KOTL(ISFDL+J),
-     *            SSECT(ISFDL+J)-SOTL(ISFDL+J),
-     *            (SSECT(ISFDL+J)-SOTL(ISFDL+J))/SOTL(ISFDL+J)
+     *          '' SMALL SECTOR K='',I3,'' I='',I3,
+     *          '' J='',I3,'' K2='',I3,'' N='',
+     *          I4,'' S='',F11.4,'' S/S0='',F11.4,
+     *          '' INCREMENT N='',I3,'' DS='',F11.4,'' DS/S='',F11.4)')
+     *          KK,K,I,J,K1,KSECT(ISFDL+J),
+     *          SSECT(ISFDL+J),SSECT(ISFDL+J)/DDS,
+     *          KSECT(ISFDL+J)-KOTL(ISFDL+J),
+     *          SSECT(ISFDL+J)-SOTL(ISFDL+J),
+     *          (SSECT(ISFDL+J)-SOTL(ISFDL+J))/SOTL(ISFDL+J)
             ENDIF
   15     CONTINUE
          K1=KK-K2
@@ -2845,8 +2848,8 @@ C
 
             IF(RR+RNE.LE.RAT.OR.RR+RAT.LE.RNE) THEN
                WRITE (6,'('' ONE SPHERE INCLUDES THE OTHER: ATOM'',
-     *         I3,'' NEIGH.'',I3,''  R1='',F10.5,''  R2='',F10.5,
-     *         ''  RR='',F10.5)') IAT,INMB(INEB),RAT,RNE,RR
+     *         I3,'' NEIGH.'',I3,''  R1='',F12.5,''  R2='',F12.5,
+     *         ''  RR='',F12.5)') IAT,INMB(INEB),RAT,RNE,RR
                GOTO 5
             ENDIF
 
@@ -3185,7 +3188,7 @@ C
          IF(XSQRT.LT.0.D0) XSQRT=0.D0
          SITECR(INEB)=SQRT(XSQRT)
          IF(PRINT) WRITE (6,'('' NEIGBBOUR #'',I3,''  ATOM #'',I3,
-     *                ''  TETA='',F6.1)') INEB,INEV,R2D(TETECR(INEB))
+     *                ''  TETA='',F8.1)') INEB,INEV,R2D(TETECR(INEB))
    60 CONTINUE
 C
 C     THE NUMBER OF NEIGHBOURS NNEB
@@ -3356,7 +3359,7 @@ C
          ENDIF
 
          IF(PRINT) THEN
-            WRITE (6,'('' NEIGHBOUR #'',I4,''  AA='',F8.3,
+            WRITE (6,'('' NEIGHBOUR #'',I4,''  AA='',F10.3,
      *                 ''  NO. OF SECTORS WRT TETA'',I4)') INEB,AA,II
             WRITE (6,'('' TETOS,TESS,TT,A1,A2,AA'',6F8.2/
      *          '' DATTET(J)'',9F8.2)') R2D(TETOS),R2D(TESS),R2D(TT),
@@ -4015,7 +4018,7 @@ C
          ZAT=ZA(IAT)
          RAT_=RA(IAT)
          IF(PRINT)
-     *   WRITE (6,'(/'' ATOM #'',I3,''  RAT='',F6.3/)') IAT,RAT_
+     *   WRITE (6,'(/'' ATOM #'',I3,''  RAT='',F10.3/)') IAT,RAT_
 C
 C        SPL is a factor for calculating of tesserae square
 C
@@ -4279,11 +4282,11 @@ C
       TIMEB=SECOND()
       TSF1=TSF1+TIMEB-TIMEA
       IF(TIMES) THEN
-           WRITE(6,'(''##### TIME TOTAL IS  '',F8.2,
-     1     ''    SFERA1  '',F8.2)')TIMEB-TIME0,TIMEB-TIMEA
+           WRITE(6,'(''##### TIME TOTAL IS  '',F9.2,
+     1     ''    SFERA1  '',F9.2)')TIMEB-TIME0,TIMEB-TIMEA
       END IF
       RETURN
-    8 FORMAT(2X,I4,2X, 5F9.4)
+    8 FORMAT(2X,I4,2X, 5F11.4)
       END SUBROUTINE SFERA1T
 
 !======================================================================!
@@ -4449,9 +4452,9 @@ CR       DEL=QS1-QS_
          DQNN2=SQRT(DQSQ/DQSS)
 
          IF (SF) THEN
-            WRITE(6,'(/1X,''. ITER'',I2,'' Sum(sigma_1)='',F10.6,
+            WRITE(6,'(/1X,''. ITER'',I2,'' Sum(sigma_1)='',F13.6,
      *      '' MISFIT='',D10.3)')M,QQ1,DQNN1
-            WRITE(6,'( 1X,''. ITER'',I2,'' Sum(sigma_2)='',F10.6,
+            WRITE(6,'( 1X,''. ITER'',I2,'' Sum(sigma_2)='',F13.6,
      *      '' MISFIT='',D10.3)')M,QQ2,DQNN2
          ENDIF
 
@@ -4470,8 +4473,8 @@ C        IF(DABS(DQNN1).LE.SELFCR .AND. DABS(DQNN2).LE.SELFCR)
       TIMEB=SECOND()
       TSF3=TSF3+TIMEB-TIMEA
       IF (TIMES ) THEN
-         WRITE(6,'(''##### TIME TOTAL IS  '',F8.2,
-     1   ''    SFERA3  '',F8.2)')TIMEB-TIME0,TIMEB-TIMEA
+         WRITE(6,'(''##### TIME TOTAL IS  '',F9.2,
+     1   ''    SFERA3  '',F9.2)')TIMEB-TIME0,TIMEB-TIMEA
       END IF
       RETURN
   100 FORMAT(/'SFERA3T: Cavity surface charges are not converged',
@@ -4602,7 +4605,7 @@ C
              QQ=QQ+QS_(IL)
   110     CONTINUE
   120 CONTINUE
-      IF (SF3)WRITE (6,'('' IN SFERT0 QQ='',F12.7)')QQ
+      IF (SF3)WRITE (6,'('' IN SFERT0 QQ='',F14.7)')QQ
       RETURN
       END SUBROUTINE SFERT0
 
@@ -4642,8 +4645,8 @@ C
          QQ2=QQ2+QS_(I)
       ENDDO
       IF (SFERT1P) THEN
-         WRITE (6,'(/'' TOTAL CHARGE OF SOLUTE'',13X,''='',F9.5)')CHARGE
-         WRITE (6,'('' SURFACE CHARGE BEFORE COMPENSATION ='',F9.5)')QQ2
+         WRITE (6,'(/'' TOTAL CHARGE OF SOLUTE'',13X,''='',F12.5)')CHARGE
+         WRITE (6,'('' SURFACE CHARGE BEFORE COMPENSATION ='',F12.5)')QQ2
       ENDIF
       CHARGE_=CHARGE*CON_
       DC=ABS(QQ2-CHARGE_)
@@ -4651,9 +4654,9 @@ C      IF (ABS(CHARGE_).GT.1.D0) DC=DC/ABS(CHARGE_)
       IF (DC.GT.CHDIFF_) THEN
          WRITE (6,'(//'' CAUTION!!!''/
      *   '' SFERT1:  CHARGE ON CAVITY TOO FAR FROM EXPECTED'')')
-         WRITE (6,'('' EXPECTED CHARGE ON SURFACE'',9X,''='',F9.5)')
+         WRITE (6,'('' EXPECTED CHARGE ON SURFACE'',9X,''='',F12.5)')
      *   CHARGE_
-         WRITE (6,'('' SURFACE CHARGE BEFORE COMPENSATION ='',F9.5)')QQ2
+         WRITE (6,'('' SURFACE CHARGE BEFORE COMPENSATION ='',F12.5)')QQ2
          WRITE (6,'('' MOST LIKELY SOMETHING WRONG IN INPUT FILES'')')
          WRITE (6,'('' FURTHER JOB DOES NOT MAKE SENSE. IT STOPPED'')
      *      ')
@@ -4683,9 +4686,9 @@ C
             ENDIF
          ENDDO
       ELSE
-C         WRITE (*,'('' CON='',F9.5)') CON_
+C         WRITE (*,'('' CON='',F12.5)') CON_
          IF (SFERT1P)
-     *   WRITE (6,'('' EXPECTED CHARGE ON SURFACE'',9X,''='',F9.5)')
+     *   WRITE (6,'('' EXPECTED CHARGE ON SURFACE'',9X,''='',F12.5)')
      *   CHARGE_
          AA=CHARGE_/QQ2
          DO I=1,IJ_
@@ -4703,7 +4706,7 @@ C         WRITE (*,'('' CON='',F9.5)') CON_
           CHARGE1=CHARGE1+QSFE_(I)
       ENDDO
       IF (SFERT1P)
-     *WRITE (6,'('' SURFACE CHARGE AFTER COMPENSATION  ='',F9.5/)')
+     *WRITE (6,'('' SURFACE CHARGE AFTER COMPENSATION  ='',F12.5/)')
      *CHARGE1
       RETURN
   100 FORMAT(' Suggestions:'/
@@ -4805,10 +4808,10 @@ C                 WRITE(6,1000)IL,JL,RRKSR,CSA,COG,COG*QS2(JL)
 
   120 CONTINUE
 
-      IF (SF3) WRITE (6,'('' IN SFERT2 QQ='',F12.7)') QQ
+      IF (SF3) WRITE (6,'('' IN SFERT2 QQ='',F14.7)') QQ
 
- 1000 FORMAT(' IL,JL,RRKSR,COG,COG*QS2(JL):',2I5,5X,4G11.5)
- 1010 FORMAT(' IL,JL,RRKSR:',2I5,5X,3G11.5)
+ 1000 FORMAT(' IL,JL,RRKSR,COG,COG*QS2(JL):',2I5,5X,4G12.5)
+ 1010 FORMAT(' IL,JL,RRKSR:',2I5,5X,3G12.5)
 
       END SUBROUTINE SFERT2
 
@@ -5036,7 +5039,7 @@ C
  2190 FORMAT(' *  RADIUS   - USER''S VAN-DER-WAALS RADII TO BE USED')
       IF (MYWORD(ALLKEY,'KAPPA')  )WRITE(6,2110)
      1 READA(KEYWRD_,INDEX(KEYWRD_,'KAPPA'))
- 2110 FORMAT(' *  KAPPA=   - FACTOR FOR FIRST RADII OF ATOMS IS ',F5.2)
+ 2110 FORMAT(' *  KAPPA=   - FACTOR FOR FIRST RADII OF ATOMS IS ',F9.2)
       IF (MYWORD(ALLKEY,'DELTA')  )WRITE(6,2111)
      1 READA(KEYWRD_,INDEX(KEYWRD_,'DELTA'))
  2111 FORMAT(' *  DELTA=  - ADDITIONAL FACTOR FOR THE 2D RADII IS ',
@@ -5044,11 +5047,11 @@ C
       IF (MYWORD(ALLKEY,'EPS')  )WRITE(6,2010)
      1 READA(KEYWRD_,INDEX(KEYWRD_,'EPS'))
  2010 FORMAT(' *  EPS=     - DIELECTRIC PERMITTIVITY OF SOLVENT',
-     1' EPS=',F6.2)
+     1' EPS=',F9.2)
       IF (MYWORD(ALLKEY,'EPSEL')  )WRITE(6,2020)
      1 READA(KEYWRD_,INDEX(KEYWRD_,'EPSEL'))
  2020 FORMAT(' *  EPSEL=   - OPTICAL PERMITTIVITY OF SOLVENT ',
-     1 'EPSEL=',F6.3)
+     1 'EPSEL=',F10.3)
       IF (MYWORD(ALLKEY,'EXVOL')  )WRITE(6,2030)
      1 READA(KEYWRD_,INDEX(KEYWRD_,'EXVOL'))
  2030 FORMAT(' *  EXVOL=   - MINIMAL UNREACHABLE VOLUME TO ',
@@ -5056,7 +5059,7 @@ C
       IF (MYWORD(ALLKEY,'SOLRD')  )WRITE(6,2140)
      1 READA(KEYWRD_,INDEX(KEYWRD_,'SOLRD'))
  2140 FORMAT(' *  SOLRD=   - EFFECTIVE RADIUS OF THE SOLVENT MOLECULE ',
-     1'IS ',F5.2)
+     1'IS ',F9.2)
       TP=MYWORD(ALLKEY,'MODFE')
       IF (TP) THEN
          J=INDEX(KEYWRD_,'MODFE=(')
