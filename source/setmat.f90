@@ -5,9 +5,12 @@ subroutine setmat
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-02-24 00:51:09 $
-!  $Revision: 5.8 $
+!  $Date: 2012-03-13 22:06:36 $
+!  $Revision: 5.9 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.8  2011/02/24 00:51:09  souda
+!  Slight changes in the output format
+!
 !  Revision 5.7  2011/02/20 00:58:11  souda
 !  Major additions/modifications:
 !  (1) precalculation of the proton vibrational basis functions for METHOD=1
@@ -75,7 +78,7 @@ subroutine setmat
    logical :: file_exists
 
    integer :: i, j, ndgas, nhgas, nagas, nkr, kr, kleft, krigh, k
-   integer :: ikey, itread, ispa, lenf, kk, kg, npnts1, npnts2
+   integer :: ikey, islash, itread, ispa, lenf, kk, kg, npnts1, npnts2
    integer :: ndsol, nhsol, nasol, kratio, nsc, kgratio, ngsc
    integer :: kgsol, ksol, l, kp, it, np2, ng2, kpoint, kgpoint
    integer :: ii, jj, itwrite, iread
@@ -86,6 +89,9 @@ subroutine setmat
    real(8) :: ratio, gratio, rl, rcoef
    real(8) :: talp1, talp2, tbeta, tdet, tr1a1b, tr1a2a
    real(8) :: ersum, erdif, ersq, tanth, sqtan, debye
+   real(8) :: lambda_pt, lambda_et, lambda_ept, zp_1a, ze_1a, gsolv_1a
+   real(8) :: tr11, tr12, tr13, tr14, tr22, tr23, tr24, tr33, tr34, tr44
+   real(8) :: trinf11, trinf12, trinf13, trinf14, trinf22, trinf23, trinf24, trinf33, trinf34, trinf44
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Local arrays
@@ -408,17 +414,17 @@ subroutine setmat
    write(6,*) " Reorganization energy matrices and their derivatives..."
    write(6,*)
 
+   ikey = index(keywrd,' SOLV(')
+   call getopt(keywrd,ikey+6,options)
+
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Read external file with the reorganization energy matrices
    ! if TREAD option is specified for the keyword SOLV()
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   ikey = index(keywrd,' SOLV(')
-   call getopt(keywrd,ikey+6,options)
-
    itread = index(options,' TREAD=')
 
-   IF (ITREAD.NE.0) THEN
+   if (ITREAD.NE.0) then
 
       ispa = index(options(itread+7:),' ')
       fname = options(itread+7:itread+ispa+5)
@@ -464,6 +470,209 @@ subroutine setmat
       goto 20
 
    endif
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Read partial reorganization energies and reconstruct
+   ! full reorganization energy matrices
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   if (index(options,' TSET').ne.0) then
+
+      write(6,'(/1x,''Reorganization energy matrices will be reconstructed from the following input.'')')
+      write(6,'( 1x,''(It is assumed that reorganization energies do not depend on the proton or gating coordinates)'')')
+      write(6,'( 1x,''(It is also assumed that electronic reorganization energy matrices are zero...)'')')
+
+
+      !-- Read solvation free energy of 1a diabatic state
+      !   (default value is zero)
+
+      ikey = index(options,' GSOLV1A=')
+      if (ikey.ne.0) then
+         gsolv_1a = reada(options,ikey+9)
+      else
+         gsolv_1a = 0.d0
+      endif
+
+      write(6,'(/1x,"Solvation free energy of the 1a diabatic state: ",f15.3," kcal/mol")') gsolv_1a
+
+      !-- Read Z_p and Z_e values at the minimum of 1a diabatic free energy surface
+      !   (default values are zero)
+
+      write(6,'(/1x,"Values of solvent coordinates at the minimum of the 1a free energy surface:")')
+
+      ikey = index(options,' MIN1A=')
+      if (ikey.ne.0) then
+         ikey = ikey + 7
+         islash = index(options(ikey:),'/')
+         zp_1a = reada(options(ikey:ikey+islash-2),1)
+         ze_1a = reada(options,ikey+islash)
+         write(6,'(1x,"(user input)")')
+      else
+         zp_1a = 0.d0
+         ze_1a = 0.d0
+         write(6,'(1x,"(default values)")')
+      endif
+      write(6,'(10x,"Z_p (kcal/mol): ",f13.6)') zp_1a
+      write(6,'(10x,"Z_e (kcal/mol): ",f13.6)') ze_1a
+
+      !-- Read reorganization energies
+   
+      ikey = index(options,' ERPT=')
+      if (ikey.ne.0) then
+         lambda_pt = reada(options,ikey+6)
+      else
+         write(*,'(/1x,"*** (INPUT ERROR in SETMAT): you must specify the ERPT reorganization energy ***"/)')
+         stop
+      endif
+
+      ikey = index(options,' ERET=')
+      if (ikey.ne.0) then
+         lambda_et = reada(options,ikey+6)
+      else
+         write(*,'(/1x,"*** (INPUT ERROR in SETMAT): you must specify the ERET reorganization energy ***"/)')
+         stop
+      endif
+
+      ikey = index(options,' EREPT=')
+      if (ikey.ne.0) then
+         lambda_ept = reada(options,ikey+7)
+      else
+         write(*,'(/1x,"*** (INPUT ERROR in SETMAT): you must specify the EREPT reorganization energy ***"/)')
+         stop
+      endif
+
+      !-- reconstruct total reorganization energy matrix
+
+      tr11 = gsolv_1a
+      tr12 = -zp_1a
+      tr13 = -ze_1a
+      tr14 = -(zp_1a + ze_1a)
+
+      tr22 = 2.d0*lambda_pt
+      tr23 = lambda_ept - lambda_pt - lambda_et
+      tr24 = lambda_ept + lambda_pt - lambda_et
+
+      tr33 = 2.d0*lambda_et
+      tr34 = lambda_ept - lambda_pt + lambda_et
+
+      tr44 = 2.d0*lambda_ept
+
+      !-- What about electronic reorganization energy matrices?
+
+      !-- (for now we set them to zero)
+
+      trinf11 = 0.d0
+      trinf12 = 0.d0
+      trinf13 = 0.d0
+      trinf14 = 0.d0
+      trinf22 = 0.d0
+      trinf23 = 0.d0
+      trinf24 = 0.d0
+      trinf33 = 0.d0
+      trinf34 = 0.d0
+      trinf44 = 0.d0
+
+      !!--------------------------------------------------------
+      !! (AVS: not necessary - always satisfied by construction)
+      !!--------------------------------------------------------
+      !!if (reddens) then
+      !!   t14 = t12 + t13 - t11
+      !!   t24 = t22 + t23 - t12
+      !!   t34 = t23 + t33 - t13
+      !!   t44 = t11 + t22 + t33 + 2.d0*(t23 - t12 - t13)
+      !!   tinf14 = tinf12 + tinf13 - tinf11
+      !!   tinf24 = tinf22 + tinf23 - tinf12
+      !!   tinf34 = tinf23 + tinf33 - tinf13
+      !!   tinf44 = tinf11 + tinf22 + tinf33 + 2.d0*(tinf23 - tinf12 - tinf13)
+      !!endif
+
+      !-- initialize the reorganization energy matrices
+
+      do kg=1,nkr
+         do kk=1,npnts
+
+            tr(1,1,kk,kg) = tr11
+            t(1,1,kk,kg) = tr11
+
+            tr(1,2,kk,kg) = tr12
+            tr(2,1,kk,kg) = tr12
+            tr(1,3,kk,kg) = tr13
+            tr(3,1,kk,kg) = tr13
+            tr(1,4,kk,kg) = tr14
+            tr(4,1,kk,kg) = tr14
+
+            t(1,2,kk,kg) = tr12 + tr11
+            t(2,1,kk,kg) = tr12 + tr11
+            t(1,3,kk,kg) = tr13 + tr11
+            t(3,1,kk,kg) = tr13 + tr11
+            t(1,4,kk,kg) = tr14 + tr11
+            t(4,1,kk,kg) = tr14 + tr11
+
+            tr(2,2,kk,kg) = tr22
+            tr(2,3,kk,kg) = tr23
+            tr(3,2,kk,kg) = tr23
+            tr(2,4,kk,kg) = tr24
+            tr(4,2,kk,kg) = tr24
+            tr(3,3,kk,kg) = tr33
+            tr(3,4,kk,kg) = tr34
+            tr(4,3,kk,kg) = tr34
+            tr(4,4,kk,kg) = tr44
+
+            t(2,2,kk,kg) = tr22 + tr12 + tr12 + tr11
+            t(2,3,kk,kg) = tr23 + tr12 + tr13 + tr11
+            t(3,2,kk,kg) = tr23 + tr12 + tr13 + tr11
+            t(2,4,kk,kg) = tr24 + tr12 + tr14 + tr11
+            t(4,2,kk,kg) = tr24 + tr12 + tr14 + tr11
+            t(3,3,kk,kg) = tr33 + tr13 + tr13 + tr11
+            t(3,4,kk,kg) = tr34 + tr13 + tr14 + tr11
+            t(4,3,kk,kg) = tr34 + tr13 + tr14 + tr11
+            t(4,4,kk,kg) = tr44 + tr14 + tr14 + tr11
+
+            trinf(1,1,kk,kg) = trinf11
+            tinf(1,1,kk,kg) = trinf11
+
+            trinf(1,2,kk,kg) = trinf12
+            trinf(2,1,kk,kg) = trinf12
+            trinf(1,3,kk,kg) = trinf13
+            trinf(3,1,kk,kg) = trinf13
+            trinf(1,4,kk,kg) = trinf14
+            trinf(4,1,kk,kg) = trinf14
+
+            tinf(1,2,kk,kg) = trinf12 + trinf11
+            tinf(2,1,kk,kg) = trinf12 + trinf11
+            tinf(1,3,kk,kg) = trinf13 + trinf11
+            tinf(3,1,kk,kg) = trinf13 + trinf11
+            tinf(1,4,kk,kg) = trinf14 + trinf11
+            tinf(4,1,kk,kg) = trinf14 + trinf11
+
+            trinf(2,2,kk,kg) = trinf22
+            trinf(2,3,kk,kg) = trinf23
+            trinf(3,2,kk,kg) = trinf23
+            trinf(2,4,kk,kg) = trinf24
+            trinf(4,2,kk,kg) = trinf24
+            trinf(3,3,kk,kg) = trinf33
+            trinf(3,4,kk,kg) = trinf34
+            trinf(4,3,kk,kg) = trinf34
+            trinf(4,4,kk,kg) = trinf44
+
+            tinf(2,2,kk,kg) = trinf22 + trinf12 + trinf12 + trinf11
+            tinf(2,3,kk,kg) = trinf23 + trinf12 + trinf13 + trinf11
+            tinf(3,2,kk,kg) = trinf23 + trinf12 + trinf13 + trinf11
+            tinf(2,4,kk,kg) = trinf24 + trinf12 + trinf14 + trinf11
+            tinf(4,2,kk,kg) = trinf24 + trinf12 + trinf14 + trinf11
+            tinf(3,3,kk,kg) = trinf33 + trinf13 + trinf13 + trinf11
+            tinf(3,4,kk,kg) = trinf34 + trinf13 + trinf14 + trinf11
+            tinf(4,3,kk,kg) = trinf34 + trinf13 + trinf14 + trinf11
+            tinf(4,4,kk,kg) = trinf44 + trinf14 + trinf14 + trinf11
+
+         enddo
+      enddo
+
+      tread = .true.
+      goto 20
+
+   endif
+
 
    10 continue
 
@@ -749,7 +958,7 @@ subroutine setmat
          tdet  = talp1*talp2-tbeta*tbeta
          if (dabs(tdet).lt.1.d-4) then
             write(*,'(/1x,''The truncated reorganization energy matrix'',/,&
-            &'' at the gridpoint '',2I3,'' is singular (Det[TR]='',G12.6,'')'',/,&
+            &'' at the gridpoint '',2I3,'' is singular (Det[TR]='',G13.6,'')'',/,&
             &'' Further calculations are meaningless...'',/,&
             &'' (Check charges for EVB states)''/)') k,kg,tdet
             stop
@@ -935,20 +1144,14 @@ subroutine setmat
 
    open(72,file=job(1:ljob)//'/tmat.dat',status='new',form='formatted')
 
-   write(72,'("Proton grid point: ",i4,";  Limits: from ",f8.3," to ",f8.3)') np2, alim, blim
-   write(72,'("Gating grid point: ",i4,";  Limits: from ",f8.3," to ",f8.3)') ng2, aglim, bglim
+   write(72,'("Proton grid point: ",i4,";  Limits: from ",f10.3," to ",f10.3)') np2, alim, blim
+   write(72,'("Gating grid point: ",i4,";  Limits: from ",f10.3," to ",f10.3)') ng2, aglim, bglim
    write(72,*)
-   write(72,*) '---------- TMAT INNERTIAL (kcal/mol)'
+   write(72,*) '---------- TMAT INERTIAL (kcal/mol)'
    write(72,'(4(3x,f15.6))') (    t(1,j,np2,ng2),j=1,4)
    write(72,'(4(3x,f15.6))') (    t(2,j,np2,ng2),j=1,4)
    write(72,'(4(3x,f15.6))') (    t(3,j,np2,ng2),j=1,4)
    write(72,'(4(3x,f15.6))') (    t(4,j,np2,ng2),j=1,4)
-   write(72,*)
-   write(72,*) '---------- REDUCED TMAT INNERTIAL (kcal/mol)'
-   write(72,'(4(3x,f15.6))') (   tr(1,j,np2,ng2),j=1,4)
-   write(72,'(4(3x,f15.6))') (   tr(2,j,np2,ng2),j=1,4)
-   write(72,'(4(3x,f15.6))') (   tr(3,j,np2,ng2),j=1,4)
-   write(72,'(4(3x,f15.6))') (   tr(4,j,np2,ng2),j=1,4)
    write(72,*)
    write(72,*) '---------- TMAT INFINITY (kcal/mol)'
    write(72,'(4(3x,f15.6))') ( tinf(1,j,np2,ng2),j=1,4)
@@ -956,17 +1159,29 @@ subroutine setmat
    write(72,'(4(3x,f15.6))') ( tinf(3,j,np2,ng2),j=1,4)
    write(72,'(4(3x,f15.6))') ( tinf(4,j,np2,ng2),j=1,4)
    write(72,*)
+   write(72,*) '---------- TOTAL TMAT (kcal/mol)'
+   write(72,'(4(3x,f15.6))') ((t(1,j,np2,ng2) + tinf(1,j,np2,ng2)),j=1,4)
+   write(72,'(4(3x,f15.6))') ((t(2,j,np2,ng2) + tinf(2,j,np2,ng2)),j=1,4)
+   write(72,'(4(3x,f15.6))') ((t(3,j,np2,ng2) + tinf(3,j,np2,ng2)),j=1,4)
+   write(72,'(4(3x,f15.6))') ((t(4,j,np2,ng2) + tinf(4,j,np2,ng2)),j=1,4)
+   write(72,*)
+   write(72,*) '---------- REDUCED TMAT INERTIAL (kcal/mol)'
+   write(72,'(4(3x,f15.6))') (   tr(1,j,np2,ng2),j=1,4)
+   write(72,'(4(3x,f15.6))') (   tr(2,j,np2,ng2),j=1,4)
+   write(72,'(4(3x,f15.6))') (   tr(3,j,np2,ng2),j=1,4)
+   write(72,'(4(3x,f15.6))') (   tr(4,j,np2,ng2),j=1,4)
+   write(72,*)
    write(72,*) '---------- REDUCED TMAT INFINITY (kcal/mol)'
    write(72,'(4(3x,f15.6))') (trinf(1,j,np2,ng2),j=1,4)
    write(72,'(4(3x,f15.6))') (trinf(2,j,np2,ng2),j=1,4)
    write(72,'(4(3x,f15.6))') (trinf(3,j,np2,ng2),j=1,4)
    write(72,'(4(3x,f15.6))') (trinf(4,j,np2,ng2),j=1,4)
    write(72,*)
-   write(72,*) '---------- TOTAL TMAT (kcal/mol)'
-   write(72,'(4(3x,f15.6))') ((t(1,j,np2,ng2) + tinf(1,j,np2,ng2)),j=1,4)
-   write(72,'(4(3x,f15.6))') ((t(2,j,np2,ng2) + tinf(2,j,np2,ng2)),j=1,4)
-   write(72,'(4(3x,f15.6))') ((t(3,j,np2,ng2) + tinf(3,j,np2,ng2)),j=1,4)
-   write(72,'(4(3x,f15.6))') ((t(4,j,np2,ng2) + tinf(4,j,np2,ng2)),j=1,4)
+   write(72,*) '---------- REDUCED TOTAL TMAT (kcal/mol)'
+   write(72,'(4(3x,f15.6))') ((tr(1,j,np2,ng2) + trinf(1,j,np2,ng2)),j=1,4)
+   write(72,'(4(3x,f15.6))') ((tr(2,j,np2,ng2) + trinf(2,j,np2,ng2)),j=1,4)
+   write(72,'(4(3x,f15.6))') ((tr(3,j,np2,ng2) + trinf(3,j,np2,ng2)),j=1,4)
+   write(72,'(4(3x,f15.6))') ((tr(4,j,np2,ng2) + trinf(4,j,np2,ng2)),j=1,4)
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Calculate partial reorganization energies for PT and ET
@@ -990,11 +1205,15 @@ subroutine setmat
    write(6,'(10x,''Lambda_PT:  '',f15.6)') erpt
    write(6,'(10x,''Lambda_ET:  '',f15.6)') eret
    write(6,'(10x,''Coupling:   '',f15.6)') erx
+   write(6,'(10x,''Lambda_EPT  '',f15.6)') erpt + eret + 2.d0*erx
+   write(6,'(10x,''Lambda_EPT* '',f15.6)') half*tr(4,4,kpoint,kgpoint)
 
    write(72,'(/1x,''Partial reorganization energies (kcal/mol):'')')
    write(72,'(10x,''Lambda_PT:  '',f15.6)') erpt
    write(72,'(10x,''Lambda_ET:  '',f15.6)') eret
    write(72,'(10x,''Coupling:   '',f15.6)') erx
+   write(72,'(10x,''Lambda_EPT  '',f15.6)') erpt + eret + 2.d0*erx
+   write(72,'(10x,''Lambda_EPT* '',f15.6)') half*tr(4,4,kpoint,kgpoint)
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! calculate the eigenvalues of the truncated reorganization
@@ -1022,10 +1241,17 @@ subroutine setmat
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! calculate the transformation angle
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   tanth = half*(erdif - ersq)/erx
-   sqtan = sqrt(1.d0 + tanth*tanth)
-   sin_theta = tanth/sqtan
-   cos_theta = 1.d0/sqtan
+   if (abs(erx).gt.1.d-6) then
+      tanth = half*(erdif - ersq)/erx
+      sqtan = sqrt(1.d0 + tanth*tanth)
+      sin_theta = tanth/sqtan
+      cos_theta = 1.d0/sqtan
+   else
+      tanth = 0.d0
+      sqtan = 1.d0
+      sin_theta = 0.d0
+      cos_theta = 1.d0
+   endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! initialize transformation matrix for solvent coordinates:
@@ -1166,22 +1392,22 @@ subroutine setmat
       write(6,'(/1x,"Dipole moments (Debye) of the diabatic charge distributions (proton at the middle of the PT interface)")')
       write(6,'( 1x,"   State  ","      d_x         d_y         d_z          |d|  ")')
 
-      write(6,'( 1x,"    1a    ",4f12.6)') dipole_moment_diab_x(1,1,npnts/2)*debye, &
+      write(6,'( 1x,"    1a    ",4f13.6)') dipole_moment_diab_x(1,1,npnts/2)*debye, &
                                          & dipole_moment_diab_y(1,1,npnts/2)*debye, &
                                          & dipole_moment_diab_z(1,1,npnts/2)*debye, &
       &sqrt(dipole_moment_diab_x(1,1,npnts/2)**2 + dipole_moment_diab_y(1,1,npnts/2)**2 + dipole_moment_diab_z(1,1,npnts/2)**2)*debye
 
-      write(6,'( 1x,"    1b    ",4f12.6)') dipole_moment_diab_x(2,2,npnts/2)*debye, &
+      write(6,'( 1x,"    1b    ",4f13.6)') dipole_moment_diab_x(2,2,npnts/2)*debye, &
                                          & dipole_moment_diab_y(2,2,npnts/2)*debye, &
                                          & dipole_moment_diab_z(2,2,npnts/2)*debye, &
       &sqrt(dipole_moment_diab_x(2,2,npnts/2)**2 + dipole_moment_diab_y(2,2,npnts/2)**2 + dipole_moment_diab_z(2,2,npnts/2)**2)*debye
 
-      write(6,'( 1x,"    2a    ",4f12.6)') dipole_moment_diab_x(3,3,npnts/2)*debye, &
+      write(6,'( 1x,"    2a    ",4f13.6)') dipole_moment_diab_x(3,3,npnts/2)*debye, &
                                          & dipole_moment_diab_y(3,3,npnts/2)*debye, &
                                          & dipole_moment_diab_z(3,3,npnts/2)*debye, &
       &sqrt(dipole_moment_diab_x(3,3,npnts/2)**2 + dipole_moment_diab_y(3,3,npnts/2)**2 + dipole_moment_diab_z(3,3,npnts/2)**2)*debye
 
-      write(6,'( 1x,"    2b    ",4f12.6)') dipole_moment_diab_x(4,4,npnts/2)*debye, &
+      write(6,'( 1x,"    2b    ",4f13.6)') dipole_moment_diab_x(4,4,npnts/2)*debye, &
                                          & dipole_moment_diab_y(4,4,npnts/2)*debye, &
                                          & dipole_moment_diab_z(4,4,npnts/2)*debye, &
       &sqrt(dipole_moment_diab_x(4,4,npnts/2)**2 + dipole_moment_diab_y(4,4,npnts/2)**2 + dipole_moment_diab_z(4,4,npnts/2)**2)*debye
@@ -1190,22 +1416,22 @@ subroutine setmat
       write(72,'(/1x,"Dipole moments (Debye) of the diabatic charge distributions (proton at the middle of the PT interface)")')
       write(72,'( 1x,"   State  ","      d_x         d_y         d_z          |d|  ")')
    
-      write(72,'( 1x,"    1a    ",4f12.6)') dipole_moment_diab_x(1,1,npnts/2)*debye, &
+      write(72,'( 1x,"    1a    ",4f13.6)') dipole_moment_diab_x(1,1,npnts/2)*debye, &
                                           & dipole_moment_diab_y(1,1,npnts/2)*debye, &
                                           & dipole_moment_diab_z(1,1,npnts/2)*debye, &
       &sqrt(dipole_moment_diab_x(1,1,npnts/2)**2 + dipole_moment_diab_y(1,1,npnts/2)**2 + dipole_moment_diab_z(1,1,npnts/2)**2)*debye
 
-      write(72,'( 1x,"    1b    ",4f12.6)') dipole_moment_diab_x(2,2,npnts/2)*debye, &
+      write(72,'( 1x,"    1b    ",4f13.6)') dipole_moment_diab_x(2,2,npnts/2)*debye, &
                                           & dipole_moment_diab_y(2,2,npnts/2)*debye, &
                                           & dipole_moment_diab_z(2,2,npnts/2)*debye, &
       &sqrt(dipole_moment_diab_x(2,2,npnts/2)**2 + dipole_moment_diab_y(2,2,npnts/2)**2 + dipole_moment_diab_z(2,2,npnts/2)**2)*debye
 
-      write(72,'( 1x,"    2a    ",4f12.6)') dipole_moment_diab_x(3,3,npnts/2)*debye, &
+      write(72,'( 1x,"    2a    ",4f13.6)') dipole_moment_diab_x(3,3,npnts/2)*debye, &
                                           & dipole_moment_diab_y(3,3,npnts/2)*debye, &
                                           & dipole_moment_diab_z(3,3,npnts/2)*debye, &
       &sqrt(dipole_moment_diab_x(3,3,npnts/2)**2 + dipole_moment_diab_y(3,3,npnts/2)**2 + dipole_moment_diab_z(3,3,npnts/2)**2)*debye
 
-      write(72,'( 1x,"    2b    ",4f12.6)') dipole_moment_diab_x(4,4,npnts/2)*debye, &
+      write(72,'( 1x,"    2b    ",4f13.6)') dipole_moment_diab_x(4,4,npnts/2)*debye, &
                                           & dipole_moment_diab_y(4,4,npnts/2)*debye, &
                                           & dipole_moment_diab_z(4,4,npnts/2)*debye, &
       &sqrt(dipole_moment_diab_x(4,4,npnts/2)**2 + dipole_moment_diab_y(4,4,npnts/2)**2 + dipole_moment_diab_z(4,4,npnts/2)**2)*debye

@@ -6,9 +6,12 @@ subroutine setjob
 !---------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-03-01 23:52:15 $
-!  $Revision: 5.7 $
+!  $Date: 2012-03-13 22:06:35 $
+!  $Revision: 5.8 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.7  2011/03/01 23:52:15  souda
+!  insignificant change in output
+!
 !  Revision 5.6  2011/02/25 19:11:25  souda
 !  Now using a separate set of dielectric constant for solvent dynamics.
 !
@@ -47,7 +50,7 @@ subroutine setjob
    character(  40) :: fname
    logical :: ok
 
-   integer :: ikey, ingrid, ingrids, npntsi, inprst, ilims, ialim, islash
+   integer :: ikey, ingrid, ingrids, npntsi, inprst, ilims, ialim, islash, itset
    integer :: irhmin, npntspow2, iarlim, igquant, ingast, icoulomb
    integer :: idist, ideltag, ivept, ipars, ispa, lenf
    integer :: igeo, ixyz, imajor, iminor, ikappa, idelta, igeom, itread
@@ -153,7 +156,7 @@ subroutine setjob
    else
       charge = 0.d0
    endif
-   write(6,'(/1x,"Total charge of the solute: ",f12.6)') charge
+   write(6,'(/1x,"Total charge of the solute: ",f13.6)') charge
 
    !====================================================
    ! Parameters of the grid for 1D-Schroedinger equation
@@ -315,8 +318,8 @@ subroutine setjob
       endif
 
       write(6,'(/1x,"Quantum particle parameters:")')
-      write(6,'(10x,"Mass of the particle (Daltons): ",f12.6)') pm/dalton
-      write(6,'(10x,"Integration limits (Angstroms): ",2f12.6)') alim,blim
+      write(6,'(10x,"Mass of the particle (Daltons): ",f13.6)') pm/dalton
+      write(6,'(10x,"Integration limits (Angstroms): ",2f13.6)') alim,blim
       write(6,'(10x,"Number of integration points:   ",i12)') npnts
       write(6,'(10x,"Number of proton basis states:  ",i12)') nprst
 
@@ -547,9 +550,9 @@ subroutine setjob
       endif
 
       write(6,'(/1x,"Gating coordinate parameters:")')
-      write(6,'(10x,"Mass of the donor (Daltons)   : ",f12.6)') dm/dalton
-      write(6,'(10x,"Mass of the acceptor (Daltons): ",f12.6)') am/dalton
-      write(6,'(10x,"Integration limits (Angstroms): ",2f12.6)') aglim,bglim
+      write(6,'(10x,"Mass of the donor (Daltons)   : ",f13.6)') dm/dalton
+      write(6,'(10x,"Mass of the acceptor (Daltons): ",f13.6)') am/dalton
+      write(6,'(10x,"Integration limits (Angstroms): ",2f13.6)') aglim,bglim
       write(6,'(10x,"Number of grid points:          ",i12)') npntsg
       if (gquant) then
          write(6,'(10x,"Quantization is turned on")')
@@ -678,8 +681,8 @@ subroutine setjob
       endif
 
       write(6,'(/1x,"Some water potential parameters:")')
-      write(6,'(10x,"Electron transfer distance (A): ",f12.6)') dist_et
-      write(6,'(10x,"Bias for ET states (kcal/mol):  ",f12.6)') deltag
+      write(6,'(10x,"Electron transfer distance (A): ",f13.6)') dist_et
+      write(6,'(10x,"Bias for ET states (kcal/mol):  ",f13.6)') deltag
       write(6,'(10x,"Method for VEPT estimate:       ",i12)')   veptmeth
 
 
@@ -832,6 +835,7 @@ subroutine setjob
 
    endif
 
+
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Read values of dielectric constants (EPS0,EPS8) at 298.15 K
    ! [Y. Marcus, Ion Solvation, Wiley, NY, 1985, p.137-138]
@@ -938,10 +942,11 @@ subroutine setjob
       nosymd=.false.
    endif
 
-   write(6,'(/1x,"Solvent parameters:")')
-   write(6,'(10x,"Static dielectric constant:  ",f12.6)') eps0
-   write(6,'(10x,"Optical dielectric constant: ",f12.6)') eps8
-   write(6,'(10x,"Total charge of the solute:  ",f12.6)') charge
+   write(6,'(/1x,"Static solvent parameters:")')
+   write(6,'(10x,"Static dielectric constant:  ",f13.6)') eps0
+   write(6,'(10x,"Optical dielectric constant: ",f13.6)') eps8
+   !write(6,'(10x,"Inverse Pekar factor:       ",f13.6)') f0
+   write(6,'(10x,"Total charge of the solute:  ",f13.6)') charge
 
    if (symt) then
       write(6,'("Solvation T matrices symmetrized for PCET in a symmetric system")')
@@ -1000,9 +1005,9 @@ subroutine setjob
       r   = 2.d0*a/l0
 
       write(6,'(/1x,"Ellipsoidal cavity parameters:")')
-      write(6,'(10x,"Major semiaxis:      ",f12.6)') a
-      write(6,'(10x,"Minor semiaxis:      ",f12.6)') b
-      write(6,'(10x,"Interfocal distance: ",f12.6)') r
+      write(6,'(10x,"Major semiaxis:      ",f13.6)') a
+      write(6,'(10x,"Minor semiaxis:      ",f13.6)') b
+      write(6,'(10x,"Interfocal distance: ",f13.6)') r
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1074,16 +1079,30 @@ subroutine setjob
       endif
 
       write(6,'(/1x,"FRCM cavity parameters:")')
-      write(6,'(10x,"Factor for VdW radii (KAPPA):     ",f12.6)') kappa
-      write(6,'(10x,"Width of the inner layer (DELTA): ",f12.6," Angstroms")') delta
+      write(6,'(10x,"Factor for VdW radii (KAPPA):     ",f13.6)') kappa
+      write(6,'(10x,"Width of the inner layer (DELTA): ",f13.6," Angstroms")') delta
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+   elseif (index(options,' TSET').ne.0) then
+
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      ! Reconstruction of reorganization energy matrix from
+      ! input values of partial reorganization energies
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      write(6,'(/1x,"Reorganization energy matrices will be reconstructed from partial reorganization energies specified in input")')
+      isolv = 3
+
    else
 
-      write(*,'(/1x,"*** (in SETJOB): You MUST specify the solvation model with SOLV ***"/)')
+      write(*,'(/1x,"*** (in SETJOB): You MUST specify the solvation model (ELLIPSE/FRCM/TSET) with SOLV ***"/)')
       stop
 
+   endif
+
+   itread = index(options,' TREAD=')
+   if (itread.ne.0) then
+      write(6,'(/1x,"Reorganization energy matrices will be read from disk file in SETMAT")')
    endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1092,7 +1111,6 @@ subroutine setjob
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    igeom = index(options,' GEOM=')
-   itread = index(options,' TREAD=')
 
    if (igeom.ne.0) then
 
@@ -1169,13 +1187,20 @@ subroutine setjob
 
       endif
 
-   elseif (itread.ne.0) then
-
-      write(6,'(/1x,"Reorganization energy matrices will be read from disk file in SETMAT")')
+      if (isolv.eq.3) then
+         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         ! put the hydrogen atom at the center of mass
+         ! of the pt interface
+         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+         nhpt = iptsol(2)
+         xyzsol(1,nhpt) = 0.d0
+         xyzsol(2,nhpt) = 0.d0
+         xyzsol(3,nhpt) = 0.d0
+      endif
 
    else
 
-      write(*,'(/1x,"*** (in SETJOB): You MUST specify either GEOM= or TREAD= for SOLV ***"/)')
+      write(*,'(/1x,"*** (in SETJOB): You MUST specify file with the geometry (GEOM=) in SOLV keyword ***"/)')
       stop
 
    endif
@@ -1187,7 +1212,7 @@ subroutine setjob
 
    ixyz = index(options,' XYZOUT=')
 
-   if (ixyz.ne.0) then
+   if (ixyz.ne.0.and.isolv.lt.3) then
 
       ispa = index(options(ixyz+8:),' ')
       fname = options(ixyz+8:ixyz+ispa+6)
@@ -1209,6 +1234,7 @@ contains
 !=======================================================================
    
    subroutine scan_geo(iunit,n)
+
    ! scans geometry input file (iunit) and extracts
    ! number of atoms (n)
 
@@ -1244,6 +1270,7 @@ contains
       endif
 
       return
+
    end subroutine scan_geo
 
 
