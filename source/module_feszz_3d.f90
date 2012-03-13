@@ -5,9 +5,12 @@ module feszz_3d
 !======================================================================
 !
 !  $Author: souda $
-!  $Date: 2011-04-13 23:49:48 $
-!  $Revision: 5.4 $
+!  $Date: 2012-03-13 22:06:00 $
+!  $Revision: 5.5 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.4  2011/04/13 23:49:48  souda
+!  Minor restructuring of modules and addition of LAPACK diagonalization wrappers
+!
 !  Revision 5.3  2011/02/20 00:58:11  souda
 !  Major additions/modifications:
 !  (1) precalculation of the proton vibrational basis functions for METHOD=1
@@ -124,7 +127,7 @@ contains
 
    integer :: nzdim, ielst0, i, j, n, k, l, kk, ll, ierr
    integer :: iel, ipr, ielshift, jel, jpr, jelshift, iset_shift
-   real(8) :: p, hfij, psipr_ovl, dterm, dtij, gterm, gtij
+   real(8) :: p, hfij, psipr_ovl, dterm, dtij, gterm, gtij, self_energy
    !real(8) :: zeit_start, zeit_end
 
    integer, allocatable, dimension(:)     :: istel, istpr
@@ -213,11 +216,13 @@ contains
       !    energy levels for 1a, 1b, 2a, and 2b electronic states,
       !    respectively)
 
+      self_energy = selfen(npnts/2,kg,zp,ze)
+
       if (diab4) then
 
          psipr(1,:,:) = psipr_diabatic(iset,:,:,kg)
          do j=1,nprst
-            envib(1,j) = envib_diabatic(iset,j,kg) + solvent_shift(iset,zp,ze) + selfen(npnts/2,kg,zp,ze)
+            envib(1,j) = envib_diabatic(iset,j,kg) + solvent_shift(iset,zp,ze) + self_energy
          enddo
 
       elseif (diab2) then
@@ -226,7 +231,7 @@ contains
          do i=1,ielst
             do j=1,nprst
                psipr(i,j,:) = psipr_diabatic(i+iset_shift,j,:,kg)
-               envib(i,j) = envib_diabatic(i+iset_shift,j,kg) + solvent_shift(i+iset_shift,zp,ze) + selfen(npnts/2,kg,zp,ze)
+               envib(i,j) = envib_diabatic(i+iset_shift,j,kg) + solvent_shift(i+iset_shift,zp,ze) + self_energy
             enddo
          enddo
 
@@ -235,7 +240,7 @@ contains
          do i=1,ielst
             do j=1,nprst
                psipr(i,j,:) = psipr_diabatic(i,j,:,kg)
-               envib(i,j) = envib_diabatic(i,j,kg) + solvent_shift(i,zp,ze) + selfen(npnts/2,kg,zp,ze)
+               envib(i,j) = envib_diabatic(i,j,kg) + solvent_shift(i,zp,ze) + self_energy
             enddo
          enddo
 
