@@ -7,8 +7,8 @@
 #
 #############################################################
 
-ARCH = intel_11.1-x86_64_debug
-FC = ifort
+ARCH = intel_2011_sp1-x86_64_debug
+FC = /opt/intel/composer_xe_2011_sp1.7.256/bin/intel64/ifort
 # Important: MODFLAG must have a trailing blank
 MODFLAG = -module 
 BACKSLASH = -assume nobscc
@@ -17,8 +17,8 @@ F90FLAGS = -g -check
 F77FLAGS = -g -check
 
 # sequential mkl libraries
-LDFLAGS = -L/usr/local/intel/ifort_11.1/072/mkl/lib/em64t -lmkl_lapack -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lpthread -lm
+LDFLAGS = -L/opt/intel/composerxe/mkl/lib/em64t -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lpthread -lm
 
 # parallel (threaded) mkl libraries
 # set OMP_NUM_THREADS=<number_of_threads> in your script (default is 8 threads)
-#LDFLAGS = -L/usr/local/intel/ifort_11.1/072/mkl/lib/em64t -lmkl_lapack -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm
+#LDFLAGS = -L/opt/intel/composerxe/mkl/lib/em64t -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm

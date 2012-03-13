@@ -15,4 +15,4 @@ BACKSLASH = -Mbackslash
 NOBACKSLASH = -Mnobackslash
 F90FLAGS = -g -C
 F77FLAGS = -g -C
-LDFLAGS = -L/usr/pgi/linux86-64/9.0-2/lib -llapack
+LDFLAGS = -L/usr/pgi/linux86-64/9.0-2/lib -llapack -lblas -lm
