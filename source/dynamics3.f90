@@ -140,9 +140,12 @@ subroutine dynamics3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-06-03 05:05:45 $
-!  $Revision: 5.17 $
+!  $Date: 2012-03-13 22:07:59 $
+!  $Revision: 5.18 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.17  2011/06/03 05:05:45  souda
+!  Kinetic energy components are calculated and added to the trajectory data
+!
 !  Revision 5.16  2011/04/13 23:49:48  souda
 !  Minor restructuring of modules and addition of LAPACK diagonalization wrappers
 !
@@ -256,11 +259,11 @@ subroutine dynamics3
    integer :: number_of_switches=0, number_of_rejected=0
    integer :: itraj_channel=11
 
-   real(8) :: sigma, sample, population_current, wf_norm
+   real(8) :: sigma, sigma1, sigma2, sample, population_current, wf_norm
    real(8) :: zeit_start, zeit_end, zeit_total, traj_time_start, traj_time_end
    real(8) :: zeit, zeit_prev
    real(8) :: zeitq, zeitq_prev
-   real(8) :: z1, z2, zp, ze, vz1, vz2, vzp, vze, z10, z20, zp0, ze0
+   real(8) :: z1, z2, zp, ze, vz1, vz2, vzp, vze, z10, z20, zp0, ze0, y1, y2
    real(8) :: ekin, ekin1, ekin2, efes
    real(8) :: vz1_prev, vz2_prev
    real(8) :: pump_e, pump_w, vib_linewidth
@@ -308,10 +311,10 @@ subroutine dynamics3
 
    if (npntsg.eq.1) then
       kg0 = 1
-      write(6,'(1x,"The gating distance is fixed at the value from the input geometry: ",f8.3," A"/)') abs(xyzgas(1,iptgas(3)) - xyzgas(1,iptgas(1)))
+      write(6,'(1x,"The gating distance is fixed at the value from the input geometry: ",f10.3," A"/)') abs(xyzgas(1,iptgas(3)) - xyzgas(1,iptgas(1)))
    else
       if (kg0.ge.1.and.kg0.le.npntsg) then
-         write(6,'(1x," The gating distance is fixed at the value: ",f8.3," A (grid point #",i3,")"/)') glist(kg0),kg0
+         write(6,'(1x," The gating distance is fixed at the value: ",f10.3," A (grid point #",i3,")"/)') glist(kg0),kg0
       else
          write(6,'(1x," The specified gating grid point #",i3," is outside the allowed range (1,",i3,")"/)') kg0,npntsg
          call clean_exit
@@ -329,7 +332,7 @@ subroutine dynamics3
       temp = 300.d0
    endif
 
-   write(6,'(1x,"Temperature: ",f8.3," K"/)') temp
+   write(6,'(1x,"Temperature: ",f10.3," K"/)') temp
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Dielectric relaxation model
@@ -382,29 +385,33 @@ subroutine dynamics3
          call clean_exit
       endif
 
-      ioption = index(options,' EPS0=')
-      if (ioption.ne.0) then
-         eps0_dyn = reada(options,ioption+6)
-      else
-         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS0= option for DEBYE model ***"/)')
-         call clean_exit
-      endif
+      !ioption = index(options,' EPS0=')
+      !if (ioption.ne.0) then
+      !   eps0_dyn = reada(options,ioption+6)
+      !else
+      !   write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS0= option for DEBYE model ***"/)')
+      !   call clean_exit
+      !endif
 
-      ioption = index(options,' EPS8=')
-      if (ioption.ne.0) then
-         eps8_dyn = reada(options,ioption+6)
-      else
-         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS8= option for DEBYE model ***"/)')
-         call clean_exit
-      endif
+      eps0_dyn = eps0
+
+      !ioption = index(options,' EPS8=')
+      !if (ioption.ne.0) then
+      !   eps8_dyn = reada(options,ioption+6)
+      !else
+      !   write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS8= option for DEBYE model ***"/)')
+      !   call clean_exit
+      !endif
+
+      eps8_dyn = eps8
 
       call set_debye_model_parameters()
-      write(6,'(1x,"Static dielectric constant EPS0         ",f15.6)') eps0_dyn
-      write(6,'(1x,"Optical dielectric constant EPS_inf     ",f15.6)') eps8_dyn
-      write(6,'(1x,"Inverse Pekar factor f_0                ",f15.6)') f0
-      write(6,'(1x,"Debye relaxation time TAUD (ps):        ",f15.6)') taud
-      write(6,'(1x,"Longitudianl relaxation time TAUL (ps): ",f15.6)') taul
-      write(6,'(1x,"Effective mass of the solvent (ps^2):   ",f15.6)') effmass
+      write(6,'(1x,"Static dielectric constant EPS0         ",f15.6)')  eps0_dyn
+      write(6,'(1x,"Optical dielectric constant EPS_inf     ",f15.6)')  eps8_dyn
+      write(6,'(1x,"Inverse Pekar factor f_0                ",f15.6)')  f0
+      write(6,'(1x,"Debye relaxation time TAUD (ps):        ",f15.6)')  taud
+      write(6,'(1x,"Longitudianl relaxation time TAUL (ps): ",f15.6)')  taul
+      write(6,'(1x,"Effective masses of the solvent (ps^2): ",2f15.6)') effmass1, effmass2
 
    elseif (solvent_model.eq."DEBYE2") then
 
@@ -426,36 +433,41 @@ subroutine dynamics3
 
       ioption = index(options,' EPS1=')
       if (ioption.ne.0) then
-         eps1 = reada(options,ioption+6)
+         eps1_dyn = reada(options,ioption+6)
       else
          write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS1= option for DEBYE2 model ***"/)')
          call clean_exit
       endif
 
-      ioption = index(options,' EPS0=')
-      if (ioption.ne.0) then
-         eps0_dyn = reada(options,ioption+6)
-      else
-         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS0= option for DEBYE2 model ***"/)')
-         call clean_exit
-      endif
+      !ioption = index(options,' EPS0=')
+      !if (ioption.ne.0) then
+      !   eps0_dyn = reada(options,ioption+6)
+      !else
+      !   write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS0= option for DEBYE2 model ***"/)')
+      !   call clean_exit
+      !endif
 
-      ioption = index(options,' EPS8=')
-      if (ioption.ne.0) then
-         eps8_dyn = reada(options,ioption+6)
-      else
-         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS8= option for DEBYE2 model ***"/)')
-         call clean_exit
-      endif
+      eps0_dyn = eps0
+
+      !ioption = index(options,' EPS8=')
+      !if (ioption.ne.0) then
+      !   eps8_dyn = reada(options,ioption+6)
+      !else
+      !   write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS8= option for DEBYE2 model ***"/)')
+      !   call clean_exit
+      !endif
+
+      eps8_dyn = eps8
 
       call set_debye2_model_parameters()
       write(6,'(1x,"Static dielectric constant EPS0         ",f15.6)') eps0_dyn
       write(6,'(1x,"Optical dielectric constant EPS_inf     ",f15.6)') eps8_dyn
+      write(6,'(1x,"Additional dielectric constant EPS1     ",f15.6)') eps1_dyn
       write(6,'(1x,"Inverse Pekar factor f_0                ",f15.6)') f0
       write(6,'(1x,"First  relaxation time TAU1 (ps):       ",f15.6)') tau1
       write(6,'(1x,"Second relaxation time TAU2 (ps):       ",f15.6)') tau2
       write(6,'(1x,"Longitudianl relaxation time TAUL (ps): ",f15.6)') taul
-      write(6,'(1x,"Effective mass of the solvent (ps^2):   ",f15.6)') effmass
+      write(6,'(1x,"Effective masses of the solvent (ps^2): ",2f15.6)') effmass1, effmass2
 
    elseif (solvent_model.eq."ONODERA") then
 
@@ -468,28 +480,58 @@ subroutine dynamics3
       endif
 
       ioption = index(options,' TAU0=')
+      ioption2 = index(options,' EFFMASS=')
+
       if (ioption.ne.0) then
+
          tau0 = reada(options,ioption+6)
+         if (tau0.eq.0.d0) then
+            write(*,'(/1x,"*** (in DYNAMICS3): Use EFFMASS option instead of setting TAU0 to zero ***"/)')
+            call clean_exit
+         endif
+
+      elseif (ioption2.ne.0) then
+
+         tau0 = 0.d0
+         ikey = ioption2 + 9
+         ispa = index(options(ikey:),space)
+         islash1 = index(options(ikey:ikey+ispa-1),'/')
+         if (islash1.eq.0) then
+            effmass1 = reada(options,ikey)
+            effmass2 = effmass1
+         else
+            effmass1 = reada(options(ikey:ikey+islash1-2),1)
+            effmass2 = reada(options,ikey+islash1)
+         endif
+
       else
-         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify TAU0= option for ONODERA model ***"/)')
+
+         write(*,'(/1x,"*** (in DYNAMICS3): You MUST specify either TAU0 or EFFMASS option for ONODERA model ***"/)')
          call clean_exit
+
       endif
 
-      ioption = index(options,' EPS0=')
-      if (ioption.ne.0) then
-         eps0_dyn = reada(options,ioption+6)
-      else
-         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS0= option for ONODERA model ***"/)')
-         call clean_exit
-      endif
+      !-- dielectric constants
 
-      ioption = index(options,' EPS8=')
-      if (ioption.ne.0) then
-         eps8_dyn = reada(options,ioption+6)
-      else
-         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS8= option for ONODERA model ***"/)')
-         call clean_exit
-      endif
+      !ioption = index(options,' EPS0=')
+      !if (ioption.ne.0) then
+      !   eps0_dyn = reada(options,ioption+6)
+      !else
+      !   write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS0= option for ONODERA model ***"/)')
+      !   call clean_exit
+      !endif
+
+      eps0_dyn = eps0
+
+      !ioption = index(options,' EPS8=')
+      !if (ioption.ne.0) then
+      !   eps8_dyn = reada(options,ioption+6)
+      !else
+      !   write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS8= option for ONODERA model ***"/)')
+      !   call clean_exit
+      !endif
+
+      eps8_dyn = eps8
 
       call set_onodera_model_parameters()
       write(6,'(1x,"Static dielectric constant EPS0          ",f15.6)') eps0_dyn
@@ -499,12 +541,101 @@ subroutine dynamics3
       write(6,'(1x,"Onodera relaxation time TAU0 (ps)        ",f15.6)') tau0
       write(6,'(1x,"Longitudinal relaxation time TAUL  (ps)  ",f15.6)') taul
       write(6,'(1x,"Longitudinal relaxation time TAU0L (ps)  ",f15.6)') tau0l
-      write(6,'(1x,"Effective mass of the solvent (ps^2)     ",f15.6)') effmass
+      write(6,'(1x,"Effective masses of the solvent (ps^2)   ",2f15.6)') effmass1, effmass2
 
+   !-- Onodera model with two relaxation periods
    elseif (solvent_model.eq."ONODERA2") then
 
-      !-- not implemented yet....
+      ioption = index(options,' TAU0=')
+      ioption2 = index(options,' EFFMASS=')
+
+      if (ioption.ne.0) then
+
+         tau0 = reada(options,ioption+6)
+         if (tau0.eq.0.d0) then
+            write(*,'(/1x,"*** (in DYNAMICS3): Use EFFMASS option instead of setting TAU0 to zero ***"/)')
+            call clean_exit
+         endif
+
+      elseif (ioption2.ne.0) then
+
+         tau0 = 0.d0
+         ikey = ioption2 + 9
+         ispa = index(options(ikey:),space)
+         islash1 = index(options(ikey:ikey+ispa-1),'/')
+         if (islash1.eq.0) then
+            effmass1 = reada(options,ikey)
+            effmass2 = effmass1
+         else
+            effmass1 = reada(options(ikey:ikey+islash1-2),1)
+            effmass2 = reada(options,ikey+islash1)
+         endif
+
+      else
+
+         write(*,'(/1x,"*** (in DYNAMICS3): You MUST specify either TAU0 or EFFMASS option for ONODERA-2 model ***"/)')
+         call clean_exit
+
+      endif
+
+      ioption = index(options,' TAU1=')
+      if (ioption.ne.0) then
+         tau1 = reada(options,ioption+6)
+      else
+         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify TAU1= option for ONODERA-2 model ***"/)')
+         call clean_exit
+      endif
+
+      ioption = index(options,' TAU2=')
+      if (ioption.ne.0) then
+         tau2 = reada(options,ioption+6)
+      else
+         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify TAU2= option for ONODERA-2 model ***"/)')
+         call clean_exit
+      endif
+
+      !ioption = index(options,' EPS0=')
+      !if (ioption.ne.0) then
+      !   eps0_dyn = reada(options,ioption+6)
+      !else
+      !   write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS0= option for ONODERA model ***"/)')
+      !   call clean_exit
+      !endif
+
+      eps0_dyn = eps0
+
+      ioption = index(options,' EPS1=')
+      if (ioption.ne.0) then
+         eps1_dyn = reada(options,ioption+6)
+      else
+         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS1= option for ONODERA-2 model ***"/)')
+         call clean_exit
+      endif
+
+      !ioption = index(options,' EPS8=')
+      !if (ioption.ne.0) then
+      !   eps8_dyn = reada(options,ioption+6)
+      !else
+      !   write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS8= option for ONODERA model ***"/)')
+      !   call clean_exit
+      !endif
+
+      eps8_dyn = eps8
+
       call set_onodera2_model_parameters()
+      write(6,'(1x,"Static dielectric constant EPS0          ",f15.6)') eps0_dyn
+      write(6,'(1x,"Optical dielectric constant EPS_inf      ",f15.6)') eps8_dyn
+      write(6,'(1x,"Inverse Pekar factor f_0                 ",f15.6)') f0
+      write(6,'(1x,"Additional dielectric constant EPS1      ",f15.6)') eps1_dyn
+      write(6,'(1x,"Onodera relaxation time TAU0 (ps)        ",f15.6)') tau0
+      write(6,'(1x,"First relaxation time TAU1 (ps)          ",f15.6)') tau1
+      write(6,'(1x,"Second relaxation time TAU1 (ps)         ",f15.6)') tau2
+      write(6,'(1x,"Effective masses of the solvent (ps^2)   ",2f15.6)') effmass1, effmass2
+
+      if (effmass1.eq.0.d0.or.effmass2.eq.0.d0) then
+         write(*,'(/1x,"*** (in DYNAMICS3): The effective solvent masses MUST NOT BE ZERO, check your input ***"/)')
+         call clean_exit
+      endif
 
    endif
 
@@ -845,8 +976,8 @@ subroutine dynamics3
    endif
 
    write(6,'(/1x,"Center of the initial distribution of solvent coordinates:",/,&
-   &" ZP(0) = ",F7.3,2X,A," and ZE(0) = ",F7.3,2X,A,/,&
-   &" z1(0) = ",F7.3,2X,A," and z2(0) = ",F7.3,2X,A)')&
+   &" ZP(0) = ",F10.3,2X,A," and ZE(0) = ",F10.3,2X,A,/,&
+   &" z1(0) = ",F10.3,2X,A," and z2(0) = ",F10.3,2X,A)')&
    &  zp0,zpedim,ze0,zpedim,z10,z12dim,z20,z12dim
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -990,7 +1121,7 @@ subroutine dynamics3
          call clean_exit
       endif
       wp_position = reada(options,ioption+7)
-      write(6,'(/1x,"Position of the initial proton wavepacket: ",f8.3," Angstroms")') wp_position
+      write(6,'(/1x,"Position of the initial proton wavepacket: ",f10.3," Angstroms")') wp_position
 
       !-- read the frequency of the initial proton wave packet
 
@@ -1044,7 +1175,7 @@ subroutine dynamics3
       &         1x," transition from the ground vibronic state")')
 
       pump_e = reada(options,ioption+6)
-      write(6,'(/1x,"Pump laser pulse energy: ",f12.6," eV")') pump_e
+      write(6,'(/1x,"Pump laser pulse energy: ",f13.6," eV")') pump_e
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       !-- specify the vibronic state from which the system
@@ -1073,7 +1204,7 @@ subroutine dynamics3
 
       if (ioption2.ne.0) then
          pump_w = reada(options,ioption2+11)
-         write(6,'(1x,"Pump laser linewidth (full width at half maximum) (eV): ",f12.6)') pump_w
+         write(6,'(1x,"Pump laser linewidth (full width at half maximum) (eV): ",f13.6)') pump_w
       else
          write(6,'(1x,"(From DYNAMICS3: You must specify the PUMPWIDTH keyword for this type of the initial condition)")')
          call clean_exit
@@ -1173,7 +1304,7 @@ subroutine dynamics3
 
             write(6,'(/1x,"Vibronic spectrum with Lorentzian convolution will be written to the external file ",a)') &
             &job(1:ljob)//"/vibronic_spectrum_conv.dat"
-            write(6,'(1x,"Vibronic linewidth: ",f12.6," eV")') vib_linewidth
+            write(6,'(1x,"Vibronic linewidth: ",f13.6," eV")') vib_linewidth
 
             open(11,file=job(1:ljob)//"/vibronic_spectrum_lconv.dat")
             call print_vibronic_spectrum_conv(11,iground,1,vib_linewidth)
@@ -1182,7 +1313,7 @@ subroutine dynamics3
 
             write(6,'(/1x,"Vibronic spectrum with Gaussian convolution will be written to the external file ",a)') &
             &job(1:ljob)//"/vibronic_spectrum_conv.dat"
-            write(6,'(1x,"Vibronic linewidth: ",f12.6," eV")') vib_linewidth
+            write(6,'(1x,"Vibronic linewidth: ",f13.6," eV")') vib_linewidth
 
             open(11,file=job(1:ljob)//"/vibronic_spectrum_gconv.dat")
             call print_vibronic_spectrum_conv(11,iground,2,vib_linewidth)
@@ -1192,7 +1323,7 @@ subroutine dynamics3
             write(6,'(/1x,"(WARNING) Unknown convolution type: ",a)') trim(str)
             write(6,'( 1x,"Vibronic spectrum with Lorentzian (default) convolution will be written to the external file ",a)') &
             &job(1:ljob)//"/vibronic_spectrum_conv.dat"
-            write(6,'(1x,"Vibronic linewidth: ",f12.6," eV")') vib_linewidth
+            write(6,'(1x,"Vibronic linewidth: ",f13.6," eV")') vib_linewidth
 
             open(11,file=job(1:ljob)//"/vibronic_spectrum_lconv.dat")
             call print_vibronic_spectrum_conv(11,iground,1,vib_linewidth)
@@ -1328,10 +1459,30 @@ subroutine dynamics3
       sample = gaussdist_boxmuller()
       z2 = z20 + sigma*sample
 
+      !if (solvent_model.eq."ONODERA2") then
+      !   !-- assign the initial values of auxiliary solvent coordinates
+      !   y1 = -z1
+      !   y2 = -z2
+      !endif
+
+      if (solvent_model.eq."ONODERA2") then
+         !-- pick the initial values of auxiliary solvent coordinates
+         !   from gaussian distribution centered at (-z10,-z20)
+         sigma = sqrt(kb*temp/gamma)
+         sample = gaussdist_boxmuller()
+         y1 = -z10 + sigma*sample
+         sample = gaussdist_boxmuller()
+         y2 = -z20 + sigma*sample
+      endif
+
       !--(DEBUG)--start
       !-- ignoring sampling
       !z1 = z10
       !z2 = z20
+      !if (solvent_model.eq."ONODERA2") then
+      !   y1 = -z10
+      !   y2 = -z20
+      !endif
       !--(DEBUG)--end
 
       !-- initialize initial velocities
@@ -1345,16 +1496,27 @@ subroutine dynamics3
       elseif (solvent_model.eq."ONODERA") then
 
          !-- initial velocities from Maxwell distribution
-         sigma = sqrt(kb*temp/effmass)
+         sigma1 = sqrt(kb*temp/effmass1)
+         sigma2 = sqrt(kb*temp/effmass2)
          sample = gaussdist_boxmuller()
-         vz1 = sigma*sample
+         vz1 = sigma1*sample
          sample = gaussdist_boxmuller()
-         vz2 = sigma*sample
+         vz2 = sigma2*sample
+
+      elseif (solvent_model.eq."ONODERA2") then
+
+         !-- initial velocities from Maxwell distribution
+         sigma1 = sqrt(kb*temp/effmass1)
+         sigma2 = sqrt(kb*temp/effmass2)
+         sample = gaussdist_boxmuller()
+         vz1 = sigma1*sample
+         sample = gaussdist_boxmuller()
+         vz2 = sigma2*sample
 
       else
 
          !-- Other models are not implemented yet...
-         write(6,'(1x,"(From DYNAMICS3: solvent model ",a10," is not implemented yet: abort calculation)")') solvent_model
+         write(6,'(1x,"(From DYNAMICS3: solvent model ",a10," is not implemented: abort calculation)")') solvent_model
          call clean_exit
 
       endif
@@ -1489,7 +1651,7 @@ subroutine dynamics3
       endif
 
       write(6,'(/1x,"===> Trajectory ",i5," starts on the vibronic state ",i3)') itraj, istate
-      write(6,'( 1x,"===> Initial solvent coordinates (z1,z2), (kcal/mol)^(1/2): ",2f12.6)') z1, z2
+      write(6,'( 1x,"===> Initial solvent coordinates (z1,z2), (kcal/mol)^(1/2): ",2f13.6)') z1, z2
 
       write(6,*)
       write(6,'(141("-"))')
@@ -1511,10 +1673,10 @@ subroutine dynamics3
       ekin = ekin1 + ekin2
 
       if (weights) then
-          write(itraj_channel,'(f12.6,10f12.5,i5,4f8.3,2f12.5)') &
+          write(itraj_channel,'(f13.6,10f12.5,i5,4f10.3,2f12.5)') &
           & 0.d0, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn), ekin1, ekin2
       else
-          write(itraj_channel,'(f12.6,10f12.5,i5,2f12.5)') &
+          write(itraj_channel,'(f13.6,10f12.5,i5,2f12.5)') &
           & 0.d0, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate, ekin1, ekin2
       endif
 
@@ -1571,10 +1733,10 @@ subroutine dynamics3
 
             !-- ordinary Langevin equation with memory friction
             !   (Onodera model with two relaxation periods)
-            !call langevin_onodera2_2d(istate,kg0,z1,z2,vz1,vz2,tstep,temp,ekin1,ekin2,efes)
-            !ekin = ekin1 + ekin2
-            write(*,'(/1x,"DYNAMICS3: Onodera2 propagator is not coded yet...")')
-            call clean_exit
+            call langevin_onodera2_2d(istate,kg0,z1,z2,y1,y2,vz1,vz2,tstep,temp,ekin1,ekin2,efes)
+            ekin = ekin1 + ekin2
+            !write(*,'(/1x,"DYNAMICS3: Onodera2 propagator is not coded yet...")')
+            !call clean_exit
 
          endif
 
@@ -1726,7 +1888,7 @@ subroutine dynamics3
                call adjust_velocities(istate,new_state,vz1,vz2,success)
                if (success) then
                   write(itraj_channel,'("#--------------------------------------------------------------------")')
-                  write(itraj_channel,'("#  t  = ",f12.6," ps ==> switch ",i3,"  -->",i3)') zeit,istate,new_state
+                  write(itraj_channel,'("#  t  = ",f13.6," ps ==> switch ",i3,"  -->",i3)') zeit,istate,new_state
                   write(itraj_channel,'("#  d  = (",f20.6,",",f20.6,")")') &
                   & get_vibronic_coupling(istate,new_state)
                   write(itraj_channel,'("# |d| = ",f20.6)') &
@@ -1755,19 +1917,19 @@ subroutine dynamics3
 
          if (mod(istep,ndump).eq.0) then
             if (weights) then
-               write(itraj_channel,'(f12.6,10f12.5,i5,4f8.3,2f12.5)') &
+               write(itraj_channel,'(f13.6,10f12.5,i5,4f10.3,2f12.5)') &
                & zeit, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn), ekin1, ekin2
             else
-               write(itraj_channel,'(f12.6,10f12.5,i5,2f12.5)') &
+               write(itraj_channel,'(f13.6,10f12.5,i5,2f12.5)') &
                & zeit, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate, ekin1, ekin2
             endif
          endif
 
          !if (ndump6.gt.0.and.mod(istep,ndump6).eq.0) &
-         !& write(6,'(137("\b"),f12.6,10f12.5,i5,$)') zeit, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate
+         !& write(6,'(137("\b"),f13.6,10f12.5,i5,$)') zeit, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate
 
          if (ndump6.gt.0.and.mod(istep,ndump6).eq.0) &
-         & write(6,'(f12.6,10f12.5,i5)') zeit, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate
+         & write(6,'(f13.6,10f12.5,i5)') zeit, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate
 
       enddo loop_over_time
 
