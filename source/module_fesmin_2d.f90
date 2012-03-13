@@ -5,9 +5,12 @@ module fesmin_2d
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:36 $
-!  $Revision: 5.2 $
+!  $Date: 2012-03-13 22:02:05 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:36  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !-------------------------------------------------------------------
 
@@ -314,7 +317,8 @@ module fesmin_2d
       real(kind=8) :: f
       real(kind=8), dimension(n)  :: l, u
       real(kind=8), dimension(29) :: dsave
-      real(kind=8), dimension(2*m*n+4*n+12*m*m+12*m) :: wa
+      !--(Ver. 2.1)--real(kind=8), dimension(2*m*n+4*n+12*m*m+12*m) :: wa
+      real(kind=8), dimension(2*m*n + 5*n + 11*m*m + 8*m) :: wa              !--(Ver. 3.0)
 
       real(kind=8) :: t1, t2
       integer      :: i
@@ -367,8 +371,6 @@ module fesmin_2d
 
       !------- the beginning of the loop ----------
  
- 111  continue
-
       optimization_loop: do
 
          !-- This is the call to the L-BFGS-B code.

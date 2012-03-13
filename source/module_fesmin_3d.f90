@@ -6,9 +6,12 @@ module fesmin_3d
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2010-10-28 21:29:36 $
-!  $Revision: 5.2 $
+!  $Date: 2012-03-13 22:02:05 $
+!  $Revision: 5.3 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.2  2010/10/28 21:29:36  souda
+!  First (working and hopefully bug-free) source of PCET 5.x
+!
 !
 !=======================================================================
 
@@ -136,7 +139,7 @@ module fesmin_3d
       do while (.not.done)
 
          kg = kg + igdir
-         write(*,'(1x,"--> gating grid point ",i3,": ",f8.3)') kg,glist(kg)*bohr2a
+         write(*,'(1x,"--> gating grid point ",i3,": ",f10.3)') kg,glist(kg)*bohr2a
 
          if (kg.lt.1.or.kg.gt.npntsg) then
             write(*,'(/1x,"warning: minimization failed...")')
@@ -539,7 +542,8 @@ module fesmin_3d
       real(kind=8) :: f
       real(kind=8), dimension(n)  :: l, u
       real(kind=8), dimension(29) :: dsave
-      real(kind=8), dimension(2*m*n+4*n+12*m*m+12*m) :: wa
+      !--(Ver. 2.1)--real(kind=8), dimension(2*m*n+4*n+12*m*m+12*m) :: wa
+      real(kind=8), dimension(2*m*n + 5*n + 11*m*m + 8*m) :: wa              !--(Ver. 3.0)
 
       real(kind=8) :: t1, t2
       integer      :: i
@@ -592,8 +596,6 @@ module fesmin_3d
 
       !------- the beginning of the loop ----------
  
- 111  continue
-
       optimization_loop: do
 
          !-- This is the call to the L-BFGS-B code.
@@ -752,7 +754,7 @@ module fesmin_3d
       real*8,  intent(in),  dimension(n) :: x, xs
       real*8,  intent(out), dimension(n) :: g
 
-      real*8, parameter :: xinc = 1.d-4
+      real*8, parameter :: xinc = 1.d-6
       integer :: i
       real*8, dimension(n) :: xt
       
@@ -782,7 +784,7 @@ module fesmin_3d
       real*8,  intent(in),  dimension(n)   :: x, xs
       real*8,  intent(out), dimension(n,n) :: f
 
-      real*8, parameter :: xinc = 1.d-4, two = 2.d0
+      real*8, parameter :: xinc = 1.d-6, two = 2.d0
       real*8, dimension(n) :: xt, grad, gnext
       integer :: i, j
 
