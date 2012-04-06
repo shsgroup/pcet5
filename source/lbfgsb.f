@@ -2794,7 +2794,7 @@ c                             the truncated Newton step has been used.
  1004 format (/,a4, 1p, 6(1x,d11.4),/,(4x,1p,6(1x,d11.4)))
  2001 format
      +  (/,'At iterate',i5,4x,'f= ',1p,d12.5,4x,'|proj g|= ',1p,d12.5)
- 3001 format(2(1x,i4),2(1x,i5),2x,a3,1x,i4,1p,2(2x,d7.1),1p,2(1x,d10.3))
+ 3001 format(2(1x,i4),2(1x,i5),2x,a3,1x,i4,1p,2(2x,d8.1),1p,2(1x,d10.3))
 
       return
 
@@ -2885,7 +2885,7 @@ c     ************
       endif
 
  1004 format (/,a4, 1p, 6(1x,d11.4),/,(4x,1p,6(1x,d11.4)))
- 3002 format(2(1x,i4),2(1x,i5),2x,a3,1x,i4,1p,2(2x,d7.1),6x,'-',10x,'-')
+ 3002 format(2(1x,i4),2(1x,i5),2x,a3,1x,i4,1p,2(2x,d8.1),6x,'-',10x,'-')
  3003 format (/,
      + '           * * *',/,/,
      + 'Tit   = total number of iterations',/,
