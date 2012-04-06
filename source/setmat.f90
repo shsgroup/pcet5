@@ -5,9 +5,12 @@ subroutine setmat
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2012-03-13 22:06:36 $
-!  $Revision: 5.9 $
+!  $Date: 2012-04-06 22:37:53 $
+!  $Revision: 5.10 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.9  2012/03/13 22:06:36  souda
+!  tools for reconstructing the reorganization energy matrix from input
+!
 !  Revision 5.8  2011/02/24 00:51:09  souda
 !  Slight changes in the output format
 !
@@ -1264,6 +1267,13 @@ subroutine setmat
    ztmat(1,2) =  sin_theta/sq1
    ztmat(2,1) = -sin_theta/sq2
 
+   write( 6,'(/1x,''Coordinate transformation matrix (z1,z2) = [ztmat]*(zp,ze) :'')')
+   write( 6,'(10x,2f15.6)') ztmat(1,1), ztmat(1,2)
+   write( 6,'(10x,2f15.6)') ztmat(2,1), ztmat(2,2)
+   write(72,'(/1x,''Coordinate transformation matrix (z1,z2) = [ztmat]*(zp,ze) :'')')
+   write(72,'(10x,2f15.6)') ztmat(1,1), ztmat(1,2)
+   write(72,'(10x,2f15.6)') ztmat(2,1), ztmat(2,2)
+
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! initialize transformation matrix for gradient:
    ! gtmat = S^{-1}*C^{tr} so that grad(z1,z2) = [gtmat]*grad(zp,ze)
@@ -1272,6 +1282,13 @@ subroutine setmat
    gtmat(2,2) =  sq2*cos_theta
    gtmat(1,2) =  sq1*sin_theta
    gtmat(2,1) = -sq2*sin_theta
+
+   write( 6,'(/1x,''Gradient transformation matrix grad(z1,z2) = [gtmat]*grad(zp,ze) :'')')
+   write( 6,'(10x,2f15.6)') gtmat(1,1), gtmat(1,2)
+   write( 6,'(10x,2f15.6)') gtmat(2,1), gtmat(2,2)
+   write(72,'(/1x,''Gradient transformation matrix grad(z1,z2) = [ztmat]*grad(zp,ze) :'')')
+   write(72,'(10x,2f15.6)') gtmat(1,1), gtmat(1,2)
+   write(72,'(10x,2f15.6)') gtmat(2,1), gtmat(2,2)
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! initialize shifts for new solvent coordinates
