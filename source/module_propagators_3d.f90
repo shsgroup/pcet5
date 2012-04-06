@@ -5,9 +5,12 @@ module propagators_3d
    !---------------------------------------------------------------------
    !
    !  $Author: souda $
-   !  $Date: 2012-03-13 22:07:18 $
-   !  $Revision: 5.17 $
+   !  $Date: 2012-04-06 22:38:46 $
+   !  $Revision: 5.18 $
    !  $Log: not supported by cvs2svn $
+   !  Revision 5.17  2012/03/13 22:07:18  souda
+   !  Langevin propagator for Onodera-2 model added (4-dimensional)
+   !
    !  Revision 5.16  2011/06/03 05:05:45  souda
    !  Kinetic energy components are calculated and added to the trajectory data
    !
@@ -133,6 +136,10 @@ module propagators_3d
    !-----------------------------------------------------------
    real(8), allocatable, dimension(:) :: switch_prob
 
+   !-- interpolation coefficients for kinetic energy
+   !---------------------------------------------------------
+   real(8) :: a0_ekin, a1_ekin, a2_ekin
+
    !-- arrays with interpolation coefficients
    !---------------------------------------------------------
    real(8), allocatable, dimension(:) :: a0_fe, a1_fe, a2_fe
@@ -153,6 +160,7 @@ module propagators_3d
    public :: calculate_v_dot_d
    public :: interpolate_vdotd
    public :: interpolate_energy
+   public :: interpolate_kinenergy
    public :: assign_initial_state
    public :: assign_fc_state
    public :: set_initial_amplitudes_pure
@@ -179,6 +187,7 @@ module propagators_3d
    public :: print_propagators_3d
    public :: tdse_derivatives
    public :: propagate_amplitudes_rk4
+   public :: propagate_amplitudes_phcorr_rk4
    public :: propagate_density_rk4
    public :: switch_state
    public :: adjust_velocities
@@ -1091,6 +1100,65 @@ contains
       enddo
    end subroutine interpolate_energy
 
+
+   !--------------------------------------------------------------------
+   !-- calculate linear interpolation coefficients
+   !   for the velocities (for phase-corrected scheme)
+   !--------------------------------------------------------------------
+   subroutine interpolate_kinenergy(interpolation,t_prev_,t_,ekin_,ekin_prev_,ekin_half_)
+
+      character(len=*), intent(in) :: interpolation
+      real(8), intent(in) :: t_prev_, t_, ekin_, ekin_prev_, ekin_half_
+      real(8) :: x0, x1, x2, x01, x02, x12
+      real(8) :: y0, y1, y2, y01, y02, y12
+      real(8) :: xdenom, a0, a1, a2
+
+      x0 = t_prev_
+      x2 = t_
+      x1 = 0.5d0*(x0 + x2)
+      
+      x01 = x0 - x1
+      x02 = x0 - x2
+      x12 = x1 - x2
+      xdenom = x01*x02*x12
+
+      if (interpolation.eq."QUADRATIC") then
+
+         y0 = ekin_prev_
+         y1 = ekin_half_
+         y2 = ekin_
+         y01 = y0 - y1
+         y02 = y0 - y2
+         y12 = y1 - y2
+         
+         a0 = (y0*x1*x2*x12 - x0*y1*x2*x02 + x0*x1*y2*x01)/xdenom
+         a1 = (x2*x2*y01 - x1*x1*y02 + x0*x0*y12)/xdenom
+         a2 = (-x2*y01 + x1*y02 - x0*y12)/xdenom
+
+         a0_ekin = a0
+         a1_ekin = a1
+         a2_ekin = a2
+
+      else
+
+         y0 = ekin_prev_
+         y2 = ekin_
+         y02 = y0 - y2
+         
+         a0 = (x0*y2 - x2*y0)/x02
+         a1 = y02/x02
+         a2 = 0.d0
+
+         a0_ekin =  a0
+         a1_ekin =  a1
+         a2_ekin =  a2
+
+      endif
+
+   end subroutine interpolate_kinenergy
+
+
+
    !--------------------------------------------------------------------
    !-- calculate interpolation coefficients
    !   for the nonadiabatic coupling terms v*d_{kl}
@@ -1402,13 +1470,13 @@ contains
    !   for Onodera2 model (with two auxiliary variables)
    !   [Chem. Phys. Lett., 2006, 429, 310-316, Eq.23]
    !--------------------------------------------------------------------
-   subroutine langevin_onodera2_2d(istate,kg,z1,z2,y1,y2,vz1,vz2,dt,temp,ekin1,ekin2,efes)
+   subroutine langevin_onodera2_2d(istate,kg,z1,z2,y1,y2,vz1,vz2,dt,temp,ekin1,ekin2,ekinhalf1,ekinhalf2,efes)
 
       implicit none
       integer, intent(in)    :: istate, kg
       real(8), intent(in)    :: dt, temp
       real(8), intent(inout) :: z1, z2, y1, y2, vz1, vz2
-      real(8), intent(out)   :: ekin1, ekin2, efes
+      real(8), intent(out)   :: ekin1, ekin2, ekinhalf1, ekinhalf2, efes
 
       real(8), parameter :: half=0.5d0
       real(8), parameter :: eighth=1.d0/8.d0
@@ -1527,6 +1595,11 @@ contains
          &               - eighth*dt2*gammaz(i)*(f(i) - gammaz(i)*v(i)) &
          &               - fourth*dt32*gammaz(i)*sigmaz(i)*(half*ksiz(i) + etaz(i)/sq3)
       enddo
+
+      !-- calculate kinetic energies for both degrees of freedom
+      !   at half time step
+      ekinhalf1 = half*effmass1*vhalf(1)*vhalf(1)
+      ekinhalf2 = half*effmass2*vhalf(2)*vhalf(2)
 
       !-- Honeycutt RK2 propagation for auxiliary variables
       if (abs(etay).gt.1.d-20) then
@@ -1910,6 +1983,71 @@ contains
 
    end subroutine tdse_derivatives
 
+
+
+
+
+   !--------------------------------------------------------------------
+   !-- Right-hand side (time derivative) of TDSE with phase correction
+   !--------------------------------------------------------------------
+   subroutine tdse_derivatives_phcorr(istate_,t_,c,dc)
+
+      integer, intent(in) :: istate_
+      real(8), intent(in) :: t_
+      complex(8), intent(in),  dimension(nstates) :: c
+      complex(8), intent(out), dimension(nstates) :: dc
+
+      integer :: i, j
+      real(8) :: ekinocc, efeocc, efei, hocc, hii, conservation, vdij
+      complex(8) :: dci
+
+      !-- interpolated value of the kinetic energy in the occupied state
+      ekinocc = a0_ekin + a1_ekin*t_ + a2_ekin*t_*t_
+
+      hocc = -2.d0*ekinocc
+
+      !-- interpolated value of the potential (free) energy of the occupied state
+      efeocc = a0_fe(istate_) + a1_fe(istate_)*t_ + a2_fe(istate_)*t_*t_
+
+      do i=1,nstates
+
+         if (i.eq.istate_) then
+
+            hii = hocc
+
+         else
+
+            !-- calculate the interpolated value of energy
+            !   of the current state
+            efei = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_
+            
+            conservation = ekinocc + efeocc - efei
+            
+            if (conservation.gt.0.d0) then
+               hii = -2.d0*sqrt(ekinocc*conservation)
+            else
+               hii = 0.d0
+            endif
+
+         endif
+
+         dci = -ii*c(i)*hii/hbarps
+
+         do j=1,nstates
+            !-- calculate the interpolated value of the
+            !   nonadiabatic coupling term
+            vdij = a0_vdotd(i,j) + a1_vdotd(i,j)*t_ + a2_vdotd(i,j)*t_*t_
+            dci = dci - c(j)*vdij
+         enddo
+
+         dc(i) = dci
+
+      enddo
+
+   end subroutine tdse_derivatives_phcorr
+
+
+
    !--------------------------------------------------------------------
    !-- Quantum propagator for renormalized amplitudes
    !   I. Based on the classic 4-th order Runge-Kutta algorithm.
@@ -1937,6 +2075,38 @@ contains
       amplitude = y + qtstep_*(dy1 + 2.d0*dy2 + 2.d0*dy3 + dy4)/6.d0
 
    end subroutine propagate_amplitudes_rk4
+
+
+   !--------------------------------------------------------------------
+   !-- Quantum propagator for renormalized amplitudes
+   !   (for phase-corrected algorithm)
+   !   I. Based on the classic 4-th order Runge-Kutta algorithm.
+   !--------------------------------------------------------------------
+   subroutine propagate_amplitudes_phcorr_rk4(istate_,t_,qtstep_)
+
+      integer, intent(in) :: istate_
+      real(8), intent(in) :: t_, qtstep_
+
+      complex(8), dimension(nstates) :: y, dy1, dy2, dy3, dy4
+      complex(8), dimension(nstates) :: y2, y3, y4
+
+      !-- initial amplitudes
+      y = amplitude
+
+      !-- Runge-Kutta steps
+      call tdse_derivatives_phcorr(istate_,t_,y,dy1)
+      y2 = y + 0.5d0*qtstep_*dy1
+      call tdse_derivatives_phcorr(istate_,t_+0.5d0*qtstep_,y2,dy2)
+      y3 = y + 0.5d0*qtstep_*dy2
+      call tdse_derivatives_phcorr(istate_,t_+0.5d0*qtstep_,y3,dy3)
+      y4 = y + qtstep_*dy3
+      call tdse_derivatives_phcorr(istate_,t_+qtstep_,y4,dy4)
+
+      !-- final amplitude (array operation)
+      amplitude = y + qtstep_*(dy1 + 2.d0*dy2 + 2.d0*dy3 + dy4)/6.d0
+
+   end subroutine propagate_amplitudes_phcorr_rk4
+
 
    !--------------------------------------------------------------------
    !-- Check if surface hoppping should take place

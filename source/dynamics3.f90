@@ -140,9 +140,12 @@ subroutine dynamics3
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2012-03-13 22:07:59 $
-!  $Revision: 5.18 $
+!  $Date: 2012-04-06 22:38:46 $
+!  $Revision: 5.19 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.18  2012/03/13 22:07:59  souda
+!  changes related to new solvent models (Onodera-2 and Debye-2)
+!
 !  Revision 5.17  2011/06/03 05:05:45  souda
 !  Kinetic energy components are calculated and added to the trajectory data
 !
@@ -264,7 +267,7 @@ subroutine dynamics3
    real(8) :: zeit, zeit_prev
    real(8) :: zeitq, zeitq_prev
    real(8) :: z1, z2, zp, ze, vz1, vz2, vzp, vze, z10, z20, zp0, ze0, y1, y2
-   real(8) :: ekin, ekin1, ekin2, efes
+   real(8) :: ekin, ekin1, ekin2, ekin_prev, ekinhalf1, ekinhalf2, efes
    real(8) :: vz1_prev, vz2_prev
    real(8) :: pump_e, pump_w, vib_linewidth
    real(8) :: qtstep_var
@@ -645,12 +648,22 @@ subroutine dynamics3
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    if (index(options,' MDQT').ne.0) then
+
       mdqt = .true.
       write(6,'(/1x,"Mixed quantum-classical dynamics on multiple vibronic free energy surfaces.",/,&
                 &1x,"Tullys fewest switches surface hopping algorithm (MDQT) will be utilized."/)')
+
+      if (index(options,' PHASE').ne.0) then
+         phase_corr = .true.
+         write(6,'(/1x,"Phase correction algorithm will be used.",/,&
+                   &1x,"[N. Shenvi, J. E. Subotnik, and W. Yang, J. Chem. Phys. 135, 024101 (2011) ]"/)')
+      endif
+
    else
+
       mdqt = .false.
       write(6,'(/1x,"Classical dynamics on a single vibronic free energy surface (default)."/)')
+
    endif
 
 
@@ -1701,6 +1714,7 @@ subroutine dynamics3
          if (mdqt) then
             vz1_prev = vz1
             vz2_prev = vz2
+            ekin_prev = ekin
             call store_vibronic_couplings                                 !  coupz(:,:) -> coupz_prev(:,:)
             call store_vibronic_energies                                  !  fe(:)      -> fe_prev(:)
             if (interpolation.eq."QUADRATIC") call store_wavefunctions    !  z(:,:)     -> z_prev(:,:)
@@ -1733,7 +1747,7 @@ subroutine dynamics3
 
             !-- ordinary Langevin equation with memory friction
             !   (Onodera model with two relaxation periods)
-            call langevin_onodera2_2d(istate,kg0,z1,z2,y1,y2,vz1,vz2,tstep,temp,ekin1,ekin2,efes)
+            call langevin_onodera2_2d(istate,kg0,z1,z2,y1,y2,vz1,vz2,tstep,temp,ekin1,ekin2,ekinhalf1,ekinhalf2,efes)
             ekin = ekin1 + ekin2
             !write(*,'(/1x,"DYNAMICS3: Onodera2 propagator is not coded yet...")')
             !call clean_exit
@@ -1760,6 +1774,13 @@ subroutine dynamics3
             !-------------------------------------------------------
             if (interpolation.eq."QUADRATIC") then
                call calculate_v_dot_d_mid(tstep)
+            endif
+
+            !-- calculate interpolation coefficients for the kinetic energy
+            !   for phase-corrected surface hopping scheme
+            !------------------------------------------------------------------
+            if (phase_corr) then
+               call interpolate_kinenergy(interpolation,zeit_prev,zeit,ekin1+ekin2,ekin_prev,ekinhalf1+ekinhalf2)
             endif
 
             !-- calculate interpolation coefficients for the adiabatic energies
@@ -1799,7 +1820,11 @@ subroutine dynamics3
 
                !-- propagate amplitudes forward in time
                !-------------------------------------------------------
-               call propagate_amplitudes_rk4(zeitq_prev,qtstep_var)
+               if (phase_corr) then
+                  call propagate_amplitudes_phcorr_rk4(istate,zeitq_prev,qtstep_var)
+               else
+                  call propagate_amplitudes_rk4(zeitq_prev,qtstep_var)
+               endif
                !call propagate_density_rk4(zeitq_prev,qtstep_var)
 
                !-- calculate transition probabilities from current state

@@ -6,9 +6,12 @@ module control_dynamics
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
-!  $Date: 2011-03-01 23:54:03 $
-!  $Revision: 5.3 $
+!  $Date: 2012-04-06 22:38:46 $
+!  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
+!  Revision 5.3  2011/03/01 23:54:03  souda
+!  Variable timestep for quantum propagation implemented (thanks to Sharon) - that fixes the problems with the conservation of the norm of the time-dependent wavefunction.
+!
 !  Revision 5.2  2010/11/04 22:43:08  souda
 !  Next iteration... and two additional Makefiles for building the code with debug options.
 !
@@ -23,15 +26,17 @@ module control_dynamics
 
    character(len=10) :: solvent_model
    character(len=10) :: interpolation="LINEAR"
-   logical :: mdqt=.false.     ! flag for MDQT dynamics
-   integer :: nsteps=100       ! number of steps
-   integer :: ndump=1          ! dump trajectory every ndump steps
-   integer :: ntraj=1          ! number of trajectories
-   integer :: nqsteps          ! number of timesteps in TDSE
-   integer :: maxnqsteps       ! maximum number of timesteps in TDSE
-   real(8) :: tstep            ! time step for solvent dynamics (ps)
-   real(8) :: qtstep           ! timestep for TDSE (ps)
-   real(8) :: temp             ! temperature (K)
+
+   logical :: mdqt=.false.        ! flag for MDQT dynamics
+   logical :: phase_corr=.false.  ! flag for MDQT dynamics with phase correction (Shenvi-Subotnik)
+   integer :: nsteps=100          ! number of steps
+   integer :: ndump=1             ! dump trajectory every ndump steps
+   integer :: ntraj=1             ! number of trajectories
+   integer :: nqsteps             ! number of timesteps in TDSE
+   integer :: maxnqsteps          ! maximum number of timesteps in TDSE
+   real(8) :: tstep               ! time step for solvent dynamics (ps)
+   real(8) :: qtstep              ! timestep for TDSE (ps)
+   real(8) :: temp                ! temperature (K)
 !=======================================================================
 
 contains
