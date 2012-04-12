@@ -11,7 +11,7 @@
 
 include Makefile.machine
 
-VERSION = 5.2a
+VERSION = 5.2b
 
 ###MODDIR  = ./mod
 
