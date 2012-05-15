@@ -29,6 +29,7 @@ module control_dynamics
 
    logical :: mdqt=.false.        ! flag for MDQT dynamics
    logical :: phase_corr=.false.  ! flag for MDQT dynamics with phase correction (Shenvi-Subotnik)
+   logical :: decoherence=.false. ! flag for MDQT dynamics with decoherence (AFSSH) (Landry-Shenvi-Subotnik)
    integer :: nsteps=100          ! number of steps
    integer :: ndump=1             ! dump trajectory every ndump steps
    integer :: ntraj=1             ! number of trajectories
@@ -37,6 +38,7 @@ module control_dynamics
    real(8) :: tstep               ! time step for solvent dynamics (ps)
    real(8) :: qtstep              ! timestep for TDSE (ps)
    real(8) :: temp                ! temperature (K)
+   real(8) :: dzeta=1.d0          ! coefficient for decoherence rate (A-FSSH, Eq.32)
 !=======================================================================
 
 contains
