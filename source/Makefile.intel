@@ -21,6 +21,6 @@ LDFLAGS = -L/opt/intel/composerxe/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_core -l
 
 # parallel (threaded) mkl libraries
 # set OMP_NUM_THREADS=<number_of_threads> in your script (default is 8 threads)
-#LDFLAGS = -L/opt/intel/composerxe/mkl/lib/intel64 -lmkl_lapack -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm
+#LDFLAGS = -L/opt/intel/composerxe/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm
 
 
