@@ -90,68 +90,89 @@ module propagators_3d
 
    !-- arrays for the energies and wavefunctions
    !------------------------------------------------------
-   real(8), allocatable, dimension(:)     :: fe
-   real(8), allocatable, dimension(:)     :: fe_prev
-   real(8), allocatable, dimension(:,:)   :: z
-   real(8), allocatable, dimension(:,:)   :: z_prev
-   real(8), allocatable, dimension(:,:,:) :: psiel, psipr
-   real(8), allocatable, dimension(:,:)   :: enel, envib
+   real(kind=8), allocatable, dimension(:)     :: fe
+   real(kind=8), allocatable, dimension(:)     :: fe_prev
+   real(kind=8), allocatable, dimension(:,:)   :: z
+   real(kind=8), allocatable, dimension(:,:)   :: z_prev
+   real(kind=8), allocatable, dimension(:,:,:) :: psiel, psipr
+   real(kind=8), allocatable, dimension(:,:)   :: enel, envib
+
+   !-- arrays for the force matrices
+   !------------------------------------------------------
+   real(kind=8), allocatable, dimension(:,:) :: fmatz1, fmatz1_prev
+   real(kind=8), allocatable, dimension(:,:) :: fmatz2, fmatz2_prev
 
    !-- arrays for absorption probabilities (vibronic spectrum)
    !---------------------------------------------------------
-   real(8), allocatable, dimension(:) :: absorption_prob
-   real(8), allocatable, dimension(:) :: fc_prob
+   real(kind=8), allocatable, dimension(:) :: absorption_prob
+   real(kind=8), allocatable, dimension(:) :: fc_prob
 
    !-- array for EVB weights
    !---------------------------------------------
-   real(8), allocatable, dimension(:,:), public :: wght
+   real(kind=8), allocatable, dimension(:,:), public :: wght
 
    !-- arrays for nonadaiabatic coupling vectors
    !---------------------------------------------
-   real(8), allocatable, dimension(:,:) :: coupz1
-   real(8), allocatable, dimension(:,:) :: coupz2
-   real(8), allocatable, dimension(:,:) :: coupz1_prev
-   real(8), allocatable, dimension(:,:) :: coupz2_prev
+   real(kind=8), allocatable, dimension(:,:) :: coupz1
+   real(kind=8), allocatable, dimension(:,:) :: coupz2
+   real(kind=8), allocatable, dimension(:,:) :: coupz1_prev
+   real(kind=8), allocatable, dimension(:,:) :: coupz2_prev
 
-   !-- array for the dot product of the classical velosity and coupling
+   !-- arrays for moments of classical coordinates (AFSSH)
+   !------------------------------------------------------
+   complex(kind=8), allocatable, dimension(:,:) :: zmom1
+   complex(kind=8), allocatable, dimension(:,:) :: zmom2
+   complex(kind=8), allocatable, dimension(:,:) :: pzmom1
+   complex(kind=8), allocatable, dimension(:,:) :: pzmom2
+   complex(kind=8), allocatable, dimension(:,:) :: zmom1_copy
+   complex(kind=8), allocatable, dimension(:,:) :: zmom2_copy
+   complex(kind=8), allocatable, dimension(:,:) :: pzmom1_copy
+   complex(kind=8), allocatable, dimension(:,:) :: pzmom2_copy
+
+   !-- array for the dot product of the classical velocity and coupling
    !-------------------------------------------------------------------
-   real(8), allocatable, dimension(:,:) :: v_dot_d
-   real(8), allocatable, dimension(:,:) :: v_dot_d_mid
-   real(8), allocatable, dimension(:,:) :: v_dot_d_prev
+   real(kind=8), allocatable, dimension(:,:) :: v_dot_d
+   real(kind=8), allocatable, dimension(:,:) :: v_dot_d_mid
+   real(kind=8), allocatable, dimension(:,:) :: v_dot_d_prev
 
    !-- Array for the renormalized complex amplitudes
    !---------------------------------------------------------
-   complex(8), allocatable, dimension(:) :: amplitude
-   complex(8), allocatable, dimension(:) :: amplitude_copy
+   complex(kind=8), allocatable, dimension(:) :: amplitude
+   complex(kind=8), allocatable, dimension(:) :: amplitude_copy
 
    !-- Array for the density matrix
    !---------------------------------------------------------
-   complex(8), allocatable, dimension(:,:) :: density_matrix
+   complex(kind=8), allocatable, dimension(:,:) :: density_matrix
+   complex(kind=8), allocatable, dimension(:,:) :: density_matrix_copy
 
    !-- arrays for the MDQT transition probabilities for current state (b_jk)
    !---------------------------------------------------------------------
-   real(8), allocatable, dimension(:) :: b_prob
+   real(kind=8), allocatable, dimension(:) :: b_prob
 
    !-- Array for the switching probabilities from current state
    !-----------------------------------------------------------
-   real(8), allocatable, dimension(:) :: switch_prob
+   real(kind=8), allocatable, dimension(:) :: switch_prob
 
    !-- interpolation coefficients for kinetic energy
    !---------------------------------------------------------
-   real(8) :: a0_ekin, a1_ekin, a2_ekin
+   real(kind=8) :: a0_ekin, a1_ekin, a2_ekin
 
    !-- arrays with interpolation coefficients
    !---------------------------------------------------------
-   real(8), allocatable, dimension(:) :: a0_fe, a1_fe, a2_fe
-   real(8), allocatable, dimension(:,:) :: a0_vdotd, a1_vdotd, a2_vdotd
+   real(kind=8), allocatable, dimension(:)   :: a0_fe, a1_fe, a2_fe
+   real(kind=8), allocatable, dimension(:,:) :: a0_vdotd, a1_vdotd, a2_vdotd
+   real(kind=8), allocatable, dimension(:,:) :: a0_fmatz1, a1_fmatz1, a2_fmatz1
+   real(kind=8), allocatable, dimension(:,:) :: a0_fmatz2, a1_fmatz2, a2_fmatz2
 
    public :: set_mode
    public :: get_free_energy
    public :: allocate_vibronic_states, deallocate_vibronic_states
    public :: allocate_evb_weights, deallocate_evb_weights
    public :: allocate_mdqt_arrays, deallocate_mdqt_arrays
+   public :: allocate_afssh_arrays, deallocate_afssh_arrays
    public :: deallocate_all_arrays
    public :: calculate_vibronic_states
+   public :: calculate_force_matrices
    public :: calculate_absorption_prob
    public :: calculate_fc_prob
    public :: print_vibronic_spectrum
@@ -161,6 +182,7 @@ module propagators_3d
    public :: interpolate_vdotd
    public :: interpolate_energy
    public :: interpolate_kinenergy
+   public :: interpolate_force_matrices
    public :: assign_initial_state
    public :: assign_fc_state
    public :: set_initial_amplitudes_pure
@@ -175,9 +197,14 @@ module propagators_3d
    public :: calculate_bprob_den
    public :: calculate_density_matrix
    public :: calculate_population
+   public :: calculate_population_den
+   public :: calculate_decoherence_rate
+   public :: calculate_reset_rate
    public :: tdwf_norm
+   public :: density_trace
    public :: store_vibronic_couplings
    public :: store_vibronic_energies
+   public :: store_force_matrices
    public :: store_wavefunctions
    public :: get_evb_weights
    public :: get_vibronic_coupling
@@ -189,13 +216,20 @@ module propagators_3d
    public :: propagate_amplitudes_rk4
    public :: propagate_amplitudes_phcorr_rk4
    public :: propagate_density_rk4
+   public :: propagate_moments_and_density
    public :: switch_state
    public :: adjust_velocities
+   public :: adjust_velocities_and_moments
    public :: reset_switch_prob
    public :: accumulate_switch_prob
    public :: normalize_switch_prob
    public :: save_amplitudes
    public :: restore_amplitudes
+   public :: save_density_matrix
+   public :: restore_density_matrix
+   public :: save_moments
+   public :: restore_moments
+   public :: collapse_and_reset_afssh
 
 contains
 
@@ -247,7 +281,7 @@ contains
 
    function get_free_energy(i_) result(fe_)
       integer, intent(in) :: i_
-      real(8) :: fe_
+      real(kind=8) :: fe_
       integer :: isize
       isize = size(fe)
       if (i_.gt.0.and.i_.le.isize) then
@@ -264,6 +298,7 @@ contains
    ! array allocation routines
    !---------------------------------------------------------------------
 
+   !---------------------------------------------------------------------
    subroutine allocate_vibronic_states
       integer :: nz
       nz = ielst*nprst
@@ -277,12 +312,27 @@ contains
       allocate (psipr(ielst,nprst,npnts))
       allocate (enel(ielst,npnts))
       allocate (envib(ielst,nprst))
+      fe = 0.d0
+      fe_prev = 0.d0
+      absorption_prob = 0.d0
+      fc_prob = 0.d0
+      z = 0.d0
+      z_prev = 0.d0
+      psiel = 0.d0
+      psipr = 0.d0
+      enel = 0.d0
+      envib = 0.d0
    end subroutine allocate_vibronic_states
+   !---------------------------------------------------------------------
 
+   !---------------------------------------------------------------------
    subroutine allocate_evb_weights
       allocate (wght(ielst,nstates))
+      wght = 0.d0
    end subroutine allocate_evb_weights
+   !---------------------------------------------------------------------
 
+   !---------------------------------------------------------------------
    subroutine allocate_mdqt_arrays
       allocate (coupz1(nstates,nstates))
       allocate (coupz2(nstates,nstates))
@@ -290,6 +340,7 @@ contains
       allocate (coupz2_prev(nstates,nstates))
       allocate (amplitude(nstates),amplitude_copy(nstates))
       allocate (density_matrix(nstates,nstates))
+      allocate (density_matrix_copy(nstates,nstates))
       allocate (switch_prob(nstates))
       allocate (b_prob(nstates))
       allocate (v_dot_d(nstates,nstates))
@@ -299,7 +350,68 @@ contains
       allocate (a0_vdotd(nstates,nstates))
       allocate (a1_vdotd(nstates,nstates))
       allocate (a2_vdotd(nstates,nstates))
+      coupz1 = 0.d0
+      coupz2 = 0.d0
+      coupz1_prev = 0.d0
+      coupz2_prev = 0.d0
+      amplitude = 0.d0
+      amplitude_copy = 0.d0
+      density_matrix = 0.d0
+      density_matrix_copy = 0.d0
+      switch_prob = 0.d0
+      b_prob = 0.d0
+      v_dot_d = 0.d0
+      v_dot_d_mid = 0.d0
+      v_dot_d_prev = 0.d0
+      a0_fe = 0.d0
+      a1_fe = 0.d0
+      a2_fe = 0.d0
+      a0_vdotd = 0.d0
+      a1_vdotd = 0.d0
+      a2_vdotd = 0.d0
    end subroutine allocate_mdqt_arrays
+   !---------------------------------------------------------------------
+
+   !---------------------------------------------------------------------
+   subroutine allocate_afssh_arrays
+      allocate (zmom1(nstates,nstates))
+      allocate (zmom2(nstates,nstates))
+      allocate (pzmom1(nstates,nstates))
+      allocate (pzmom2(nstates,nstates))
+      allocate (zmom1_copy(nstates,nstates))
+      allocate (zmom2_copy(nstates,nstates))
+      allocate (pzmom1_copy(nstates,nstates))
+      allocate (pzmom2_copy(nstates,nstates))
+      allocate (fmatz1_prev(nstates,nstates))
+      allocate (fmatz2_prev(nstates,nstates))
+      allocate (fmatz1(nstates,nstates))
+      allocate (fmatz2(nstates,nstates))
+      allocate (a0_fmatz1(nstates,nstates))
+      allocate (a1_fmatz1(nstates,nstates))
+      allocate (a2_fmatz1(nstates,nstates))
+      allocate (a0_fmatz2(nstates,nstates))
+      allocate (a1_fmatz2(nstates,nstates))
+      allocate (a2_fmatz2(nstates,nstates))
+      zmom1 = 0.d0
+      zmom2 = 0.d0
+      pzmom1 = 0.d0
+      pzmom2 = 0.d0
+      zmom1_copy = 0.d0
+      zmom2_copy = 0.d0
+      pzmom1_copy = 0.d0
+      pzmom2_copy = 0.d0
+      fmatz1_prev = 0.d0
+      fmatz2_prev = 0.d0
+      fmatz1 = 0.d0
+      fmatz2 = 0.d0
+      a0_fmatz1 = 0.d0
+      a1_fmatz1 = 0.d0
+      a2_fmatz1 = 0.d0
+      a0_fmatz2 = 0.d0
+      a1_fmatz2 = 0.d0
+      a2_fmatz2 = 0.d0
+   end subroutine allocate_afssh_arrays
+   !---------------------------------------------------------------------
 
    !---------------------------------------------------------------------
    ! array deallocation routines
@@ -323,30 +435,53 @@ contains
    end subroutine deallocate_evb_weights
 
    subroutine deallocate_mdqt_arrays
-      if (allocated(coupz1))            deallocate (coupz1)
-      if (allocated(coupz2))            deallocate (coupz2)
-      if (allocated(coupz1_prev))       deallocate (coupz1_prev)
-      if (allocated(coupz2_prev))       deallocate (coupz2_prev)
-      if (allocated(amplitude))         deallocate (amplitude)
-      if (allocated(amplitude_copy))    deallocate (amplitude_copy)
-      if (allocated(density_matrix))    deallocate (density_matrix)
-      if (allocated(b_prob))            deallocate (b_prob)
-      if (allocated(switch_prob))       deallocate (switch_prob)
-      if (allocated(v_dot_d))           deallocate (v_dot_d)
-      if (allocated(v_dot_d_mid))       deallocate (v_dot_d_mid)
-      if (allocated(v_dot_d_prev))      deallocate (v_dot_d_prev)
-      if (allocated(a0_fe))             deallocate (a0_fe)
-      if (allocated(a1_fe))             deallocate (a1_fe)
-      if (allocated(a2_fe))             deallocate (a2_fe)
-      if (allocated(a0_vdotd))          deallocate (a0_vdotd)
-      if (allocated(a1_vdotd))          deallocate (a1_vdotd)
-      if (allocated(a2_vdotd))          deallocate (a2_vdotd)
+      if (allocated(coupz1))              deallocate (coupz1)
+      if (allocated(coupz2))              deallocate (coupz2)
+      if (allocated(coupz1_prev))         deallocate (coupz1_prev)
+      if (allocated(coupz2_prev))         deallocate (coupz2_prev)
+      if (allocated(amplitude))           deallocate (amplitude)
+      if (allocated(amplitude_copy))      deallocate (amplitude_copy)
+      if (allocated(density_matrix))      deallocate (density_matrix)
+      if (allocated(density_matrix_copy)) deallocate (density_matrix_copy)
+      if (allocated(b_prob))              deallocate (b_prob)
+      if (allocated(switch_prob))         deallocate (switch_prob)
+      if (allocated(v_dot_d))             deallocate (v_dot_d)
+      if (allocated(v_dot_d_mid))         deallocate (v_dot_d_mid)
+      if (allocated(v_dot_d_prev))        deallocate (v_dot_d_prev)
+      if (allocated(a0_fe))               deallocate (a0_fe)
+      if (allocated(a1_fe))               deallocate (a1_fe)
+      if (allocated(a2_fe))               deallocate (a2_fe)
+      if (allocated(a0_vdotd))            deallocate (a0_vdotd)
+      if (allocated(a1_vdotd))            deallocate (a1_vdotd)
+      if (allocated(a2_vdotd))            deallocate (a2_vdotd)
    end subroutine deallocate_mdqt_arrays
+
+   subroutine deallocate_afssh_arrays
+      if (allocated(zmom1))       deallocate (zmom1)
+      if (allocated(zmom2))       deallocate (zmom2)
+      if (allocated(pzmom1))      deallocate (pzmom1)
+      if (allocated(pzmom2))      deallocate (pzmom2)
+      if (allocated(zmom1_copy))  deallocate (zmom1_copy)
+      if (allocated(zmom2_copy))  deallocate (zmom2_copy)
+      if (allocated(pzmom1_copy)) deallocate (pzmom1_copy)
+      if (allocated(pzmom2_copy)) deallocate (pzmom2_copy)
+      if (allocated(fmatz1))      deallocate (fmatz1)
+      if (allocated(fmatz2))      deallocate (fmatz2)
+      if (allocated(fmatz1))      deallocate (fmatz1_prev)
+      if (allocated(fmatz2))      deallocate (fmatz2_prev)
+      if (allocated(a0_fmatz1))   deallocate (a0_fmatz1)
+      if (allocated(a1_fmatz1))   deallocate (a1_fmatz1)
+      if (allocated(a2_fmatz1))   deallocate (a2_fmatz1)
+      if (allocated(a0_fmatz2))   deallocate (a0_fmatz2)
+      if (allocated(a1_fmatz2))   deallocate (a1_fmatz2)
+      if (allocated(a2_fmatz2))   deallocate (a2_fmatz2)
+   end subroutine deallocate_afssh_arrays
 
    subroutine deallocate_all_arrays
       call deallocate_vibronic_states
       call deallocate_evb_weights
       call deallocate_mdqt_arrays
+      call deallocate_afssh_arrays
    end subroutine deallocate_all_arrays
 
    !--------------------------------------------------------------------
@@ -356,11 +491,11 @@ contains
    subroutine calculate_absorption_prob(iground,kg,z1,z2)
 
       integer, intent(in) :: iground, kg
-      real(8), intent(in) :: z1, z2
+      real(kind=8), intent(in) :: z1, z2
 
       integer :: ndabf, k, i, j, mu, nu, imu, jnu, kp, i0, j0
-      real(8) :: zp, ze, s, dx, dy, dz, davx, davy, davz
-      real(8) :: pnorm
+      real(kind=8) :: zp, ze, s, dx, dy, dz, davx, davy, davz
+      real(kind=8) :: pnorm
 
       !-- transform to zp,ze frame
       call z1z2_to_zpze(z1,z2,zp,ze)
@@ -433,7 +568,7 @@ contains
       integer, intent(in) :: ichannel, iground
 
       integer :: i
-      real(8) :: excitation_energy, pnorm
+      real(kind=8) :: excitation_energy, pnorm
 
       !-- print the header of the table
 
@@ -461,14 +596,14 @@ contains
    subroutine print_vibronic_spectrum_conv(ichannel,iground,iconv,width)
 
       integer, intent(in) :: ichannel, iground, iconv
-      real(8), intent(in) :: width
+      real(kind=8), intent(in) :: width
 
       character(len=10), parameter, dimension(2) :: conv=(/"Lorentzian","Gaussian"/)
       integer, parameter :: npoints = 1000
 
       integer :: i, k
-      real(8) :: energy, exc_en_min, exc_en_max, range, den, p
-      real(8), dimension(nstates) :: excitation_energy
+      real(kind=8) :: energy, exc_en_min, exc_en_max, range, den, p
+      real(kind=8), dimension(nstates) :: excitation_energy
 
       if (iconv.lt.1.or.iconv.gt.2) then
          write(ichannel,'("#  Unknown convoluting function: no output")')
@@ -544,8 +679,8 @@ contains
 
       integer :: i
       real(4) :: r
-      real(8) :: s, excitation_energy, pnorm
-      real(8), dimension(nstates) :: p
+      real(kind=8) :: s, excitation_energy, pnorm
+      real(kind=8), dimension(nstates) :: p
 
       istate = 0
 
@@ -586,10 +721,10 @@ contains
    subroutine calculate_fc_prob(fc_state,kg,z1,z2)
 
       integer, intent(in) :: fc_state, kg
-      real(8), intent(in) :: z1, z2
+      real(kind=8), intent(in) :: z1, z2
 
       integer :: ndabf, n, i, i0, ifc, mu, imu, imu_start, kp
-      real(8) :: zp, ze, fc_ovlp, coef, pnorm
+      real(kind=8) :: zp, ze, fc_ovlp, coef, pnorm
 
       fc_prob = 0
 
@@ -690,7 +825,7 @@ contains
 
       integer :: i
       real(4) :: r
-      real(8) :: s
+      real(kind=8) :: s
 
       istate = 0
 
@@ -740,7 +875,7 @@ contains
    !--------------------------------------------------------------------
    subroutine set_initial_amplitudes_fc
       integer :: i
-      real(8) :: wfnorm
+      real(kind=8) :: wfnorm
       amplitude = 0.d0
       wfnorm = 0.d0
       do i=1,nstates
@@ -757,7 +892,7 @@ contains
 
       integer, intent(in) :: ichannel
       integer :: i, n
-      real(8) :: pnorm, reamp
+      real(kind=8) :: pnorm, reamp
 
       write(ichannel,'("#",100("="))')
       write(ichannel,'("# Initial amplitudes of the time-dependent wavefunction")')
@@ -802,6 +937,40 @@ contains
    end subroutine restore_amplitudes
 
    !---------------------------------------------------------------------
+   !-- save density_matrix
+   !---------------------------------------------------------------------
+   subroutine save_density_matrix
+      density_matrix_copy = density_matrix   !array operation
+   end subroutine save_density_matrix
+
+   !---------------------------------------------------------------------
+   !-- restore amplitudes
+   !---------------------------------------------------------------------
+   subroutine restore_density_matrix
+      density_matrix = density_matrix_copy   !array operation
+   end subroutine restore_density_matrix
+
+   !---------------------------------------------------------------------
+   !-- save moments
+   !---------------------------------------------------------------------
+   subroutine save_moments
+      zmom1_copy  = zmom1    !array operation
+      zmom2_copy  = zmom2    !array operation
+      pzmom1_copy = pzmom1   !array operation
+      pzmom2_copy = pzmom2   !array operation
+   end subroutine save_moments
+
+   !---------------------------------------------------------------------
+   !-- restore moments
+   !---------------------------------------------------------------------
+   subroutine restore_moments
+      zmom1  = zmom1_copy    !array operation
+      zmom2  = zmom2_copy    !array operation
+      pzmom1 = pzmom1_copy   !array operation
+      pzmom2 = pzmom2_copy   !array operation
+   end subroutine restore_moments
+
+   !---------------------------------------------------------------------
    !-- Set initial density matrix to correspond to a pure adiabatic state
    !---------------------------------------------------------------------
    subroutine set_initial_density_pure(istate)
@@ -816,7 +985,7 @@ contains
    !---------------------------------------------------------------------
    subroutine set_initial_density_laser
       integer :: i, j
-      real(8) :: rhoij
+      real(kind=8) :: rhoij
       density_matrix = 0.d0
       do i=1,nstates
          do j=1,nstates
@@ -833,7 +1002,7 @@ contains
    subroutine set_initial_density_fc
 
       integer :: i, j
-      real(8) :: rhoij, wfnorm
+      real(kind=8) :: rhoij, wfnorm
 
       density_matrix = 0.d0
 
@@ -857,9 +1026,9 @@ contains
    !--------------------------------------------------------------------
    subroutine calculate_vibronic_states(kg,z1,z2)
       integer, intent(in) :: kg
-      real(8), intent(in) :: z1, z2
+      real(kind=8), intent(in) :: z1, z2
       integer :: ndabf
-      real(8) :: zp, ze
+      real(kind=8) :: zp, ze
       !-- transform to zp,ze frame
       call z1z2_to_zpze(z1,z2,zp,ze)
       !-- calculate vibronic states
@@ -871,8 +1040,8 @@ contains
    !--------------------------------------------------------------------
    subroutine calculate_gradient(istate,g1,g2)
       integer, intent(in) :: istate
-      real(8), intent(out) :: g1, g2
-      real(8) :: gp, ge
+      real(kind=8), intent(out) :: g1, g2
+      real(kind=8) :: gp, ge
       !-- calculate gradients in zp,ze frame
       call dvdzz3(mode,iset,istate,nzdim,z,ielst,gp,ge)
       !-- transform gradients
@@ -880,16 +1049,46 @@ contains
    end subroutine calculate_gradient
 
    !--------------------------------------------------------------------
+   !-- Calculation of the force matrices (A-FSSH) (F-matrices)
+   !--------------------------------------------------------------------
+   subroutine calculate_force_matrices
+
+      integer :: i, j
+      real(kind=8) :: gp, ge, g1, g2, fij
+
+      !-- calculate gradients in zp,ze frame
+      do i=1,nstates
+         call dvdzz3(mode,iset,i,nzdim,z,ielst,gp,ge)
+         !-- transform gradients
+         call gpge_to_g1g2(gp,ge,g1,g2)
+         fmatz1(i,i) = -g1
+         fmatz2(i,i) = -g2
+      enddo
+
+      !-- off-diagonal terms are expressed in terms of derivative couplings
+      fij = 0.d0
+      do i=1,nstates-1
+         do j=i+1,nstates
+            fij = coupz1(i,j)*(fe(j) - fe(i))
+            fmatz1(i,j) = fij
+            fmatz1(j,i) = fij
+         enddo
+      enddo
+
+   end subroutine calculate_force_matrices
+
+
+   !--------------------------------------------------------------------
    !-- Interface to the calculation of the vibronic couplings
    !   for current vibronic wavefunctions
    !--------------------------------------------------------------------
    subroutine calculate_vibronic_couplings
-      real(8), dimension(nstates,nstates) :: coupzp, coupze
-      real(8) :: dzp, dze, dz1, dz2
+      real(kind=8), dimension(nstates,nstates) :: coupzp, coupze
+      real(kind=8) :: dzp, dze, dz1, dz2
       integer :: i, j
       call coupzz3(mode,iset,nstates,fe,nzdim,z,ielst,coupzp,coupze)
       !-- transform the couplings to z1,z2 frame
-      do i=1,nstates
+      do i=1,nstates-1
          do j=i+1,nstates
             dzp = coupzp(i,j)
             dze = coupze(i,j)
@@ -907,7 +1106,7 @@ contains
    !--------------------------------------------------------------------
    function get_vibronic_coupling(i_,j_) result(coupz)
       integer, intent(in) :: i_, j_
-      real(8), dimension(2) :: coupz
+      real(kind=8), dimension(2) :: coupz
       coupz(1) = coupz1(i_,j_)
       coupz(2) = coupz2(i_,j_)
    end function get_vibronic_coupling
@@ -929,19 +1128,36 @@ contains
    end subroutine store_vibronic_energies
 
    !--------------------------------------------------------------------
-   !-- calculate population (diagonal element of the density matrix)
+   !-- store force_matrices (A-FSSH)
+   !--------------------------------------------------------------------
+   subroutine store_force_matrices
+      fmatz1_prev = fmatz1
+      fmatz2_prev = fmatz2
+   end subroutine store_force_matrices
+
+   !--------------------------------------------------------------------
+   !-- calculate population (from amplitudes)
    !--------------------------------------------------------------------
    function calculate_population(istate) result(pop)
       integer, intent(in) :: istate
-      real(8) :: pop
+      real(kind=8) :: pop
       pop = amplitude(istate)*conjg(amplitude(istate))
    end function calculate_population
+
+   !--------------------------------------------------------------------
+   !-- calculate population (diagonal element of the density matrix)
+   !--------------------------------------------------------------------
+   function calculate_population_den(istate) result(pop)
+      integer, intent(in) :: istate
+      real(kind=8) :: pop
+      pop = real(density_matrix(istate,istate))
+   end function calculate_population_den
 
    !--------------------------------------------------------------------
    !-- calculate norm of the time-dependent wavefunction
    !--------------------------------------------------------------------
    function tdwf_norm() result(wfnorm)
-      real(8) :: wfnorm
+      real(kind=8) :: wfnorm
       integer :: i
       wfnorm = 0.d0
       do i=1,nstates
@@ -953,8 +1169,8 @@ contains
    !-- calculate trace of the density matrix
    !--------------------------------------------------------------------
    function density_trace() result(trace)
-      complex(8) :: ctrace
-      real(8) :: trace
+      complex(kind=8) :: ctrace
+      real(kind=8) :: trace
       integer :: i
       ctrace = 0.d0
       do i=1,nstates
@@ -981,8 +1197,8 @@ contains
    !--------------------------------------------------------------------
    subroutine calculate_bprob_amp(istate,t_)
       integer, intent(in) :: istate
-      real(8), intent(in) :: t_
-      real(8) :: vdji
+      real(kind=8), intent(in) :: t_
+      real(kind=8) :: vdji
       integer :: j
       do j=1,nstates
          vdji = a0_vdotd(j,istate) + a1_vdotd(j,istate)*t_ + a2_vdotd(j,istate)*t_*t_
@@ -996,8 +1212,8 @@ contains
    !--------------------------------------------------------------------
    subroutine calculate_bprob_den(istate,t_)
       integer, intent(in) :: istate
-      real(8), intent(in) :: t_
-      real(8) :: vdji
+      real(kind=8), intent(in) :: t_
+      real(kind=8) :: vdji
       integer :: j
       do j=1,nstates
          vdji = a0_vdotd(j,istate) + a1_vdotd(j,istate)*t_ + a2_vdotd(j,istate)*t_*t_
@@ -1013,10 +1229,26 @@ contains
    end subroutine reset_switch_prob
 
    !--------------------------------------------------------------------
+   !-- zero out moments of coordinates (A-FSSH)
+   !--------------------------------------------------------------------
+   subroutine reset_zmoments
+      zmom1 = 0.d0
+      zmom2 = 0.d0
+   end subroutine reset_zmoments
+
+   !--------------------------------------------------------------------
+   !-- zero out moments of coordinate momenta (A-FSSH)
+   !--------------------------------------------------------------------
+   subroutine reset_pzmoments
+      pzmom1 = 0.d0
+      pzmom2 = 0.d0
+   end subroutine reset_pzmoments
+
+   !--------------------------------------------------------------------
    !-- accumulate switching probabilities
    !--------------------------------------------------------------------
    subroutine accumulate_switch_prob(qtstep_)
-      real(8), intent(in) :: qtstep_
+      real(kind=8), intent(in) :: qtstep_
       switch_prob = switch_prob + b_prob*qtstep_   ! (array operation)
    end subroutine accumulate_switch_prob
 
@@ -1024,7 +1256,7 @@ contains
    !-- normalize and clean switching probabilities (if <0, set to zero)
    !--------------------------------------------------------------------
    subroutine normalize_switch_prob(factor)
-      real(8), intent(in) :: factor
+      real(kind=8), intent(in) :: factor
       switch_prob = switch_prob/(factor+1.d-10)
       where (switch_prob < 0.d0) switch_prob = 0.d0
    end subroutine normalize_switch_prob
@@ -1041,8 +1273,8 @@ contains
    !   at t and t+dt
    !--------------------------------------------------------------------
    subroutine calculate_v_dot_d(vz1,vz1_prev,vz2,vz2_prev)
-      real(8), intent(in) :: vz1, vz1_prev, vz2, vz2_prev
-      real(8) :: vd, vd_prev
+      real(kind=8), intent(in) :: vz1, vz1_prev, vz2, vz2_prev
+      real(kind=8) :: vd, vd_prev
       integer :: i, j
       v_dot_d = 0.d0
       v_dot_d_prev = 0.d0
@@ -1063,8 +1295,8 @@ contains
    !   at the half step t+dt/2
    !--------------------------------------------------------------------
    subroutine calculate_v_dot_d_mid(tstep_)
-      real(8), intent(in) :: tstep_
-      real(8) :: vd
+      real(kind=8), intent(in) :: tstep_
+      real(kind=8) :: vd
       integer :: i, j, k
       v_dot_d_mid = 0.d0
       do i=1,nstates
@@ -1085,8 +1317,8 @@ contains
    !   for the adiabatic energies
    !--------------------------------------------------------------------
    subroutine interpolate_energy(t_prev_,t_)
-      real(8), intent(in) :: t_prev_, t_
-      real(8) :: dt0, f1, f2, t01, t02
+      real(kind=8), intent(in) :: t_prev_, t_
+      real(kind=8) :: dt0, f1, f2, t01, t02
       integer :: i
       t01 = t_prev_
       t02 = t_
@@ -1100,6 +1332,47 @@ contains
       enddo
    end subroutine interpolate_energy
 
+   !--------------------------------------------------------------------
+   !-- calculate linear interpolation coefficients
+   !   for the force matrices
+   !--------------------------------------------------------------------
+   subroutine interpolate_force_matrices(t_prev_,t_)
+
+      real(kind=8), intent(in) :: t_prev_, t_
+      real(kind=8) :: dt0, g1, g2, t01, t02
+      integer :: i, j
+
+      t01 = t_prev_
+      t02 = t_
+      dt0 = t_ - t_prev_
+
+      do i=1,nstates
+         do j=i,nstates
+            g2 = fmatz1(i,j)
+            g1 = fmatz1_prev(i,j)
+            a0_fmatz1(i,j) = (t02*g1 - t01*g2)/dt0
+            a1_fmatz1(i,j) = (g2 - g1)/dt0
+            a2_fmatz1(i,j) = 0.d0
+            a0_fmatz1(j,i) = a0_fmatz1(i,j)
+            a1_fmatz1(j,i) = a1_fmatz1(i,j)
+            a2_fmatz1(j,i) = a2_fmatz1(i,j)
+         enddo
+      enddo
+
+      do i=1,nstates
+         do j=i,nstates
+            g2 = fmatz2(i,j)
+            g1 = fmatz2_prev(i,j)
+            a0_fmatz2(i,j) = (t02*g1 - t01*g2)/dt0
+            a1_fmatz2(i,j) = (g2 - g1)/dt0
+            a2_fmatz2(i,j) = 0.d0
+            a0_fmatz2(j,i) = a0_fmatz2(i,j)
+            a1_fmatz2(j,i) = a1_fmatz2(i,j)
+            a2_fmatz2(j,i) = a2_fmatz2(i,j)
+         enddo
+      enddo
+
+   end subroutine interpolate_force_matrices
 
    !--------------------------------------------------------------------
    !-- calculate linear interpolation coefficients
@@ -1108,10 +1381,10 @@ contains
    subroutine interpolate_kinenergy(interpolation,t_prev_,t_,ekin_,ekin_prev_,ekin_half_)
 
       character(len=*), intent(in) :: interpolation
-      real(8), intent(in) :: t_prev_, t_, ekin_, ekin_prev_, ekin_half_
-      real(8) :: x0, x1, x2, x01, x02, x12
-      real(8) :: y0, y1, y2, y01, y02, y12
-      real(8) :: xdenom, a0, a1, a2
+      real(kind=8), intent(in) :: t_prev_, t_, ekin_, ekin_prev_, ekin_half_
+      real(kind=8) :: x0, x1, x2, x01, x02, x12
+      real(kind=8) :: y0, y1, y2, y01, y02, y12
+      real(kind=8) :: xdenom, a0, a1, a2
 
       x0 = t_prev_
       x2 = t_
@@ -1166,11 +1439,11 @@ contains
    subroutine interpolate_vdotd(interpolation,t_prev_,t_)
 
       character(len=*), intent(in) :: interpolation
-      real(8), intent(in) :: t_prev_, t_
+      real(kind=8), intent(in) :: t_prev_, t_
       integer :: i, j
-      real(8) :: x0, x1, x2, x01, x02, x12
-      real(8) :: y0, y1, y2, y01, y02, y12
-      real(8) :: xdenom, a0, a1, a2
+      real(kind=8) :: x0, x1, x2, x01, x02, x12
+      real(kind=8) :: y0, y1, y2, y01, y02, y12
+      real(kind=8) :: xdenom, a0, a1, a2
       
       x0 = t_prev_
       x2 = t_
@@ -1185,7 +1458,7 @@ contains
       
          !-- Quadratic interpolation
 
-         do i=1,nstates
+         do i=1,nstates-1
             do j=i+1,nstates
 
                y0 = v_dot_d_prev(i,j)
@@ -1255,14 +1528,14 @@ contains
 
       implicit none
       integer, intent(in)    :: istate, kg
-      real(8), intent(in)    :: dt, temp
-      real(8), intent(inout) :: z1, z2, vz1, vz2
-      real(8), intent(out)   :: ekin1, ekin2, efes
+      real(kind=8), intent(in)    :: dt, temp
+      real(kind=8), intent(inout) :: z1, z2, vz1, vz2
+      real(kind=8), intent(out)   :: ekin1, ekin2, efes
 
       integer :: i, ndabf
-      real(8) :: d, psi, psi_factor             !, zp, ze, gp, ge
-      real(8), dimension(2) :: x, v, xnew, dx
-      real(8), dimension(2) :: fr, f1, f2, g
+      real(kind=8) :: d, psi, psi_factor             !, zp, ze, gp, ge
+      real(kind=8), dimension(2) :: x, v, xnew, dx
+      real(kind=8), dimension(2) :: fr, f1, f2, g
 
       d = kb*temp/f0/taul
       psi_factor = sqrt(2.d0*d*dt)
@@ -1330,24 +1603,24 @@ contains
 
       implicit none
       integer, intent(in)    :: istate, kg
-      real(8), intent(in)    :: dt, temp
-      real(8), intent(inout) :: z1, z2, vz1, vz2
-      real(8), intent(out)   :: ekin1, ekin2, efes
+      real(kind=8), intent(in)    :: dt, temp
+      real(kind=8), intent(inout) :: z1, z2, vz1, vz2
+      real(kind=8), intent(out)   :: ekin1, ekin2, efes
 
-      real(8), parameter :: half=0.5d0
-      real(8), parameter :: eighth=1.d0/8.d0
-      real(8), parameter :: fourth=0.25d0
-      real(8), parameter :: e32=1.5d0
+      real(kind=8), parameter :: half=0.5d0
+      real(kind=8), parameter :: eighth=1.d0/8.d0
+      real(kind=8), parameter :: fourth=0.25d0
+      real(kind=8), parameter :: e32=1.5d0
 
       integer :: i, ndabf
-      real(8) :: sq3
-      real(8) :: gamma, sigma
-      real(8), dimension(2) :: x, v, f, g
-      real(8), dimension(2) :: ksi, eta, vhalf
-      real(8) :: dt2, sqdt, dt32                       !, zp, ze, gp, ge
+      real(kind=8) :: sq3
+      real(kind=8) :: gamma, sigma
+      real(kind=8), dimension(2) :: x, v, f, g
+      real(kind=8), dimension(2) :: ksi, eta, vhalf
+      real(kind=8) :: dt2, sqdt, dt32                       !, zp, ze, gp, ge
 
       !-- DEBUG variables
-      !real(8) :: zinc, tr1b, tr2a, fplus, fminus, gzp, gze, gselfzp, gselfze
+      !real(kind=8) :: zinc, tr1b, tr2a, fplus, fminus, gzp, gze, gselfzp, gselfze
 
       sq3 = sqrt(3.d0)
 
@@ -1474,24 +1747,24 @@ contains
 
       implicit none
       integer, intent(in)    :: istate, kg
-      real(8), intent(in)    :: dt, temp
-      real(8), intent(inout) :: z1, z2, y1, y2, vz1, vz2
-      real(8), intent(out)   :: ekin1, ekin2, ekinhalf1, ekinhalf2, efes
+      real(kind=8), intent(in)    :: dt, temp
+      real(kind=8), intent(inout) :: z1, z2, y1, y2, vz1, vz2
+      real(kind=8), intent(out)   :: ekin1, ekin2, ekinhalf1, ekinhalf2, efes
 
-      real(8), parameter :: half=0.5d0
-      real(8), parameter :: eighth=1.d0/8.d0
-      real(8), parameter :: fourth=0.25d0
-      real(8), parameter :: e32=1.5d0
+      real(kind=8), parameter :: half=0.5d0
+      real(kind=8), parameter :: eighth=1.d0/8.d0
+      real(kind=8), parameter :: fourth=0.25d0
+      real(kind=8), parameter :: e32=1.5d0
 
       integer :: i, ndabf
-      real(8) :: sq3
-      real(8) :: d, dy, psi_factor, f1, f2, fr, ynew
-      real(8), dimension(2) :: x, y, v, vy, f, fy, g, mass, gammaz, sigmaz
-      real(8), dimension(2) :: ksiz, etaz, psiy, vhalf
-      real(8) :: dt2, sqdt, dt32                       !, zp, ze, gp, ge
+      real(kind=8) :: sq3
+      real(kind=8) :: d, dy, psi_factor, f1, f2, fr, ynew
+      real(kind=8), dimension(2) :: x, y, v, vy, f, fy, g, mass, gammaz, sigmaz
+      real(kind=8), dimension(2) :: ksiz, etaz, psiy, vhalf
+      real(kind=8) :: dt2, sqdt, dt32                       !, zp, ze, gp, ge
 
       !-- DEBUG variables
-      !real(8) :: zinc, tr1b, tr2a, fplus, fminus, gzp, gze, gselfzp, gselfze
+      !real(kind=8) :: zinc, tr1b, tr2a, fplus, fminus, gzp, gze, gselfzp, gselfze
 
       sq3 = sqrt(3.d0)
 
@@ -1670,16 +1943,16 @@ contains
 
       implicit none
       integer, intent(in)    :: istate, kg
-      real(8), intent(in)    :: dt, temp
-      real(8), intent(inout) :: z1, z2, y1, y2, vz1, vz2
-      real(8), intent(out)   :: ekin1, ekin2, efes
+      real(kind=8), intent(in)    :: dt, temp
+      real(kind=8), intent(inout) :: z1, z2, y1, y2, vz1, vz2
+      real(kind=8), intent(out)   :: ekin1, ekin2, efes
 
-      real(8), parameter :: half=0.5d0
+      real(kind=8), parameter :: half=0.5d0
 
       integer :: i
-      real(8) :: ddx, ddy, dx, dy, psi_factor_x, psi_factor_y
-      real(8), dimension(2) :: x, y, v, xtmp, ytmp, g, f1, f2, f1y, f2y
-      real(8), dimension(2) :: psix, psiy
+      real(kind=8) :: ddx, ddy, dx, dy, psi_factor_x, psi_factor_y
+      real(kind=8), dimension(2) :: x, y, v, xtmp, ytmp, g, f1, f2, f1y, f2y
+      real(kind=8), dimension(2) :: psix, psiy
 
       x(1) = z1
       x(2) = z2
@@ -1804,13 +2077,13 @@ contains
    !--------------------------------------------------------------------
    subroutine tdvn_derivatives(t_,ro,dro)
 
-      real(8), intent(in) :: t_
-      complex(8), intent(in),  dimension(nstates,nstates) :: ro
-      complex(8), intent(out), dimension(nstates,nstates) :: dro
+      real(kind=8), intent(in) :: t_
+      complex(kind=8), intent(in),  dimension(nstates,nstates) :: ro
+      complex(kind=8), intent(out), dimension(nstates,nstates) :: dro
 
       integer :: i, j, k
-      real(8) :: ei, ej, vdik, vdkj
-      complex(8) :: droij
+      real(kind=8) :: ei, ej, vdik, vdkj
+      complex(kind=8) :: droij
 
       do i=1,nstates
          do j=i,nstates
@@ -1850,14 +2123,217 @@ contains
    end subroutine tdvn_derivatives
 
    !--------------------------------------------------------------------
+   !-- Right-hand side (time derivative) of von-Neumann equation
+   !   for density matrix (A-FSSH algorithm, Eq.18)
+   !--------------------------------------------------------------------
+   subroutine tdvn18_derivatives(t_,ro,dro)
+
+      real(kind=8), intent(in) :: t_
+      complex(kind=8), intent(in),  dimension(nstates,nstates) :: ro
+      complex(kind=8), intent(out), dimension(nstates,nstates) :: dro
+
+      integer :: i, j, k
+      real(kind=8) :: ei, ej, vdik, vdkj
+      real(kind=8) :: f1ik, f2ik, f1kj, f2kj
+      complex(kind=8) :: droij
+
+      do i=1,nstates
+         do j=i,nstates
+
+            droij = (0.d0, 0.d0)
+            
+            if (i.eq.j) then
+
+               do k=1,nstates
+                  !-- interpolate the nonadiabatic coupling term
+                  vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t_ + a2_vdotd(i,k)*t_*t_
+                  droij = droij - 2.d0*real(ro(k,i))*vdik
+               enddo
+
+            else
+
+               !-- interpolate adiabatic energies
+               ei = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_
+               ej = a0_fe(j) + a1_fe(j)*t_ + a2_fe(j)*t_*t_
+               droij = droij - ro(i,j)*(ei - ej)/(ii*hbarps)
+
+               do k=1,nstates
+
+                  !-- interpolate the nonadiabatic coupling terms
+                  vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t_ + a2_vdotd(i,k)*t_*t_
+                  vdkj = a0_vdotd(k,j) + a1_vdotd(k,j)*t_ + a2_vdotd(k,j)*t_*t_
+
+                  droij = droij - (ro(k,j)*vdik - ro(i,k)*vdkj)
+
+                  !-- additional terms unique to A-FSSH (second term in Eq.18)
+
+                  !-- interpolate the F-matrices
+                  f1ik = a0_fmatz1(i,k) + a1_fmatz1(i,k)*t_ + a2_fmatz1(i,k)*t_*t_
+                  f2ik = a0_fmatz2(i,k) + a1_fmatz2(i,k)*t_ + a2_fmatz2(i,k)*t_*t_
+                  f1kj = a0_fmatz1(k,j) + a1_fmatz1(k,j)*t_ + a2_fmatz1(k,j)*t_*t_
+                  f2kj = a0_fmatz2(k,j) + a1_fmatz2(k,j)*t_ + a2_fmatz2(k,j)*t_*t_
+
+                  droij = droij + (ii/hbarps)*(f1ik*zmom1(k,j) - zmom1(i,k)*f1kj + &
+                  &                            f2ik*zmom2(k,j) - zmom2(i,k)*f2kj)
+
+               enddo
+
+               dro(i,j) = droij
+               dro(j,i) = conjg(droij)
+
+            endif
+
+         enddo
+      enddo
+
+   end subroutine tdvn18_derivatives
+
+   !--------------------------------------------------------------------
+   !-- Right-hand sides (time derivatives) of the equations
+   !   for the coordinate and momentum moments
+   !   as well as the density matrix
+   !   (A-FSSH algorithm, Eq.14-18)
+   !--------------------------------------------------------------------
+   subroutine tdafssh_derivatives(istate_,t_,ro_,zmom1_,zmom2_,pzmom1_,pzmom2_,drodt,dzmom1dt,dzmom2dt,dpzmom1dt,dpzmom2dt)
+
+      integer, intent(in) :: istate_
+      real(kind=8), intent(in) :: t_
+      complex(kind=8), intent(in),  dimension(nstates,nstates) :: ro_
+      complex(kind=8), intent(in),  dimension(nstates,nstates) :: zmom1_, zmom2_, pzmom1_, pzmom2_
+      complex(kind=8), intent(out), dimension(nstates,nstates) :: drodt, dzmom1dt, dzmom2dt, dpzmom1dt, dpzmom2dt
+
+      integer :: i, j, k
+      real(kind=8) :: ei, ej, vdik, vdkj
+      real(kind=8) :: f1ik, f2ik, f1kj, f2kj, f1sh, f2sh
+      complex(kind=8) :: droij
+
+      real(kind=8), dimension(nstates) :: tiiz1, tiiz2, tiipz1, tiipz2
+
+      drodt     = cmplx(0.d0,0.d0)
+      dzmom1dt  = cmplx(0.d0,0.d0)
+      dzmom2dt  = cmplx(0.d0,0.d0)
+      dpzmom1dt = cmplx(0.d0,0.d0)
+      dpzmom2dt = cmplx(0.d0,0.d0)
+
+      !-- calculate diagonal elements of the derivatives
+
+      !-- interpolate diagonal elements of the F-matrices corresponding to the occupied state
+      f1sh = a0_fmatz1(istate_,istate_) + a1_fmatz1(istate_,istate_)*t_ + a2_fmatz1(istate_,istate_)*t_*t_
+      f2sh = a0_fmatz2(istate_,istate_) + a1_fmatz2(istate_,istate_)*t_ + a2_fmatz2(istate_,istate_)*t_*t_
+
+      do i=1,nstates
+
+         droij = cmplx(0.d0,0.d0)
+         tiiz1(i)  = real(pzmom1_(i,i))/effmass1
+         tiiz2(i)  = real(pzmom2_(i,i))/effmass2
+         tiipz1(i) = 0.d0
+         tiipz2(i) = 0.d0
+
+         do k=1,nstates
+            vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t_ + a2_vdotd(i,k)*t_*t_
+            f1ik = a0_fmatz1(i,k) + a1_fmatz1(i,k)*t_ + a2_fmatz1(i,k)*t_*t_
+            f2ik = a0_fmatz2(i,k) + a1_fmatz2(i,k)*t_ + a2_fmatz2(i,k)*t_*t_
+            tiiz1(i)  = tiiz1(i) - 2.d0*vdik*real(zmom1_(i,k))
+            tiiz2(i)  = tiiz2(i) - 2.d0*vdik*real(zmom2_(i,k))
+            tiipz1(i) = tiipz1(i) + (f1ik-f1sh)*real(ro_(i,k)) - 2.d0*vdik*real(pzmom1_(i,k))
+            tiipz2(i) = tiipz2(i) + (f2ik-f2sh)*real(ro_(i,k)) - 2.d0*vdik*real(pzmom2_(i,k))
+            droij = droij - 2.d0*real(ro_(k,i))*vdik
+         enddo
+
+         dzmom1dt(i,i)  = cmplx(tiiz1(i),0.d0)
+         dzmom2dt(i,i)  = cmplx(tiiz2(i),0.d0)
+         dpzmom1dt(i,i) = cmplx(tiipz1(i),0.d0)
+         dpzmom2dt(i,i) = cmplx(tiipz2(i),0.d0)
+         drodt(i,i) = droij
+
+      enddo
+
+      do i=1,nstates
+         dzmom1dt(i,i)  = dzmom1dt(i,i)  - cmplx(tiiz1(istate_),0.d0)
+         dzmom2dt(i,i)  = dzmom2dt(i,i)  - cmplx(tiiz2(istate_),0.d0)
+         dpzmom1dt(i,i) = dpzmom1dt(i,i) - cmplx(tiipz1(istate_),0.d0)
+         dpzmom2dt(i,i) = dpzmom2dt(i,i) - cmplx(tiipz2(istate_),0.d0)
+      enddo
+
+
+      !-- calculate off-diagonal derivative parts for matrices of moments EOM (upper triangle)
+
+
+      do i=1,nstates-1
+         do j=i+1,nstates
+
+            droij = cmplx(0.d0,0.d0)
+
+            !-- interpolate adiabatic energies
+            ei = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_
+            ej = a0_fe(j) + a1_fe(j)*t_ + a2_fe(j)*t_*t_
+
+            droij = droij - ro_(i,j)*(ei - ej)/(ii*hbarps)
+
+            !-- first two terms in Eq. (14)
+            dzmom1dt(i,j)  = dzmom1dt(i,j) - (ii/hbarps)*zmom1_(i,j)*(ei - ej) + pzmom1_(i,j)/effmass1
+            dzmom2dt(i,j)  = dzmom2dt(i,j) - (ii/hbarps)*zmom2_(i,j)*(ei - ej) + pzmom2_(i,j)/effmass2
+
+            !-- first term in Eq. (16)
+            dpzmom1dt(i,j)  = dpzmom1dt(i,j) - (ii/hbarps)*pzmom1_(i,j)*(ei - ej)
+            dpzmom2dt(i,j)  = dpzmom2dt(i,j) - (ii/hbarps)*pzmom2_(i,j)*(ei - ej)
+
+            do k=1,nstates
+
+               !-- interpolate the nonadiabatic coupling terms
+               vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t_ + a2_vdotd(i,k)*t_*t_
+               vdkj = a0_vdotd(k,j) + a1_vdotd(k,j)*t_ + a2_vdotd(k,j)*t_*t_
+
+               !-- last term (with couplings) in Eq. (18)
+               droij = droij - (ro_(k,j)*vdik - ro_(i,k)*vdkj)
+
+               !-- last term (with the coupling) in Eqs. (14) and (16)
+               dzmom1dt(i,j)  = dzmom1dt(i,j)  - (vdik*zmom1_(k,j)  - zmom1_(i,k)*vdkj)
+               dzmom2dt(i,j)  = dzmom2dt(i,j)  - (vdik*zmom2_(k,j)  - zmom2_(i,k)*vdkj)
+               dpzmom1dt(i,j) = dpzmom1dt(i,j) - (vdik*pzmom1_(k,j) - pzmom1_(i,k)*vdkj)
+               dpzmom2dt(i,j) = dpzmom2dt(i,j) - (vdik*pzmom2_(k,j) - pzmom2_(i,k)*vdkj)
+
+               !-- interpolate the F-matrices
+               f1ik = a0_fmatz1(i,k) + a1_fmatz1(i,k)*t_ + a2_fmatz1(i,k)*t_*t_
+               f2ik = a0_fmatz2(i,k) + a1_fmatz2(i,k)*t_ + a2_fmatz2(i,k)*t_*t_
+               f1kj = a0_fmatz1(k,j) + a1_fmatz1(k,j)*t_ + a2_fmatz1(k,j)*t_*t_
+               f2kj = a0_fmatz2(k,j) + a1_fmatz2(k,j)*t_ + a2_fmatz2(k,j)*t_*t_
+
+               !-- second term in Eq. (18)
+               droij = droij + (ii/hbarps)*(f1ik*zmom1_(k,j) - zmom1_(i,k)*f1kj + &
+               &                            f2ik*zmom2_(k,j) - zmom2_(i,k)*f2kj)
+
+               !-- second term in Eq. (16)
+
+               dpzmom1dt(i,j) = dpzmom1dt(i,j) + 0.5d0*((f1ik-f1sh)*ro_(k,j) + ro_(i,k)*(f1kj-f1sh))
+               dpzmom2dt(i,j) = dpzmom2dt(i,j) + 0.5d0*((f2ik-f2sh)*ro_(k,j) + ro_(i,k)*(f2kj-f2sh))
+
+            enddo
+
+            drodt(i,j) = droij
+            drodt(j,i) = conjg(droij)
+
+            dzmom1dt(j,i) = conjg(dzmom1dt(i,j))
+            dzmom2dt(j,i) = conjg(dzmom2dt(i,j))
+
+            dpzmom1dt(j,i) = conjg(dpzmom1dt(i,j))
+            dpzmom2dt(j,i) = conjg(dpzmom2dt(i,j))
+
+         enddo
+      enddo
+
+   end subroutine tdafssh_derivatives
+
+
+   !--------------------------------------------------------------------
    !-- Quantum propagator for the density matrix (von Neumann equation)
    !   I. Based on the classic 4-th order Runge-Kutta algorithm.
    !--------------------------------------------------------------------
    subroutine propagate_density_rk4(t_,qtstep_)
 
-      real(8), intent(in) :: t_, qtstep_
+      real(kind=8), intent(in) :: t_, qtstep_
 
-      complex(8), dimension(nstates,nstates) :: y, dy1, dy2, dy3, dy4
+      complex(kind=8), dimension(nstates,nstates) :: y, dy1, dy2, dy3, dy4
 
       !-- initial amplitudes
       y = density_matrix
@@ -1873,18 +2349,79 @@ contains
 
    end subroutine propagate_density_rk4
 
+   !---------------------------------------------------------------------
+   !-- Quantum propagator for the moments of the coordinates and momenta
+   !   specific to A-FSSH - Eqs. (15) and (17).
+   !   (based on the classic 4-th order Runge-Kutta algorithm)
+   !---------------------------------------------------------------------
+
+   subroutine propagate_moments_and_density(istate_,t_,qtstep_)
+
+      integer, intent(in) :: istate_
+      real(kind=8), intent(in) :: t_, qtstep_
+      
+      real(kind=8) :: dt,dt2
+
+      complex(kind=8), dimension(nstates,nstates) :: z1_y, z1_dy1, z1_dy2, z1_dy3, z1_dy4
+      complex(kind=8), dimension(nstates,nstates) :: z2_y, z2_dy1, z2_dy2, z2_dy3, z2_dy4
+      complex(kind=8), dimension(nstates,nstates) :: pz1_y, pz1_dy1, pz1_dy2, pz1_dy3, pz1_dy4
+      complex(kind=8), dimension(nstates,nstates) :: pz2_y, pz2_dy1, pz2_dy2, pz2_dy3, pz2_dy4
+      complex(kind=8), dimension(nstates,nstates) :: ro_y, ro_dy1, ro_dy2, ro_dy3, ro_dy4
+
+      dt = qtstep_
+      dt2 = 0.5d0*qtstep_
+
+      !-- Runge-Kutta steps
+
+      ro_y = density_matrix
+      z1_y = zmom1
+      z2_y = zmom2
+      pz1_y = pzmom1
+      pz2_y = pzmom2
+      call tdafssh_derivatives(istate_,t_,ro_y,z1_y,z2_y,pz1_y,pz2_y,ro_dy1,z1_dy1,z2_dy1,pz1_dy1,pz2_dy1)
+
+      ro_y = density_matrix + dt2*ro_dy1
+      z1_y = zmom1 + dt2*z1_dy1
+      z2_y = zmom2 + dt2*z2_dy1
+      pz1_y = pzmom1 + dt2*pz1_dy1
+      pz2_y = pzmom2 + dt2*pz2_dy1
+      call tdafssh_derivatives(istate_,t_+dt2,ro_y,z1_y,z2_y,pz1_y,pz2_y,ro_dy2,z1_dy2,z2_dy2,pz1_dy2,pz2_dy2)
+
+      ro_y = density_matrix + dt2*ro_dy2
+      z1_y = zmom1 + dt2*z1_dy2
+      z2_y = zmom2 + dt2*z2_dy2
+      pz1_y = pzmom1 + dt2*pz1_dy2
+      pz2_y = pzmom2 + dt2*pz2_dy2
+      call tdafssh_derivatives(istate_,t_+dt2,ro_y,z1_y,z2_y,pz1_y,pz2_y,ro_dy3,z1_dy3,z2_dy3,pz1_dy3,pz2_dy3)
+
+      ro_y  = density_matrix + dt*ro_dy3
+      z1_y  = zmom1          + dt*z1_dy3
+      z2_y  = zmom2          + dt*z2_dy3
+      pz1_y = pzmom1         + dt*pz1_dy3
+      pz2_y = pzmom2         + dt*pz2_dy3
+      call tdafssh_derivatives(istate_,t_+dt,ro_y,z1_y,z2_y,pz1_y,pz2_y,ro_dy4,z1_dy4,z2_dy4,pz1_dy4,pz2_dy4)
+
+      !-- final moments and density matrix (array operations)
+      density_matrix = density_matrix + dt*(ro_dy1 + 2.d0*ro_dy2 + 2.d0*ro_dy3 + ro_dy4)/6.d0
+      zmom1 = zmom1 + dt*(z1_dy1 + 2.d0*z1_dy2 + 2.d0*z1_dy3 + z1_dy4)/6.d0
+      zmom2 = zmom2 + dt*(z2_dy1 + 2.d0*z2_dy2 + 2.d0*z2_dy3 + z2_dy4)/6.d0
+      pzmom1 = pzmom1 + dt*(pz1_dy1 + 2.d0*pz1_dy2 + 2.d0*pz1_dy3 + pz1_dy4)/6.d0
+      pzmom2 = pzmom2 + dt*(pz2_dy1 + 2.d0*pz2_dy2 + 2.d0*pz2_dy3 + pz2_dy4)/6.d0
+
+   end subroutine propagate_moments_and_density
+
    !--------------------------------------------------------------------
    !-- Right-hand side (time derivative) of TDSE
    !--------------------------------------------------------------------
    subroutine tdse_derivatives(t_,c,dc)
 
-      real(8), intent(in) :: t_
-      complex(8), intent(in),  dimension(nstates) :: c
-      complex(8), intent(out), dimension(nstates) :: dc
+      real(kind=8), intent(in) :: t_
+      complex(kind=8), intent(in),  dimension(nstates) :: c
+      complex(kind=8), intent(out), dimension(nstates) :: dc
 
       integer :: i, j
-      real(8) :: e0, de, vdij
-      complex(8) :: dci
+      real(kind=8) :: e0, de, vdij
+      complex(kind=8) :: dci
 
       !-- interpolated value of the ground state energy
       e0 = a0_fe(1) + a1_fe(1)*t_ + a2_fe(1)*t_*t_
@@ -1917,13 +2454,13 @@ contains
    subroutine tdse_derivatives_phcorr(istate_,t_,c,dc)
 
       integer, intent(in) :: istate_
-      real(8), intent(in) :: t_
-      complex(8), intent(in),  dimension(nstates) :: c
-      complex(8), intent(out), dimension(nstates) :: dc
+      real(kind=8), intent(in) :: t_
+      complex(kind=8), intent(in),  dimension(nstates) :: c
+      complex(kind=8), intent(out), dimension(nstates) :: dc
 
       integer :: i, j
-      real(8) :: ekinocc, efeocc, efei, hocc, hii, conservation, vdij
-      complex(8) :: dci
+      real(kind=8) :: ekinocc, efeocc, efei, hocc, hii, conservation, vdij
+      complex(kind=8) :: dci
 
       !-- interpolated value of the kinetic energy in the occupied state
       ekinocc = a0_ekin + a1_ekin*t_ + a2_ekin*t_*t_
@@ -1978,10 +2515,10 @@ contains
    !--------------------------------------------------------------------
    subroutine propagate_amplitudes_rk4(t_,qtstep_)
 
-      real(8), intent(in) :: t_, qtstep_
+      real(kind=8), intent(in) :: t_, qtstep_
 
-      complex(8), dimension(nstates) :: y, dy1, dy2, dy3, dy4
-      complex(8), dimension(nstates) :: y2, y3, y4
+      complex(kind=8), dimension(nstates) :: y, dy1, dy2, dy3, dy4
+      complex(kind=8), dimension(nstates) :: y2, y3, y4
 
       !-- initial amplitudes
       y = amplitude
@@ -2002,17 +2539,17 @@ contains
 
 
    !--------------------------------------------------------------------
-   !-- Quantum propagator for renormalized amplitudes
+   !-- Quantum propagator for amplitudes
    !   (for phase-corrected algorithm)
    !   I. Based on the classic 4-th order Runge-Kutta algorithm.
    !--------------------------------------------------------------------
    subroutine propagate_amplitudes_phcorr_rk4(istate_,t_,qtstep_)
 
       integer, intent(in) :: istate_
-      real(8), intent(in) :: t_, qtstep_
+      real(kind=8), intent(in) :: t_, qtstep_
 
-      complex(8), dimension(nstates) :: y, dy1, dy2, dy3, dy4
-      complex(8), dimension(nstates) :: y2, y3, y4
+      complex(kind=8), dimension(nstates) :: y, dy1, dy2, dy3, dy4
+      complex(kind=8), dimension(nstates) :: y2, y3, y4
 
       !-- initial amplitudes
       y = amplitude
@@ -2032,15 +2569,68 @@ contains
    end subroutine propagate_amplitudes_phcorr_rk4
 
 
+   !---------------------------------------------------------------------
+   !-- Calculate decoherence rate (A-FSSH - 1/tau_d from Eqs. 32)
+   !---------------------------------------------------------------------
+
+   function calculate_decoherence_rate(istate_, n_, dzeta_) result(decoherence_rate)
+
+      integer, intent(in) :: istate_, n_
+      real(kind=8), intent(in) :: dzeta_
+      real(kind=8) :: decoherence_rate
+
+      real(kind=8) :: f1ii, f2ii, f1nn, f2nn, f1in, f2in, zmom1nn, zmom2nn
+
+      f1ii = fmatz1(istate_,istate_)
+      f2ii = fmatz2(istate_,istate_)
+      f1nn = fmatz1(n_,n_)
+      f2nn = fmatz2(n_,n_)
+      f1in = fmatz1(istate_,n_)
+      f2in = fmatz2(istate_,n_)
+
+      zmom1nn = real(zmom1(n_,n_))
+      zmom2nn = real(zmom2(n_,n_))
+
+      decoherence_rate = (f1nn - f1ii)*zmom1nn + (f2nn - f2ii)*zmom2nn - 4.d0*abs(f1in*zmom1nn+f2in*zmom2nn)*dzeta_
+      decoherence_rate = 0.5d0*decoherence_rate/hbarps
+
+   end function calculate_decoherence_rate
+
+
+   !---------------------------------------------------------------------
+   !-- Calculate reset rate (A-FSSH - 1/tau_r from Eqs. 33)
+   !---------------------------------------------------------------------
+
+   function calculate_reset_rate(istate_, n_) result(reset_rate)
+
+      integer, intent(in) :: istate_, n_
+      real(kind=8) :: reset_rate
+
+      real(kind=8) :: f1ii, f2ii, f1nn, f2nn, zmom1ii, zmom2ii
+
+      f1ii = fmatz1(istate_,istate_)
+      f2ii = fmatz2(istate_,istate_)
+      f1nn = fmatz1(n_,n_)
+      f2nn = fmatz2(n_,n_)
+
+      zmom1ii = real(zmom1(istate_,istate_))
+      zmom2ii = real(zmom2(istate_,istate_))
+
+      reset_rate = (f1nn - f1ii)*zmom1ii + (f2nn - f2ii)*zmom2ii
+      reset_rate = -0.5d0*reset_rate/hbarps
+
+   end function calculate_reset_rate
+
+
    !--------------------------------------------------------------------
-   !-- Check if surface hoppping should take place
+   !-- Check if surface hopping should take place
    !--------------------------------------------------------------------
    function switch_state(istate) result(new_state)
       integer, intent(in) :: istate
       integer :: new_state
       integer :: i
-      real(8) :: total_prob
-      real(4) :: s
+      real(kind=8) :: total_prob
+      real(kind=4) :: s
       new_state = istate
       s = ran2nr()
       total_prob = 0.d0
@@ -2054,17 +2644,17 @@ contains
    end function switch_state
 
    !--------------------------------------------------------------------
-   !-- Check if surface hoppping should take place
+   !-- Adjust velocities after surface hopping took place
    !--------------------------------------------------------------------
    subroutine adjust_velocities(istate,new_state,vz1,vz2,success)
 
       integer, intent(in)    :: istate, new_state
-      real(8), intent(inout) :: vz1, vz2
+      real(kind=8), intent(inout) :: vz1, vz2
       logical, intent(out)   :: success
 
-      real(8) :: dkl_z1, dkl_z2
-      real(8) :: akl, bkl, ekl, discr
-      real(8) :: gamma
+      real(kind=8) :: dkl_z1, dkl_z2
+      real(kind=8) :: akl, bkl, ekl, discr
+      real(kind=8) :: gamma
 
       dkl_z1 = coupz1(istate,new_state)
       dkl_z2 = coupz2(istate,new_state)
@@ -2122,6 +2712,199 @@ contains
       endif
 
    end subroutine adjust_velocities
+
+
+   !-------------------------------------------------------------------------------------
+   !-- Adjust velocities and moments of momenta after surface hopping took place (A-FSSH)
+   !-------------------------------------------------------------------------------------
+   subroutine adjust_velocities_and_moments(istate,new_state,vz1,vz2,success)
+
+      integer, intent(in)    :: istate, new_state
+      real(kind=8), intent(inout) :: vz1, vz2
+      logical, intent(out)   :: success
+
+      integer :: k
+      real(kind=8) :: dkl_z1, dkl_z2, dkl_norm
+      real(kind=8) :: usc_z1, usc_z2, discr_afssh
+      real(kind=8) :: akl, bkl, ekl, discr
+      real(kind=8) :: rokk, gamma, eta_k
+      real(kind=8) :: a, b, bb, c, root1, root2
+
+      dkl_z1 = coupz1(istate,new_state)
+      dkl_z2 = coupz2(istate,new_state)
+
+      akl = dkl_z1*dkl_z1/effmass1 + dkl_z2*dkl_z2/effmass2
+      bkl  = v_dot_d(istate,new_state)
+      ekl = fe(istate) - fe(new_state)
+
+      discr = bkl*bkl + 2.d0*akl*ekl
+
+      if (discr.lt.0.d0) then
+
+         !-- not enough energy for a switch: do nothing
+         success = .false.
+
+         !=== DEBUG ===================================================================
+         write(*,*)
+         write(*,'(137("-"))')
+         write(*,*) "Rejected switch:",istate," --->",new_state
+         write(*,*) "Energy gap:", -ekl, " kcal/mol"
+         write(*,'(137("-"))')
+         !=== end DEBUG ===============================================================
+
+      else
+
+         !-- calculate adjustment coefficient
+         gamma = bkl/akl
+         if (bkl.lt.0) then
+            gamma = gamma + sqrt(discr)/akl
+         else
+            gamma = gamma - sqrt(discr)/akl
+         endif
+
+         !-- adjust velocities
+         vz1 = vz1 - gamma*dkl_z1/effmass1
+         vz2 = vz2 - gamma*dkl_z2/effmass2
+
+         success = .true.
+
+         !=== DEBUG ===================================================================
+         write(*,*)
+         write(*,'(137("-"))')
+         write(*,*) "Switch: ",istate," --->", new_state
+         write(*,*) "Nonadiabatic coupling: d_z1 = ", dkl_z1
+         write(*,*) "                       d_z2 = ", dkl_z2
+         write(*,*) "                       |d|  = ", sqrt(dkl_z1*dkl_z1 + dkl_z2*dkl_z2)
+         write(*,*) "Switch probability: ", switch_prob(new_state)
+         write(*,*) "Kinetic energy gain (loss if negative): ", ekl, " kcal/mol"
+         write(*,*) "Velocity adjustments: vz1 = vz1 + ", -gamma*dkl_z1/effmass1
+         write(*,*) "                      vz2 = vz2 + ", -gamma*dkl_z2/effmass2
+         write(*,'(137("-"))')
+         !=== end DEBUG ===============================================================
+
+
+         !-- A-FSSH specific part: adjustments of the moments of momenta
+         !   (Eqs. 40-42)
+
+         !-- reset all moments of momenta
+         call reset_pzmoments
+
+         dkl_norm = sqrt(dkl_z1*dkl_z1 + dkl_z2*dkl_z2)
+         usc_z1 = dkl_z1/dkl_norm
+         usc_z2 = dkl_z2/dkl_norm
+
+         a = 0.5d0*(usc_z1*usc_z1/effmass1 + usc_z2*usc_z2/effmass2)
+         bb = vz1*usc_z1 + vz2*usc_z2
+
+         do k=1,nstates
+
+            rokk = real(density_matrix(k,k))
+
+            if (rokk.gt.1.d-8) then
+
+               b = rokk*bb
+               c = rokk*rokk*(fe(k) - fe(new_state))
+               discr_afssh = b*b - 4.d0*a*c
+
+               if (discr_afssh.ge.0) then
+
+                  root1 = 0.5d0*(-b + sqrt(discr_afssh))/a
+                  root2 = 0.5d0*(-b - sqrt(discr_afssh))/a
+                  eta_k = min(abs(root1),abs(root2))
+
+                  pzmom1(k,k) = cmplx(eta_k*usc_z1,0.d0)
+                  pzmom2(k,k) = cmplx(eta_k*usc_z2,0.d0)
+
+                  !=== DEBUG ===================================================================
+                  write(*,'("Moments of momenta readjusted for state ",i2,": ",2g15.6)') k,eta_k*usc_z1,eta_k*usc_z2
+                  write(*,'(137("-"))')
+                  !=== end DEBUG ===============================================================
+
+               endif
+
+            endif
+
+         enddo
+
+
+      endif
+
+   end subroutine adjust_velocities_and_moments
+
+   !-------------------------------------------------------------------------------------
+   !-- renormalize density matrix and moments in case of collapsing and resetting events
+   !   (A-FSSH specific)
+   !-------------------------------------------------------------------------------------
+   subroutine collapse_and_reset_afssh(istate_,tstep_,dzeta_)
+
+      integer, intent(in)      :: istate_
+      real(kind=8), intent(in) :: tstep_, dzeta_
+
+      integer :: i, k, l
+      real(kind=4) :: s_random
+      real(kind=8) :: gamma_collapse, gamma_reset, roii
+
+      !-- loop over states to determine the probabilities of collapsing the wavefunction
+      !   and resetting the moments
+
+      do i=1,nstates
+
+         !-- calculate the collapse and reset rates (Eqs. 43 and 44)
+
+         gamma_collapse =  calculate_decoherence_rate(istate_,i,dzeta_)*tstep_
+         gamma_reset    =  calculate_reset_rate(istate_,i)*tstep_
+
+         !-- collapsing state |i> ?
+
+         s_random = ran2nr()
+
+         if (s_random.lt.gamma_collapse) then
+
+            !-- renormalizing the density matrix elemenmts
+
+            roii = real(density_matrix(i,i))
+
+            do k=1,nstates
+               density_matrix(i,k) = cmplx(0.d0,0.d0)
+               density_matrix(k,i) = cmplx(0.d0,0.d0)
+               density_matrix(k,k) = density_matrix(k,k)/(1.d0 - roii)
+            enddo
+
+            do k=1,nstates-1
+               do l=k+1,nstates
+                  density_matrix(k,l) = density_matrix(k,l)/(1.d0 - roii)
+                  density_matrix(l,k) = conjg(density_matrix(k,l))
+               enddo
+            enddo
+
+            !=== DEBUG =====================================================================
+            write(*,*) "***Collapsing event for state ",i,": gamma_collapse =", gamma_collapse
+            !=== end DEBUG =================================================================
+
+
+         endif
+
+         if (s_random.lt.gamma_collapse.or.s_random.lt.gamma_reset) then
+
+            !-- zero out the moments
+
+            do k=1,nstates
+               zmom1 (i,k) = cmplx(0.d0,0.d0)
+               zmom2 (i,k) = cmplx(0.d0,0.d0)
+               pzmom1(i,k) = cmplx(0.d0,0.d0)
+               pzmom2(i,k) = cmplx(0.d0,0.d0)
+               zmom1 (k,i) = cmplx(0.d0,0.d0)
+               zmom2 (k,i) = cmplx(0.d0,0.d0)
+               pzmom1(k,i) = cmplx(0.d0,0.d0)
+               pzmom2(k,i) = cmplx(0.d0,0.d0)
+            enddo
+
+         endif
+
+      enddo
+
+   end subroutine collapse_and_reset_afssh
+
 
 !===============================================================================
 end module propagators_3d
