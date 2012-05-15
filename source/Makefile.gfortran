@@ -14,5 +14,5 @@ MODFLAG = -J
 BACKSLASH = -fno-backslash
 NOBACKSLASH = -fbackslash
 F90FLAGS = -O3 -ffree-form -ffree-line-length-none
-F77FLAGS = -O2 -ffixed-form
-LDFLAGS =
+F77FLAGS = -O2 -ffixed-form -std=legacy
+LDFLAGS = -lblas
