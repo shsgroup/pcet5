@@ -137,6 +137,12 @@ subroutine dynamics3
 !                     File (default name is dynamics_checkpoint) must be
 !                     present and not empty.
 !
+!  PHASE - Phase correction algorithm
+!          [N. Shenvi, J. E. Subotnik, and W. Yang, JCP 135, 024101 (2011)]
+!
+!  DECOHERENCE - Decoherence algorithm, Augmented Fewest Switches Surface Hopping (AFSSH)
+!                [N. Shenvi, J. E. Subotnik, 2012]
+!
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
@@ -659,6 +665,21 @@ subroutine dynamics3
                    &1x,"[N. Shenvi, J. E. Subotnik, and W. Yang, J. Chem. Phys. 135, 024101 (2011) ]"/)')
       endif
 
+      if (index(options,' DECOHERENCE').ne.0) then
+
+         decoherence = .true.
+
+         if (index(options," DZETA=").ne.0) then
+            dzeta = reada(options,ioption+7)
+         else
+            dzeta = 1.d0
+         endif
+
+         write(6,'(/1x,"Decoherence algorithm (AFSSH) with dzeta =",f8.3," will be used.",/,&
+                   &1x,"[B. R. Landry, N. Shenvi, J. E. Subotnik, 2012]"/)') dzeta
+
+      endif
+
    else
 
       mdqt = .false.
@@ -1007,7 +1028,10 @@ subroutine dynamics3
    !-- Allocate arrays in propagators module
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    call allocate_vibronic_states
-   if (mdqt) call allocate_mdqt_arrays
+   if (mdqt) then
+      call allocate_mdqt_arrays
+      if (decoherence) call allocate_afssh_arrays
+   endif
    if (weights) call allocate_evb_weights
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1636,8 +1660,13 @@ subroutine dynamics3
       !   amplitudes of the initial wavefunction
 
       if (mdqt) then
+
          !-- calculate vibronic couplings at t=0
          call calculate_vibronic_couplings
+
+         !-- calculate force matrices (A-FSSH)
+         if (decoherence) call calculate_force_matrices
+
       endif
 
       !-- open the trajectory output file (channel 1)
@@ -1718,6 +1747,7 @@ subroutine dynamics3
             call store_vibronic_couplings                                 !  coupz(:,:) -> coupz_prev(:,:)
             call store_vibronic_energies                                  !  fe(:)      -> fe_prev(:)
             if (interpolation.eq."QUADRATIC") call store_wavefunctions    !  z(:,:)     -> z_prev(:,:)
+            if (decoherence) call store_force_matrices                    !  fmatz(:,:) -> fmatz_prev(:,:)
          endif
 
          !-- Propagate solvent coordinates and velocities
@@ -1776,6 +1806,18 @@ subroutine dynamics3
                call calculate_v_dot_d_mid(tstep)
             endif
 
+            if (decoherence) then
+
+               !-- calculate force matrices at t+dt (A-FSSH)
+               !------------------------------------------------------
+               call calculate_force_matrices
+
+               !-- calculate interpolation coefficients for the force matrices
+               !------------------------------------------------------------------
+               call interpolate_force_matrices(zeit_prev,zeit)
+
+            endif
+
             !-- calculate interpolation coefficients for the kinetic energy
             !   for phase-corrected surface hopping scheme
             !------------------------------------------------------------------
@@ -1794,23 +1836,31 @@ subroutine dynamics3
 
             !-- calculate the population of the current state at time t_prev
             !---------------------------------------------------------------
-            population_current = calculate_population(istate)
+            if (decoherence) then
+               population_current = calculate_population_den(istate)
+            else
+               population_current = calculate_population(istate)
+            endif
             call reset_switch_prob
 
             !--(DEBUG)--start
             !if (istep.eq.19419) call print_propagators_3d
             !--(DEBUG)--end
 
-            !-- propagate the amplitudes and switch probabilities
-            !   from t_prev to t
+            !-- propagate the amplitudes (or density matrix)
+            !   and switching probabilities from t_prev to t
             !------------------------------------------------------------------
 
             nqsteps_var = nqsteps
             qtstep_var = qtstep
-            call save_amplitudes
+            if (decoherence) then
+               call save_density_matrix
+               call save_moments
+            else
+               call save_amplitudes
+            endif
 
             24 continue
-            call restore_amplitudes
             call reset_switch_prob
 
             do iqstep=1,nqsteps_var
@@ -1822,15 +1872,20 @@ subroutine dynamics3
                !-------------------------------------------------------
                if (phase_corr) then
                   call propagate_amplitudes_phcorr_rk4(istate,zeitq_prev,qtstep_var)
+               elseif (decoherence) then
+                  call propagate_moments_and_density(istate,zeitq_prev,qtstep_var)
                else
                   call propagate_amplitudes_rk4(zeitq_prev,qtstep_var)
+                  !call propagate_density_rk4(zeitq_prev,qtstep_var)
                endif
-               !call propagate_density_rk4(zeitq_prev,qtstep_var)
 
                !-- calculate transition probabilities from current state
                !--------------------------------------------------------
-               call calculate_bprob_amp(istate,zeitq)
-               !call calculate_bprob_den(istate,zeitq)
+               if (decoherence) then
+                  call calculate_bprob_den(istate,zeitq)
+               else
+                  call calculate_bprob_amp(istate,zeitq)
+               endif
 
                !-- accumulate swithing probabilities (array operation)
                !------------------------------------------------------
@@ -1840,7 +1895,11 @@ subroutine dynamics3
 
             !-- check the norm of the time-dependent wavefunction
             !-----------------------------------------------------
-            wf_norm = tdwf_norm()
+            if (decoherence) then
+               wf_norm = density_trace()
+            else
+               wf_norm = tdwf_norm()
+            endif
 
             if (abs(wf_norm-1.d0).gt.1.d-4) then
 
@@ -1860,6 +1919,12 @@ subroutine dynamics3
                   write(*,'( 1x,"and the quantum propagation will be repeated with a 10 times smaller timestep.")')
                   write(*,'(/1x,"-------------------------------------------------------------------------------")')
 
+                  if (decoherence) then
+                     call restore_density_matrix
+                     call restore_moments
+                  else
+                     call restore_amplitudes
+                  endif
                   goto 24
 
                else
@@ -1903,15 +1968,24 @@ subroutine dynamics3
             !------------------------------------------------------------
             !call calculate_density_matrix
 
+
             !-- decision time: should we make a hop?
             !-------------------------------------------
             new_state = switch_state(istate)
             switch = new_state.ne.istate
 
             if (switch) then
-               !-- attempt adjusting velocities
-               call adjust_velocities(istate,new_state,vz1,vz2,success)
+
+               !-- attempt adjusting velocities (and possibly moments for A-FSSH)
+
+               if (decoherence) then
+                  call adjust_velocities_and_moments(istate,new_state,vz1,vz2,success)
+               else
+                  call adjust_velocities(istate,new_state,vz1,vz2,success)
+               endif
+
                if (success) then
+
                   write(itraj_channel,'("#--------------------------------------------------------------------")')
                   write(itraj_channel,'("#  t  = ",f13.6," ps ==> switch ",i3,"  -->",i3)') zeit,istate,new_state
                   write(itraj_channel,'("#  d  = (",f20.6,",",f20.6,")")') &
@@ -1919,18 +1993,29 @@ subroutine dynamics3
                   write(itraj_channel,'("# |d| = ",f20.6)') &
                   & sqrt(dot_product(get_vibronic_coupling(istate,new_state),get_vibronic_coupling(istate,new_state)))
                   write(itraj_channel,'("#--------------------------------------------------------------------")')
+
                   istate = new_state
                   number_of_switches = number_of_switches + 1
+
                else
+
                   number_of_rejected = number_of_rejected + 1
+
                endif
+
             endif
+
+
+            !-- A-FSSH specific part: collapsing events and resetting the moments
+
+            if (decoherence) call collapse_and_reset_afssh(istate,tstep,dzeta)
 
          endif  !mdqt
 
          !---------------------------!
          !-- end of the MDQT stage --!
          !---------------------------!
+
 
          !-- calculate EVB weights
          if (weights) call get_evb_weights
