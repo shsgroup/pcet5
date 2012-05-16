@@ -8,7 +8,7 @@
 #############################################################
 
 ARCH = intel_2011_sp1-x86_64
-FC = /opt/intel/composer_xe_2011_sp1.7.256/bin/intel64/ifort
+FC = ifort
 # Important: MODFLAG must have a trailing blank
 MODFLAG = -module 
 BACKSLASH = -assume nobscc
