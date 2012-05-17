@@ -2723,12 +2723,15 @@ contains
       real(kind=8), intent(inout) :: vz1, vz2
       logical, intent(out)   :: success
 
-      integer :: k
+      integer :: k, ii, kk
       real(kind=8) :: dkl_z1, dkl_z2, dkl_norm
       real(kind=8) :: usc_z1, usc_z2, discr_afssh
       real(kind=8) :: akl, bkl, ekl, discr
       real(kind=8) :: rokk, gamma, eta_k
       real(kind=8) :: a, b, bb, c, root1, root2
+      integer, dimension(nstates) :: states_readjusted
+
+      states_readjusted = 0
 
       dkl_z1 = coupz1(istate,new_state)
       dkl_z2 = coupz2(istate,new_state)
@@ -2796,6 +2799,8 @@ contains
          a = 0.5d0*(usc_z1*usc_z1/effmass1 + usc_z2*usc_z2/effmass2)
          bb = vz1*usc_z1 + vz2*usc_z2
 
+         ii = 0
+
          do k=1,nstates
 
             rokk = real(density_matrix(k,k))
@@ -2808,6 +2813,9 @@ contains
 
                if (discr_afssh.ge.0) then
 
+                  ii = ii + 1
+                  states_readjusted(ii) = k
+
                   root1 = 0.5d0*(-b + sqrt(discr_afssh))/a
                   root2 = 0.5d0*(-b - sqrt(discr_afssh))/a
                   eta_k = min(abs(root1),abs(root2))
@@ -2816,8 +2824,8 @@ contains
                   pzmom2(k,k) = cmplx(eta_k*usc_z2,0.d0)
 
                   !=== DEBUG ===================================================================
-                  write(*,'("Moments of momenta readjusted for state ",i2,": ",2g15.6)') k,eta_k*usc_z1,eta_k*usc_z2
-                  write(*,'(137("-"))')
+                  !write(*,'("Moments of momenta readjusted for state ",i2,": ",2g15.6)') k,eta_k*usc_z1,eta_k*usc_z2
+                  !write(*,'(137("-"))')
                   !=== end DEBUG ===============================================================
 
                endif
@@ -2826,6 +2834,7 @@ contains
 
          enddo
 
+         write(*,'("Moments of momenta readjusted for states: ",100i4)') (states_readjusted(kk),kk=1,ii)
 
       endif
 
@@ -2878,7 +2887,7 @@ contains
             enddo
 
             !=== DEBUG =====================================================================
-            write(*,*) "***Collapsing event for state ",i,": gamma_collapse =", gamma_collapse
+            write(*,'("***Collapsing event for state ",i2,": gamma_collapse = ",g15.6)') i, gamma_collapse
             !=== end DEBUG =================================================================
 
 

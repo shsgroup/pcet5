@@ -667,16 +667,25 @@ subroutine dynamics3
 
       if (index(options,' DECOHERENCE').ne.0) then
 
-         decoherence = .true.
+         if (.not.phase_corr) then
 
-         if (index(options," DZETA=").ne.0) then
-            dzeta = reada(options,ioption+7)
+            decoherence = .true.
+            if (index(options," DZETA=").ne.0) then
+               dzeta = reada(options,ioption+7)
+            else
+               dzeta = 1.d0
+            endif
+            write(6,'(/1x,"Decoherence algorithm (AFSSH) with dzeta =",f8.3," will be used.",/,&
+                      &1x,"[B. R. Landry, N. Shenvi, J. E. Subotnik, 2012]"/)') dzeta
+
          else
-            dzeta = 1.d0
-         endif
 
-         write(6,'(/1x,"Decoherence algorithm (AFSSH) with dzeta =",f8.3," will be used.",/,&
-                   &1x,"[B. R. Landry, N. Shenvi, J. E. Subotnik, 2012]"/)') dzeta
+            decoherence = .false.
+            write(6,'(/1x,"In current version decoherence (AFSSH) and phase-correction algorithms are incompatible")')
+            write(6,'( 1x,"Your input contains both PHASE and DECOHERENCE keywords. Check your input!!!")')
+            call clean_exit
+
+         endif
 
       endif
 
