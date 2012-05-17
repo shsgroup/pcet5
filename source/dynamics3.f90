@@ -692,7 +692,7 @@ subroutine dynamics3
    else
 
       mdqt = .false.
-      write(6,'(/1x,"Classical dynamics on a single vibronic free energy surface (default)."/)')
+      write(6,'(/1x,"Simulation of classical dynamics on a single vibronic free energy surface (default)."/)')
 
    endif
 
