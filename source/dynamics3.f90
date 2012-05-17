@@ -681,7 +681,8 @@ subroutine dynamics3
          else
 
             write(6,'(/1x,"In current version decoherence (AFSSH) and phase-correction algorithms are incompatible")')
-            write(6,'( 1x,"Your input contains both PHASE and DECOHERENCE keywords. Check your input!!!")')
+            write(6,'( 1x,"Your input contains both PHASE and DECOHERENCE keywords.")')
+            write(6,'( 1x,"Check your input and make up your mind!!!")')
             call clean_exit
 
          endif
