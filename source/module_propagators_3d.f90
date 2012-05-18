@@ -2849,13 +2849,17 @@ contains
       integer, intent(in)      :: istate_
       real(kind=8), intent(in) :: tstep_, dzeta_
 
-      integer :: i, k, l
+      integer :: i, k, l, ii, kk
       real(kind=4) :: s_random
       real(kind=8) :: gamma_collapse, gamma_reset, roii
+      integer, dimension(nstates) :: states_collapsed
+
+      states_collapsed = 0
 
       !-- loop over states to determine the probabilities of collapsing the wavefunction
       !   and resetting the moments
 
+      ii = 0
       do i=1,nstates
 
          !-- calculate the collapse and reset rates (Eqs. 43 and 44)
@@ -2868,6 +2872,9 @@ contains
          s_random = ran2nr()
 
          if (s_random.lt.gamma_collapse) then
+
+            ii = ii + 1
+            states_collapsed(ii) = i
 
             !-- renormalizing the density matrix elemenmts
 
@@ -2887,7 +2894,7 @@ contains
             enddo
 
             !=== DEBUG =====================================================================
-            write(*,'("***Collapsing event for state ",i2,": gamma_collapse = ",g15.6)') i, gamma_collapse
+            !write(*,'("***Collapsing event for state ",i2,": gamma_collapse = ",g15.6)') i, gamma_collapse
             !=== end DEBUG =================================================================
 
 
@@ -2911,6 +2918,8 @@ contains
          endif
 
       enddo
+
+      write(*,'("Collapsing events occured for states: ",100i4)') (states_collapsed(kk),kk=1,ii)
 
    end subroutine collapse_and_reset_afssh
 
