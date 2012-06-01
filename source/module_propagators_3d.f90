@@ -78,6 +78,7 @@ module propagators_3d
    use random_generators
    use rk_parameters
    use laser
+   use control_dynamics, only: decouple
 
    !---------------------------------------------------------------------
    implicit none
@@ -198,8 +199,6 @@ module propagators_3d
    public :: calculate_density_matrix
    public :: calculate_population
    public :: calculate_population_den
-   public :: calculate_decoherence_rate
-   public :: calculate_reset_rate
    public :: tdwf_norm
    public :: density_trace
    public :: store_vibronic_couplings
@@ -212,7 +211,6 @@ module propagators_3d
    public :: langevin_onodera_2d
    public :: langevin_onodera2_2d
    public :: print_propagators_3d
-   public :: tdse_derivatives
    public :: propagate_amplitudes_rk4
    public :: propagate_amplitudes_phcorr_rk4
    public :: propagate_density_rk4
@@ -1054,7 +1052,7 @@ contains
    subroutine calculate_force_matrices
 
       integer :: i, j
-      real(kind=8) :: gp, ge, g1, g2, fij
+      real(kind=8) :: gp, ge, g1, g2, fij1, fij2
 
       !-- calculate gradients in zp,ze frame
       do i=1,nstates
@@ -1066,12 +1064,16 @@ contains
       enddo
 
       !-- off-diagonal terms are expressed in terms of derivative couplings
-      fij = 0.d0
+      fij1 = 0.d0
+      fij2 = 0.d0
       do i=1,nstates-1
          do j=i+1,nstates
-            fij = coupz1(i,j)*(fe(j) - fe(i))
-            fmatz1(i,j) = fij
-            fmatz1(j,i) = fij
+            fij1 = coupz1(i,j)*(fe(j) - fe(i))
+            fij2 = coupz2(i,j)*(fe(j) - fe(i))
+            fmatz1(i,j) = fij1
+            fmatz1(j,i) = fij1
+            fmatz2(i,j) = fij2
+            fmatz2(j,i) = fij2
          enddo
       enddo
 
@@ -2300,8 +2302,9 @@ contains
                f2kj = a0_fmatz2(k,j) + a1_fmatz2(k,j)*t_ + a2_fmatz2(k,j)*t_*t_
 
                !-- second term in Eq. (18)
-               droij = droij + (ii/hbarps)*(f1ik*zmom1_(k,j) - zmom1_(i,k)*f1kj + &
-               &                            f2ik*zmom2_(k,j) - zmom2_(i,k)*f2kj)
+               if (.not.decouple) &
+               &  droij = droij + (ii/hbarps)*(f1ik*zmom1_(k,j) - zmom1_(i,k)*f1kj + &
+               &                               f2ik*zmom2_(k,j) - zmom2_(i,k)*f2kj)
 
                !-- second term in Eq. (16)
 
@@ -2573,53 +2576,69 @@ contains
    !-- Calculate decoherence rate (A-FSSH - 1/tau_d from Eqs. 32)
    !---------------------------------------------------------------------
 
-   function calculate_decoherence_rate(istate_, n_, dzeta_) result(decoherence_rate)
+   function decoherence_rate(istate_, n_, dzeta_) result(rate)
 
       integer, intent(in) :: istate_, n_
       real(kind=8), intent(in) :: dzeta_
-      real(kind=8) :: decoherence_rate
+      real(kind=8) :: rate
 
       real(kind=8) :: f1ii, f2ii, f1nn, f2nn, f1in, f2in, zmom1nn, zmom2nn
 
-      f1ii = fmatz1(istate_,istate_)
-      f2ii = fmatz2(istate_,istate_)
-      f1nn = fmatz1(n_,n_)
-      f2nn = fmatz2(n_,n_)
-      f1in = fmatz1(istate_,n_)
-      f2in = fmatz2(istate_,n_)
+      if (n_.eq.istate_) then
 
-      zmom1nn = real(zmom1(n_,n_))
-      zmom2nn = real(zmom2(n_,n_))
+         rate = 0.d0
 
-      decoherence_rate = (f1nn - f1ii)*zmom1nn + (f2nn - f2ii)*zmom2nn - 4.d0*abs(f1in*zmom1nn+f2in*zmom2nn)*dzeta_
-      decoherence_rate = 0.5d0*decoherence_rate/hbarps
+      else
 
-   end function calculate_decoherence_rate
+         f1ii = fmatz1(istate_,istate_)
+         f2ii = fmatz2(istate_,istate_)
+         f1nn = fmatz1(n_,n_)
+         f2nn = fmatz2(n_,n_)
+         f1in = fmatz1(istate_,n_)
+         f2in = fmatz2(istate_,n_)
+         zmom1nn = real(zmom1(n_,n_))
+         zmom2nn = real(zmom2(n_,n_))
+
+         rate = (f1nn - f1ii)*zmom1nn + (f2nn - f2ii)*zmom2nn - 4.d0*abs(f1in*zmom1nn+f2in*zmom2nn)*dzeta_
+         rate = 0.5d0*rate/hbarps
+
+      endif
+
+   end function decoherence_rate
 
 
    !---------------------------------------------------------------------
    !-- Calculate reset rate (A-FSSH - 1/tau_r from Eqs. 33)
+   !   (typo in original preprint: should be \deltaR_{nn}
    !---------------------------------------------------------------------
 
-   function calculate_reset_rate(istate_, n_) result(reset_rate)
+   function moments_reset_rate(istate_, n_) result(rate)
 
       integer, intent(in) :: istate_, n_
-      real(kind=8) :: reset_rate
+      real(kind=8) :: rate
 
-      real(kind=8) :: f1ii, f2ii, f1nn, f2nn, zmom1ii, zmom2ii
+      real(kind=8) :: f1ii, f2ii, f1nn, f2nn, zmom1nn, zmom2nn
 
-      f1ii = fmatz1(istate_,istate_)
-      f2ii = fmatz2(istate_,istate_)
-      f1nn = fmatz1(n_,n_)
-      f2nn = fmatz2(n_,n_)
+      if (n_.eq.istate_) then
 
-      zmom1ii = real(zmom1(istate_,istate_))
-      zmom2ii = real(zmom2(istate_,istate_))
+         rate = 0.d0
 
-      reset_rate = (f1nn - f1ii)*zmom1ii + (f2nn - f2ii)*zmom2ii
-      reset_rate = -0.5d0*reset_rate/hbarps
+      else
 
-   end function calculate_reset_rate
+         f1ii = fmatz1(istate_,istate_)
+         f2ii = fmatz2(istate_,istate_)
+         f1nn = fmatz1(n_,n_)
+         f2nn = fmatz2(n_,n_)
+
+         zmom1nn = real(zmom1(n_,n_))
+         zmom2nn = real(zmom2(n_,n_))
+
+         rate = (f1nn - f1ii)*zmom1nn + (f2nn - f2ii)*zmom2nn
+         rate = -0.5d0*rate/hbarps
+
+      endif
+
+   end function moments_reset_rate
 
 
    !--------------------------------------------------------------------
@@ -2672,11 +2691,11 @@ contains
          success = .false.
 
          !=== DEBUG ===================================================================
-         write(*,*)
-         write(*,'(137("-"))')
-         write(*,*) "Rejected switch:",istate," --->",new_state
-         write(*,*) "Energy gap:", -ekl, " kcal/mol"
-         write(*,'(137("-"))')
+         !write(*,*)
+         !write(*,'(137("-"))')
+         !write(*,*) "Rejected switch:",istate," --->",new_state
+         !write(*,*) "Energy gap:", -ekl, " kcal/mol"
+         !write(*,'(137("-"))')
          !=== end DEBUG ===============================================================
 
       else
@@ -2748,10 +2767,14 @@ contains
          success = .false.
 
          !=== DEBUG ===================================================================
-         write(*,*)
          write(*,'(137("-"))')
-         write(*,*) "Rejected switch:",istate," --->",new_state
+         write(*,*) "REJECTED SWITCH:",istate," --->",new_state
+         write(*,*) "Nonadiabatic coupling: d_z1 = ", dkl_z1
+         write(*,*) "                       d_z2 = ", dkl_z2
+         write(*,*) "                       |d|  = ", sqrt(dkl_z1*dkl_z1 + dkl_z2*dkl_z2)
+         write(*,*) "Switch probability: ", switch_prob(new_state)
          write(*,*) "Energy gap:", -ekl, " kcal/mol"
+         write(*,*) "(v*dkl):   ",  bkl, " kcal/mol/ps"
          write(*,'(137("-"))')
          !=== end DEBUG ===============================================================
 
@@ -2772,9 +2795,8 @@ contains
          success = .true.
 
          !=== DEBUG ===================================================================
-         write(*,*)
          write(*,'(137("-"))')
-         write(*,*) "Switch: ",istate," --->", new_state
+         write(*,*) "SWITCH: ",istate," --->", new_state
          write(*,*) "Nonadiabatic coupling: d_z1 = ", dkl_z1
          write(*,*) "                       d_z2 = ", dkl_z2
          write(*,*) "                       |d|  = ", sqrt(dkl_z1*dkl_z1 + dkl_z2*dkl_z2)
@@ -2782,14 +2804,14 @@ contains
          write(*,*) "Kinetic energy gain (loss if negative): ", ekl, " kcal/mol"
          write(*,*) "Velocity adjustments: vz1 = vz1 + ", -gamma*dkl_z1/effmass1
          write(*,*) "                      vz2 = vz2 + ", -gamma*dkl_z2/effmass2
-         write(*,'(137("-"))')
          !=== end DEBUG ===============================================================
 
 
          !-- A-FSSH specific part: adjustments of the moments of momenta
          !   (Eqs. 40-42)
 
-         !-- reset all moments of momenta
+         !-- reset all moments
+         call reset_zmoments
          call reset_pzmoments
 
          dkl_norm = sqrt(dkl_z1*dkl_z1 + dkl_z2*dkl_z2)
@@ -2834,7 +2856,8 @@ contains
 
          enddo
 
-         write(*,'("Moments of momenta readjusted for states: ",100i4)') (states_readjusted(kk),kk=1,ii)
+         write(*,'(1x,"Moments of momenta readjusted for states: ",100i4)') (states_readjusted(kk),kk=1,ii)
+         write(*,'(137("-"))')
 
       endif
 
@@ -2849,23 +2872,29 @@ contains
       integer, intent(in)      :: istate_
       real(kind=8), intent(in) :: tstep_, dzeta_
 
-      integer :: i, k, l, ii, kk
+      integer :: i, k, l, ii, iir, kk
       real(kind=4) :: s_random
       real(kind=8) :: gamma_collapse, gamma_reset, roii
-      integer, dimension(nstates) :: states_collapsed
+      integer, dimension(nstates) :: states_collapsed, states_reset
 
       states_collapsed = 0
+      states_reset = 0
 
       !-- loop over states to determine the probabilities of collapsing the wavefunction
       !   and resetting the moments
 
       ii = 0
+      iir = 0
       do i=1,nstates
 
          !-- calculate the collapse and reset rates (Eqs. 43 and 44)
 
-         gamma_collapse =  calculate_decoherence_rate(istate_,i,dzeta_)*tstep_
-         gamma_reset    =  calculate_reset_rate(istate_,i)*tstep_
+         gamma_collapse =  decoherence_rate(istate_,i,dzeta_)*tstep_
+         gamma_reset    =  moments_reset_rate(istate_,i)*tstep_
+
+         !=== start DEBUG printout ===
+         !write(*,'("Collapsing and resetting probabilities for state ",i2,": ",2g15.6)') i, gamma_collapse, gamma_reset
+         !=== end DEBUG printout =====
 
          !-- collapsing state |i> ?
 
@@ -2893,9 +2922,9 @@ contains
                enddo
             enddo
 
-            !=== DEBUG =====================================================================
+            !=== start DEBUG printout ===
             !write(*,'("***Collapsing event for state ",i2,": gamma_collapse = ",g15.6)') i, gamma_collapse
-            !=== end DEBUG =================================================================
+            !=== end DEBUG printout =====
 
 
          endif
@@ -2903,6 +2932,9 @@ contains
          if (s_random.lt.gamma_collapse.or.s_random.lt.gamma_reset) then
 
             !-- zero out the moments
+
+            iir = iir + 1
+            states_reset(iir) = i
 
             do k=1,nstates
                zmom1 (i,k) = cmplx(0.d0,0.d0)
@@ -2919,7 +2951,8 @@ contains
 
       enddo
 
-      write(*,'("Collapsing events occured for states: ",100i4)') (states_collapsed(kk),kk=1,ii)
+      if (ii.gt.0)  write(*,'("Collapsing events occured for states: ",100i4)') (states_collapsed(kk),kk=1,ii)
+      if (iir.gt.0) write(*,'("Resetting  events occured for states: ",100i4)') (states_reset(kk),kk=1,iir)
 
    end subroutine collapse_and_reset_afssh
 
