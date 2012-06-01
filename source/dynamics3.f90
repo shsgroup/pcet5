@@ -678,6 +678,14 @@ subroutine dynamics3
             write(6,'(/1x,"Decoherence algorithm (AFSSH) with dzeta =",f8.3," will be used.",/,&
                       &1x,"[B. R. Landry, N. Shenvi, J. E. Subotnik, 2012]"/)') dzeta
 
+            if (index(options," DECOUPLE").ne.0) then
+               decouple = .true.
+               write(6,'(/1x,"The TDSE in decoherence algorithm (AFSSH) will be decoupled from EOM for the moments")')
+            else
+               decouple = .false.
+               write(6,'(/1x,"The TDSE in decoherence algorithm (AFSSH) will be coupled to EOM for the moments")')
+            endif
+
          else
 
             write(6,'(/1x,"In current version decoherence (AFSSH) and phase-correction algorithms are incompatible")')
