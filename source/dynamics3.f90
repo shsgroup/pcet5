@@ -143,6 +143,9 @@ subroutine dynamics3
 !  DECOHERENCE - Decoherence algorithm, Augmented Fewest Switches Surface Hopping (AFSSH)
 !                [N. Shenvi, J. E. Subotnik, 2012]
 !
+!  DECOUPLE - decoupling of TDSE from EOM for moments in decoherence algorithm (original),
+!             Augmented Fewest Switches Surface Hopping (AFSSH) [N. Shenvi, J. E. Subotnik, 2012]
+!
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
