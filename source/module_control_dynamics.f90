@@ -30,6 +30,7 @@ module control_dynamics
    logical :: mdqt=.false.        ! flag for MDQT dynamics
    logical :: phase_corr=.false.  ! flag for MDQT dynamics with phase correction (Shenvi-Subotnik)
    logical :: decoherence=.false. ! flag for MDQT dynamics with decoherence (AFSSH) (Landry-Shenvi-Subotnik)
+   logical :: decouple=.false.    ! flag for decoupling of TDSE in AFSSH algorithm
    integer :: nsteps=100          ! number of steps
    integer :: ndump=1             ! dump trajectory every ndump steps
    integer :: ntraj=1             ! number of trajectories
