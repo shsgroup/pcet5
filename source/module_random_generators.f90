@@ -109,7 +109,7 @@ contains
    subroutine set_random_seed_clock()
       integer, dimension(8) :: current_values
       call date_and_time(values=current_values)
-      iseed = - (current_values(8) + 1)
+      iseed = -(current_values(8) + 1)
    end subroutine set_random_seed_clock
 
    !--------------------------------------------------------------------
