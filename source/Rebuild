@@ -1,0 +1,40 @@
+#!/bin/sh
+#
+
+#-- help
+if [ x$1 == x ]; then
+    echo "================================================================================="
+    echo "Synopsis:"
+    echo $0 "<list of compilers>"
+    echo "---------------------------------------------------------------------------------"
+    echo "Compilers:"
+    echo "intel       (Intel Fortran90 compiler 2011_sp1.7.256 with sequential MKL libraries)"
+    echo "intel.omp   (Intel Fortran90 compiler 2011_sp1.7.256 with multi-threaded MKL libraries)"
+    echo "intel.debug (Intel Fortran90 compiler 2011_sp1.7.256 with debug options enabled)"
+    echo "pgf90       (PGI Fortran90 compiler 9.0.2)"
+    echo "pgf.debug   (PGI Fortran90 compiler 9.0.2 with debug options enabled)"
+    echo "gfortran    (GNU Fortran90 compiler, gcc 4.1.2"
+    echo "================================================================================="
+    exit 0
+fi
+
+for compiler in $*
+do
+   if [ -e "Makefile.${compiler}" ]; then
+      ln -s -f Makefile.${compiler} Makefile.machine
+      echo "==="
+      echo "=== " ${compiler}
+      echo "==="
+      make clean
+      time make all
+      echo -e "\a"
+   fi
+done
+
+# copy the executables to shscluster2
+echo
+echo -n "===> copying executables to shscluster2 ... "
+cp -f ../bin/*.x /home64/souda/PCET/pcet5/bin
+echo -e "Done \a"
+echo -e "\a"
+echo -e "\a"
