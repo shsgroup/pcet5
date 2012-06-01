@@ -2004,7 +2004,7 @@ subroutine dynamics3
                if (success) then
 
                   write(itraj_channel,'("#--------------------------------------------------------------------")')
-                  write(itraj_channel,'("#  t  = ",f13.6," ps ==> switch ",i3,"  -->",i3)') zeit,istate,new_state
+                  write(itraj_channel,'("#  t  = ",f13.6," ps ==> SWITCH ",i3,"  -->",i3)') zeit,istate,new_state
                   write(itraj_channel,'("#  d  = (",f20.6,",",f20.6,")")') &
                   & get_vibronic_coupling(istate,new_state)
                   write(itraj_channel,'("# |d| = ",f20.6)') &
@@ -2015,6 +2015,14 @@ subroutine dynamics3
                   number_of_switches = number_of_switches + 1
 
                else
+
+                  write(itraj_channel,'("#--------------------------------------------------------------------")')
+                  write(itraj_channel,'("#  t  = ",f13.6," ps ==> REJECTED SWITCH ",i3,"  -->",i3)') zeit,istate,new_state
+                  write(itraj_channel,'("#  d  = (",f20.6,",",f20.6,")")') &
+                  & get_vibronic_coupling(istate,new_state)
+                  write(itraj_channel,'("# |d| = ",f20.6)') &
+                  & sqrt(dot_product(get_vibronic_coupling(istate,new_state),get_vibronic_coupling(istate,new_state)))
+                  write(itraj_channel,'("#--------------------------------------------------------------------")')
 
                   number_of_rejected = number_of_rejected + 1
 
