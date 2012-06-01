@@ -14,13 +14,13 @@ MODFLAG = -module
 BACKSLASH = -assume nobscc
 NOBACKSLASH = -assume bscc
 F90FLAGS = -fast -ftz -zero
-F77FLAGS = -O2 -ftz -zero
+F77FLAGS = -O2 -ftz -zero -ipo
 
 # sequential mkl libraries
-LDFLAGS = -L/opt/intel/composerxe/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lpthread -lm
+LDFLAGS = -L/opt/intel/composerxe/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lpthread -lm -ipo-jobs4
 
 # parallel (threaded) mkl libraries
 # set OMP_NUM_THREADS=<number_of_threads> in your script (default is 8 threads)
-#LDFLAGS = -L/opt/intel/composerxe/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm
+#LDFLAGS = -L/opt/intel/composerxe/mkl/lib/intel64 -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm -ipo-jobs4
 
 
