@@ -1119,18 +1119,20 @@ contains
    !---------------------------------------------------------------------
       implicit none
       integer :: i, itit,itit2
-      integer :: length, lengt1, lengt2, lengt3, lengt4, lengt5
+      integer :: length
+      integer :: lengt1, lengt2, lengt3, lengt4, lengt5
+      integer :: lengt6, lengt7, lengt8, lengt9, lengt10
 
       !-- Determine the actual lengths of TITLE and TITLE2
 
-      do i=80,1,-1
+      do i=len(title),1,-1
          if (title(i:i).ne.' ') then
             itit = i
             exit
          endif
       enddo
 
-      do i=80,1,-1
+      do i=len(title),1,-1
          if (title2(i:i).ne.' ') then
             itit2 = i
             exit
@@ -1143,13 +1145,13 @@ contains
 
       write(6,'(3x,"Title of the job:  ",a)') title (1:itit)
       write(6,'(22x,a)')                      title2(1:itit2)
-      write(6,'(3x,"Start date:        ",a)') strdat
-      write(6,'(3x,"Job identificator: ",a)') job
+      write(6,'(3x,"Start date:        ",a)') trim(strdat)
+      write(6,'(3x,"Job identificator: ",a)') trim(job)
       write(6,'(1x,79("-"))')
 
       !-- Print keywords
 
-      do i=481,1,-1
+      do i=len(keywrd),1,-1
          if (keywrd(i:i).ne.' ') then
             length = i
             exit
@@ -1256,7 +1258,7 @@ contains
          write(6,'(1x,a)') keywrd(lengt3+1:lengt4)
          write(6,'(1x,a)') keywrd(lengt4+1:length)
 
-      else
+      elseif (length.le.480) then
 
          do i=400,321,-1
             if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
@@ -1299,6 +1301,350 @@ contains
          write(6,'(1x,a)') keywrd(lengt3+1:lengt4)
          write(6,'(1x,a)') keywrd(lengt4+1:lengt5)
          write(6,'(1x,a)') keywrd(lengt5+1:length)
+
+
+      elseif (length.le.560) then
+
+         do i=480,401,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt6 = i
+               exit
+            endif
+         enddo
+
+         do i=400,321,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt5 = i
+               exit
+            endif
+         enddo
+
+         do i=320,241,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt4 = i
+               exit
+            endif
+         enddo
+
+         do i=240,161,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt3 = i
+               exit
+            endif
+         enddo
+
+         do i=160,81,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt2 = i
+               exit
+            endif
+         enddo
+
+         do i=80,1,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt1 = i
+               exit
+            endif
+         enddo
+
+         write(6,'(1x,a)') keywrd(2:lengt1)
+         write(6,'(1x,a)') keywrd(lengt1+1:lengt2)
+         write(6,'(1x,a)') keywrd(lengt2+1:lengt3)
+         write(6,'(1x,a)') keywrd(lengt3+1:lengt4)
+         write(6,'(1x,a)') keywrd(lengt4+1:lengt5)
+         write(6,'(1x,a)') keywrd(lengt5+1:lengt6)
+         write(6,'(1x,a)') keywrd(lengt6+1:length)
+
+
+      elseif (length.le.640) then
+
+         do i=560,481,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt7 = i
+               exit
+            endif
+         enddo
+
+         do i=480,401,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt6 = i
+               exit
+            endif
+         enddo
+
+         do i=400,321,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt5 = i
+               exit
+            endif
+         enddo
+
+         do i=320,241,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt4 = i
+               exit
+            endif
+         enddo
+
+         do i=240,161,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt3 = i
+               exit
+            endif
+         enddo
+
+         do i=160,81,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt2 = i
+               exit
+            endif
+         enddo
+
+         do i=80,1,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt1 = i
+               exit
+            endif
+         enddo
+
+         write(6,'(1x,a)') keywrd(2:lengt1)
+         write(6,'(1x,a)') keywrd(lengt1+1:lengt2)
+         write(6,'(1x,a)') keywrd(lengt2+1:lengt3)
+         write(6,'(1x,a)') keywrd(lengt3+1:lengt4)
+         write(6,'(1x,a)') keywrd(lengt4+1:lengt5)
+         write(6,'(1x,a)') keywrd(lengt5+1:lengt6)
+         write(6,'(1x,a)') keywrd(lengt6+1:lengt7)
+         write(6,'(1x,a)') keywrd(lengt7+1:length)
+
+
+      elseif (length.le.720) then
+
+         do i=640,561,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt8 = i
+               exit
+            endif
+         enddo
+
+         do i=560,481,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt7 = i
+               exit
+            endif
+         enddo
+
+         do i=480,401,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt6 = i
+               exit
+            endif
+         enddo
+
+         do i=400,321,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt5 = i
+               exit
+            endif
+         enddo
+
+         do i=320,241,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt4 = i
+               exit
+            endif
+         enddo
+
+         do i=240,161,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt3 = i
+               exit
+            endif
+         enddo
+
+         do i=160,81,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt2 = i
+               exit
+            endif
+         enddo
+
+         do i=80,1,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt1 = i
+               exit
+            endif
+         enddo
+
+         write(6,'(1x,a)') keywrd(2:lengt1)
+         write(6,'(1x,a)') keywrd(lengt1+1:lengt2)
+         write(6,'(1x,a)') keywrd(lengt2+1:lengt3)
+         write(6,'(1x,a)') keywrd(lengt3+1:lengt4)
+         write(6,'(1x,a)') keywrd(lengt4+1:lengt5)
+         write(6,'(1x,a)') keywrd(lengt5+1:lengt6)
+         write(6,'(1x,a)') keywrd(lengt6+1:lengt7)
+         write(6,'(1x,a)') keywrd(lengt7+1:lengt8)
+         write(6,'(1x,a)') keywrd(lengt8+1:length)
+
+
+      elseif (length.le.800) then
+
+         do i=720,641,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt9 = i
+               exit
+            endif
+         enddo
+
+         do i=640,561,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt8 = i
+               exit
+            endif
+         enddo
+
+         do i=560,481,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt7 = i
+               exit
+            endif
+         enddo
+
+         do i=480,401,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt6 = i
+               exit
+            endif
+         enddo
+
+         do i=400,321,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt5 = i
+               exit
+            endif
+         enddo
+
+         do i=320,241,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt4 = i
+               exit
+            endif
+         enddo
+
+         do i=240,161,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt3 = i
+               exit
+            endif
+         enddo
+
+         do i=160,81,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt2 = i
+               exit
+            endif
+         enddo
+
+         do i=80,1,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt1 = i
+               exit
+            endif
+         enddo
+
+         write(6,'(1x,a)') keywrd(2:lengt1)
+         write(6,'(1x,a)') keywrd(lengt1+1:lengt2)
+         write(6,'(1x,a)') keywrd(lengt2+1:lengt3)
+         write(6,'(1x,a)') keywrd(lengt3+1:lengt4)
+         write(6,'(1x,a)') keywrd(lengt4+1:lengt5)
+         write(6,'(1x,a)') keywrd(lengt5+1:lengt6)
+         write(6,'(1x,a)') keywrd(lengt6+1:lengt7)
+         write(6,'(1x,a)') keywrd(lengt7+1:lengt8)
+         write(6,'(1x,a)') keywrd(lengt8+1:lengt9)
+         write(6,'(1x,a)') keywrd(lengt9+1:length)
+
+      else
+
+         do i=800,721,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt10 = i
+               exit
+            endif
+         enddo
+
+         do i=720,641,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt9 = i
+               exit
+            endif
+         enddo
+
+         do i=640,561,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt8 = i
+               exit
+            endif
+         enddo
+
+         do i=560,481,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt7 = i
+               exit
+            endif
+         enddo
+
+         do i=480,401,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt6 = i
+               exit
+            endif
+         enddo
+
+         do i=400,321,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt5 = i
+               exit
+            endif
+         enddo
+
+         do i=320,241,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt4 = i
+               exit
+            endif
+         enddo
+
+         do i=240,161,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt3 = i
+               exit
+            endif
+         enddo
+
+         do i=160,81,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt2 = i
+               exit
+            endif
+         enddo
+
+         do i=80,1,-1
+            if (keywrd(i:i).eq.' '.or.keywrd(i:i).eq.',') then
+               lengt1 = i
+               exit
+            endif
+         enddo
+
+         write(6,'(1x,a)') keywrd(2:lengt1)
+         write(6,'(1x,a)') keywrd(lengt1+1:lengt2)
+         write(6,'(1x,a)') keywrd(lengt2+1:lengt3)
+         write(6,'(1x,a)') keywrd(lengt3+1:lengt4)
+         write(6,'(1x,a)') keywrd(lengt4+1:lengt5)
+         write(6,'(1x,a)') keywrd(lengt5+1:lengt6)
+         write(6,'(1x,a)') keywrd(lengt6+1:lengt7)
+         write(6,'(1x,a)') keywrd(lengt7+1:lengt8)
+         write(6,'(1x,a)') keywrd(lengt8+1:lengt9)
+         write(6,'(1x,a)') keywrd(lengt9+1:lengt10)
+         write(6,'(1x,a)') keywrd(lengt10+1:length)
 
       endif
 
