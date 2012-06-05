@@ -12,22 +12,31 @@ if [ x$1 == x ]; then
     echo "intel.omp   (Intel Fortran90 compiler 2011_sp1.7.256 with multi-threaded MKL libraries)"
     echo "intel.debug (Intel Fortran90 compiler 2011_sp1.7.256 with debug options enabled)"
     echo "pgf90       (PGI Fortran90 compiler 9.0.2)"
-    echo "pgf.debug   (PGI Fortran90 compiler 9.0.2 with debug options enabled)"
+    echo "pgf90.debug (PGI Fortran90 compiler 9.0.2 with debug options enabled)"
     echo "gfortran    (GNU Fortran90 compiler, gcc 4.1.2"
     echo "================================================================================="
     exit 0
+fi
+
+if [ -e "Rebuild.log" ]; then
+   rm -f Rebuild.log
+fi
+
+if [ -e "Rebuild.err" ]; then
+   rm -f Rebuild.err
 fi
 
 for compiler in $*
 do
    if [ -e "Makefile.${compiler}" ]; then
       ln -s -f Makefile.${compiler} Makefile.machine
-      echo "==="
-      echo "=== " ${compiler}
-      echo "==="
+      echo "]===>"
+      echo "]===> " ${compiler}
+      echo "]===>"
       make clean
-      time make all
+      time make all 2>> Rebuild.err
       echo -e "\a"
+      echo `date '+%a %D at %r'` ": building with " ${compiler} " is done!" >> Rebuild.log
    fi
 done
 
@@ -35,6 +44,15 @@ done
 echo
 echo -n "===> copying executables to shscluster2 ... "
 cp -f ../bin/*.x /home64/souda/PCET/pcet5/bin
+echo "Executables were copied to /home64/souda/PCET/pcet5/bin" >> Rebuild.log
+
+if [ -s "Rebuild.err" ]; then
+   echo "There were errors: check Rebuild.err!"
+   echo "There were errors: check Rebuild.err!" >> Rebuild.log
+else
+   rm -f Rebuild.err
+fi
+
 echo -e "Done \a"
 echo -e "\a"
 echo -e "\a"
