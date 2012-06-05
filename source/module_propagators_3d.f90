@@ -201,6 +201,10 @@ module propagators_3d
    public :: calculate_population_den
    public :: tdwf_norm
    public :: density_trace
+   public :: zmom1_trace
+   public :: zmom2_trace
+   public :: pzmom1_trace
+   public :: pzmom2_trace
    public :: store_vibronic_couplings
    public :: store_vibronic_energies
    public :: store_force_matrices
@@ -219,6 +223,8 @@ module propagators_3d
    public :: adjust_velocities
    public :: adjust_velocities_and_moments
    public :: reset_switch_prob
+   public :: reset_zmoments
+   public :: reset_pzmoments
    public :: accumulate_switch_prob
    public :: normalize_switch_prob
    public :: save_amplitudes
@@ -228,6 +234,10 @@ module propagators_3d
    public :: save_moments
    public :: restore_moments
    public :: collapse_and_reset_afssh
+   public :: print_populations_den
+   public :: print_populations_amp
+   public :: print_coherences_den
+   public :: print_coherences_amp
 
 contains
 
@@ -266,6 +276,34 @@ contains
       write(*,*) "TDSE amplitudes: ",amplitude
       write(*,*)
    end subroutine print_propagators_3d
+
+   subroutine print_populations_den(channel,t_)
+      integer, intent(in) :: channel
+      real(kind=8), intent(in) :: t_
+      integer :: k
+      write(channel,'(f12.6,1x,100g15.6)') t_, (real(density_matrix(k,k)),k=1,nstates)
+   end subroutine print_populations_den
+
+   subroutine print_populations_amp(channel,t_)
+      integer, intent(in) :: channel
+      real(kind=8), intent(in) :: t_
+      integer :: k
+      write(channel,'(f12.6,1x,100g15.6)') t_, (real(amplitude(k)*conjg(amplitude(k))),k=1,nstates)
+   end subroutine print_populations_amp
+
+   subroutine print_coherences_den(channel,t_,istate_)
+      integer, intent(in) :: channel, istate_
+      real(kind=8), intent(in) :: t_
+      integer :: k
+      write(channel,'(f12.6,1x,100g15.6)') t_, (density_matrix(istate_,k),k=1,nstates)
+   end subroutine print_coherences_den
+
+   subroutine print_coherences_amp(channel,t_,istate_)
+      integer, intent(in) :: channel, istate_
+      real(kind=8), intent(in) :: t_
+      integer :: k
+      write(channel,'(f12.6,1x,140g15.6)') t_, (amplitude(istate_)*conjg(amplitude(k)),k=1,nstates)
+   end subroutine print_coherences_amp
 
    subroutine set_mode(mode_,iset_,nstates_,nzdim_,ielst_)
       character(len=5), intent(in) :: mode_
@@ -1140,19 +1178,19 @@ contains
    !--------------------------------------------------------------------
    !-- calculate population (from amplitudes)
    !--------------------------------------------------------------------
-   function calculate_population(istate) result(pop)
-      integer, intent(in) :: istate
+   function calculate_population(istate_) result(pop)
+      integer, intent(in) :: istate_
       real(kind=8) :: pop
-      pop = amplitude(istate)*conjg(amplitude(istate))
+      pop = real(amplitude(istate_)*conjg(amplitude(istate_)))
    end function calculate_population
 
    !--------------------------------------------------------------------
    !-- calculate population (diagonal element of the density matrix)
    !--------------------------------------------------------------------
-   function calculate_population_den(istate) result(pop)
-      integer, intent(in) :: istate
+   function calculate_population_den(istate_) result(pop)
+      integer, intent(in) :: istate_
       real(kind=8) :: pop
-      pop = real(density_matrix(istate,istate))
+      pop = real(density_matrix(istate_,istate_))
    end function calculate_population_den
 
    !--------------------------------------------------------------------
@@ -1182,6 +1220,62 @@ contains
    end function density_trace
 
    !--------------------------------------------------------------------
+   !-- calculate trace of the z1 coordinate moment
+   !--------------------------------------------------------------------
+   function zmom1_trace() result(trace)
+      complex(kind=8) :: ctrace
+      real(kind=8) :: trace
+      integer :: i
+      ctrace = 0.d0
+      do i=1,nstates
+      	ctrace = ctrace + zmom1(i,i)
+      enddo
+      trace = real(ctrace)
+   end function zmom1_trace
+
+   !--------------------------------------------------------------------
+   !-- calculate trace of the z2 coordinate moment
+   !--------------------------------------------------------------------
+   function zmom2_trace() result(trace)
+      complex(kind=8) :: ctrace
+      real(kind=8) :: trace
+      integer :: i
+      ctrace = 0.d0
+      do i=1,nstates
+      	ctrace = ctrace + zmom2(i,i)
+      enddo
+      trace = real(ctrace)
+   end function zmom2_trace
+
+   !--------------------------------------------------------------------
+   !-- calculate trace of the z1 momentum moment
+   !--------------------------------------------------------------------
+   function pzmom1_trace() result(trace)
+      complex(kind=8) :: ctrace
+      real(kind=8) :: trace
+      integer :: i
+      ctrace = 0.d0
+      do i=1,nstates
+      	ctrace = ctrace + pzmom1(i,i)
+      enddo
+      trace = real(ctrace)
+   end function pzmom1_trace
+
+   !--------------------------------------------------------------------
+   !-- calculate trace of the z2 momentum moment
+   !--------------------------------------------------------------------
+   function pzmom2_trace() result(trace)
+      complex(kind=8) :: ctrace
+      real(kind=8) :: trace
+      integer :: i
+      ctrace = 0.d0
+      do i=1,nstates
+      	ctrace = ctrace + pzmom2(i,i)
+      enddo
+      trace = real(ctrace)
+   end function pzmom2_trace
+
+   !--------------------------------------------------------------------
    !-- construct the full density matrix
    !--------------------------------------------------------------------
    subroutine calculate_density_matrix
@@ -1197,14 +1291,14 @@ contains
    !-- calculate transition probabilities b_jk
    !   from renormalized amplitudes
    !--------------------------------------------------------------------
-   subroutine calculate_bprob_amp(istate,t_)
-      integer, intent(in) :: istate
+   subroutine calculate_bprob_amp(istate_,t_)
+      integer, intent(in) :: istate_
       real(kind=8), intent(in) :: t_
       real(kind=8) :: vdji
       integer :: j
       do j=1,nstates
-         vdji = a0_vdotd(j,istate) + a1_vdotd(j,istate)*t_ + a2_vdotd(j,istate)*t_*t_
-         b_prob(j) = -2.d0*Real(amplitude(j)*conjg(amplitude(istate))*vdji)
+         vdji = a0_vdotd(j,istate_) + a1_vdotd(j,istate_)*t_ + a2_vdotd(j,istate_)*t_*t_
+         b_prob(j) = -2.d0*Real(amplitude(j)*conjg(amplitude(istate_))*vdji)
       enddo
    end subroutine calculate_bprob_amp
 
@@ -1212,14 +1306,14 @@ contains
    !-- calculate transition probabilities b_jk
    !   from density matrix
    !--------------------------------------------------------------------
-   subroutine calculate_bprob_den(istate,t_)
-      integer, intent(in) :: istate
+   subroutine calculate_bprob_den(istate_,t_)
+      integer, intent(in) :: istate_
       real(kind=8), intent(in) :: t_
       real(kind=8) :: vdji
       integer :: j
       do j=1,nstates
-         vdji = a0_vdotd(j,istate) + a1_vdotd(j,istate)*t_ + a2_vdotd(j,istate)*t_*t_
-         b_prob(j) = -2.d0*Real(density_matrix(j,istate)*vdji)
+         vdji = a0_vdotd(j,istate_) + a1_vdotd(j,istate_)*t_ + a2_vdotd(j,istate_)*t_*t_
+         b_prob(j) = -2.d0*Real(density_matrix(j,istate_)*vdji)
       enddo
    end subroutine calculate_bprob_den
 
@@ -2097,7 +2191,7 @@ contains
                do k=1,nstates
                   !-- interpolate the nonadiabatic coupling term
                   vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t_ + a2_vdotd(i,k)*t_*t_
-                  droij = droij - 2.d0*real(ro(k,i))*vdik
+                  droij = droij - 2.d0*real(ro(i,k))*vdik
                enddo
 
             else
@@ -2105,7 +2199,7 @@ contains
                !-- interpolate adiabatic energies
                ei = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_
                ej = a0_fe(j) + a1_fe(j)*t_ + a2_fe(j)*t_*t_
-               droij = droij - ro(i,j)*(ei - ej)/(ii*hbarps)
+               droij = droij - ii*ro(i,j)*(ei - ej)/hbarps
 
                do k=1,nstates
                   !-- interpolate the nonadiabatic coupling terms
@@ -2157,7 +2251,7 @@ contains
                !-- interpolate adiabatic energies
                ei = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_
                ej = a0_fe(j) + a1_fe(j)*t_ + a2_fe(j)*t_*t_
-               droij = droij - ro(i,j)*(ei - ej)/(ii*hbarps)
+               droij = droij - ii*ro(i,j)*(ei - ej)/hbarps
 
                do k=1,nstates
 
@@ -2207,7 +2301,7 @@ contains
       integer :: i, j, k
       real(kind=8) :: ei, ej, vdik, vdkj
       real(kind=8) :: f1ik, f2ik, f1kj, f2kj, f1sh, f2sh
-      complex(kind=8) :: droij
+      complex(kind=8) :: droii, droij
 
       real(kind=8), dimension(nstates) :: tiiz1, tiiz2, tiipz1, tiipz2
 
@@ -2225,7 +2319,7 @@ contains
 
       do i=1,nstates
 
-         droij = cmplx(0.d0,0.d0)
+         droii = cmplx(0.d0,0.d0)
          tiiz1(i)  = real(pzmom1_(i,i))/effmass1
          tiiz2(i)  = real(pzmom2_(i,i))/effmass2
          tiipz1(i) = 0.d0
@@ -2239,14 +2333,14 @@ contains
             tiiz2(i)  = tiiz2(i) - 2.d0*vdik*real(zmom2_(i,k))
             tiipz1(i) = tiipz1(i) + (f1ik-f1sh)*real(ro_(i,k)) - 2.d0*vdik*real(pzmom1_(i,k))
             tiipz2(i) = tiipz2(i) + (f2ik-f2sh)*real(ro_(i,k)) - 2.d0*vdik*real(pzmom2_(i,k))
-            droij = droij - 2.d0*real(ro_(k,i))*vdik
+            droii = droii - 2.d0*vdik*real(ro_(i,k))
          enddo
 
          dzmom1dt(i,i)  = cmplx(tiiz1(i),0.d0)
          dzmom2dt(i,i)  = cmplx(tiiz2(i),0.d0)
          dpzmom1dt(i,i) = cmplx(tiipz1(i),0.d0)
          dpzmom2dt(i,i) = cmplx(tiipz2(i),0.d0)
-         drodt(i,i) = droij
+         drodt(i,i) = droii
 
       enddo
 
@@ -2258,7 +2352,26 @@ contains
       enddo
 
 
-      !-- calculate off-diagonal derivative parts for matrices of moments EOM (upper triangle)
+      !-- additional diagonal terms in Eq.(18) in the case of coupled TDSE
+
+      if (.not.decouple) then
+
+         do i=1,nstates
+            droii = cmplx(0.d0,0.d0)
+            do k=1,nstates
+               !-- interpolate the F-matrices
+               f1ik = a0_fmatz1(i,k) + a1_fmatz1(i,k)*t_ + a2_fmatz1(i,k)*t_*t_
+               f2ik = a0_fmatz2(i,k) + a1_fmatz2(i,k)*t_ + a2_fmatz2(i,k)*t_*t_
+               droii = droii + (2.d0/hbarps)*(f1ik*imag(zmom1_(i,k)) + f2ik*imag(zmom2_(i,k)))
+            enddo
+            drodt(i,i) = drodt(i,i) + droii
+         enddo
+
+      endif
+
+
+      !-- calculate off-diagonal derivative parts for matrices of moments
+      !   and density matrix (upper triangles)
 
 
       do i=1,nstates-1
@@ -2270,7 +2383,7 @@ contains
             ei = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_
             ej = a0_fe(j) + a1_fe(j)*t_ + a2_fe(j)*t_*t_
 
-            droij = droij - ro_(i,j)*(ei - ej)/(ii*hbarps)
+            droij = droij - (ii/hbarps)*ro_(i,j)*(ei - ej)
 
             !-- first two terms in Eq. (14)
             dzmom1dt(i,j)  = dzmom1dt(i,j) - (ii/hbarps)*zmom1_(i,j)*(ei - ej) + pzmom1_(i,j)/effmass1
@@ -2287,7 +2400,7 @@ contains
                vdkj = a0_vdotd(k,j) + a1_vdotd(k,j)*t_ + a2_vdotd(k,j)*t_*t_
 
                !-- last term (with couplings) in Eq. (18)
-               droij = droij - (ro_(k,j)*vdik - ro_(i,k)*vdkj)
+               droij = droij - (vdik*ro_(k,j) - ro_(i,k)*vdkj)
 
                !-- last term (with the coupling) in Eqs. (14) and (16)
                dzmom1dt(i,j)  = dzmom1dt(i,j)  - (vdik*zmom1_(k,j)  - zmom1_(i,k)*vdkj)
@@ -2363,7 +2476,8 @@ contains
       integer, intent(in) :: istate_
       real(kind=8), intent(in) :: t_, qtstep_
       
-      real(kind=8) :: dt,dt2
+      integer :: i, j
+      real(kind=8) :: dt, dt2
 
       complex(kind=8), dimension(nstates,nstates) :: z1_y, z1_dy1, z1_dy2, z1_dy3, z1_dy4
       complex(kind=8), dimension(nstates,nstates) :: z2_y, z2_dy1, z2_dy2, z2_dy3, z2_dy4
@@ -2410,6 +2524,28 @@ contains
       zmom2 = zmom2 + dt*(z2_dy1 + 2.d0*z2_dy2 + 2.d0*z2_dy3 + z2_dy4)/6.d0
       pzmom1 = pzmom1 + dt*(pz1_dy1 + 2.d0*pz1_dy2 + 2.d0*pz1_dy3 + pz1_dy4)/6.d0
       pzmom2 = pzmom2 + dt*(pz2_dy1 + 2.d0*pz2_dy2 + 2.d0*pz2_dy3 + pz2_dy4)/6.d0
+
+      !-- symmetrize density matrix and matrices of moments
+
+      do i=1,nstates-1
+         do j=i+1,nstates
+            density_matrix(j,i) = conjg(density_matrix(i,j))
+            zmom1(j,i)  = conjg(zmom1(i,j))
+            zmom2(j,i)  = conjg(zmom2(i,j))
+            pzmom1(j,i) = conjg(pzmom1(i,j))
+            pzmom2(j,i) = conjg(pzmom2(i,j))
+         enddo
+      enddo
+
+      !== DEBUG start ==============================
+      !write(*,*) "--------------------------------------------------------------------------------"
+      !write(*,*) "Checking moments for occupied states"
+      !write(*,*) "<i|zmom1|i>  = ", zmom1(istate_,istate_)
+      !write(*,*) "<i|zmom2|i>  = ", zmom2(istate_,istate_)
+      !write(*,*) "<i|pzmom1|i> = ", pzmom1(istate_,istate_)
+      !write(*,*) "<i|pzmom2|i> = ", pzmom2(istate_,istate_)
+      !write(*,*) "--------------------------------------------------------------------------------"
+      !== DEBUG end ================================
 
    end subroutine propagate_moments_and_density
 
