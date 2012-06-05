@@ -131,6 +131,9 @@ subroutine dynamics3
 !
 !  NDUMP6=<int> - trajectory screen output frequency (every NDUMP6 steps)
 !
+!  NDUMP777=<int> - populations and coherences output frequency
+!                   (every NDUMP777 steps; no output if NDUMP777=0, default)
+!
 !  T=<float> - temperature in K
 !
 !  RESTART[=<file>] - restart trajectories (and random number sequences)
@@ -140,11 +143,11 @@ subroutine dynamics3
 !  PHASE - Phase correction algorithm
 !          [N. Shenvi, J. E. Subotnik, and W. Yang, JCP 135, 024101 (2011)]
 !
-!  DECOHERENCE - Decoherence algorithm, Augmented Fewest Switches Surface Hopping (AFSSH)
-!                [N. Shenvi, J. E. Subotnik, 2012]
+!  AFSSH - Decoherence algorithm, Augmented Fewest Switches Surface Hopping (AFSSH)
+!                [N. Shenvi, J. E. Subotnik, 2012, original algorithm]
 !
-!  DECOUPLE - decoupling of TDSE from EOM for moments in decoherence algorithm (original),
-!             Augmented Fewest Switches Surface Hopping (AFSSH) [N. Shenvi, J. E. Subotnik, 2012]
+!  COUPLE - couple TDSE to EOM for moments in decoherence algorithm (Eq.18),
+!           Augmented Fewest Switches Surface Hopping (AFSSH) [N. Shenvi, J. E. Subotnik, 2012]
 !
 !-------------------------------------------------------------------
 !
@@ -168,7 +171,8 @@ subroutine dynamics3
 !  (3) restarting the dynamic trajectories (checkpoint file dynamics_checkpoint)
 !
 !  Revision 5.14  2011/03/01 23:55:18  souda
-!  Variable timestep for quantum propagation implemented (thanks to Sharon) - that fixes the problems with the conservation of the norm of the time-dependent wavefunction.
+!  Variable timestep for quantum propagation implemented (thanks to Sharon) -
+!  that fixes the problems with the conservation of the norm of the time-dependent wavefunction.
 !
 !  Revision 5.13  2011/02/25 19:11:25  souda
 !  Now using a separate set of dielectric constant for solvent dynamics.
@@ -257,7 +261,7 @@ subroutine dynamics3
 
    integer :: nstates_dyn, nzdim_dyn, ielst_dyn, iseed_inp, iset_dyn
    integer :: initial_state=-1, iground=1
-   integer :: istate, new_state, ndump6, pump_s
+   integer :: istate, new_state, ndump6, ndump777, pump_s
    integer :: number_of_skipped_trajectories=0
    integer :: number_of_failed_trajectories=0
    integer :: itraj_start=1
@@ -271,15 +275,16 @@ subroutine dynamics3
    integer :: number_of_switches=0, number_of_rejected=0
    integer :: itraj_channel=11
 
-   real(8) :: sigma, sigma1, sigma2, sample, population_current, wf_norm
-   real(8) :: zeit_start, zeit_end, zeit_total, traj_time_start, traj_time_end
-   real(8) :: zeit, zeit_prev
-   real(8) :: zeitq, zeitq_prev
-   real(8) :: z1, z2, zp, ze, vz1, vz2, vzp, vze, z10, z20, zp0, ze0, y1, y2
-   real(8) :: ekin, ekin1, ekin2, ekin_prev, ekinhalf1, ekinhalf2, efes
-   real(8) :: vz1_prev, vz2_prev
-   real(8) :: pump_e, pump_w, vib_linewidth
-   real(8) :: qtstep_var
+   real(kind=8) :: sigma, sigma1, sigma2, sample, population_current
+   real(kind=8) :: wf_norm, zmom1_norm, zmom2_norm, pzmom1_norm, pzmom2_norm
+   real(kind=8) :: zeit_start, zeit_end, zeit_total, traj_time_start, traj_time_end
+   real(kind=8) :: zeit, zeit_prev
+   real(kind=8) :: zeitq, zeitq_prev
+   real(kind=8) :: z1, z2, zp, ze, vz1, vz2, vzp, vze, z10, z20, zp0, ze0, y1, y2
+   real(kind=8) :: ekin, ekin1, ekin2, ekin_prev, ekinhalf1, ekinhalf2, efes
+   real(kind=8) :: vz1_prev, vz2_prev
+   real(kind=8) :: pump_e, pump_w, vib_linewidth
+   real(kind=8) :: qtstep_var
 
    adiab   = .true.
    diab2   = .false.
@@ -668,7 +673,7 @@ subroutine dynamics3
                    &1x,"[N. Shenvi, J. E. Subotnik, and W. Yang, J. Chem. Phys. 135, 024101 (2011) ]"/)')
       endif
 
-      if (index(options,' DECOHERENCE').ne.0) then
+      if (index(options,' AFSSH').ne.0) then
 
          if (.not.phase_corr) then
 
@@ -681,12 +686,12 @@ subroutine dynamics3
             write(6,'(/1x,"Decoherence algorithm (AFSSH) with dzeta =",f8.3," will be used.",/,&
                       &1x,"[B. R. Landry, N. Shenvi, J. E. Subotnik, 2012]"/)') dzeta
 
-            if (index(options," DECOUPLE").ne.0) then
-               decouple = .true.
-               write(6,'(/1x,"The TDSE in decoherence algorithm (AFSSH) will be decoupled from EOM for the moments")')
-            else
+            if (index(options," COUPLE").ne.0) then
                decouple = .false.
-               write(6,'(/1x,"The TDSE in decoherence algorithm (AFSSH) will be coupled to EOM for the moments")')
+               write(6,'(/1x,"The TDSE in decoherence algorithm (AFSSH) will be coupled to EOM for the moments (Eq.18)")')
+            else
+               decouple = .true.
+               write(6,'(/1x,"The TDSE in decoherence algorithm (AFSSH) will be decoupled from EOM for the moments (original algorithm)")')
             endif
 
          else
@@ -929,9 +934,22 @@ subroutine dynamics3
    
    if (ioption.ne.0) then
       ndump6 = reada(options,ioption+8)
-      write(6,'(1x,"Dump trajectory to screen data every ",i10," steps"/)') ndump
+      write(6,'(1x,"Dump trajectory data to screen every ",i10," steps"/)') ndump6
    else
       ndump6 = 0
+   endif
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Populations and coherences output frequency (every NDUMP777 steps)
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   ioption = index(options," NDUMP777=")
+   
+   if (ioption.ne.0) then
+      ndump777 = reada(options,ioption+10)
+      write(6,'(1x,"Dump populations and coherences every ",i10," steps"/)') ndump777
+   else
+      ndump777 = 0
    endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1542,6 +1560,12 @@ subroutine dynamics3
       !endif
       !--(DEBUG)--end
 
+      !-- zero out the moments (A-FSSH)
+      if (mdqt.and.decoherence) then
+         call reset_zmoments
+         call reset_pzmoments
+      endif
+
       !-- initialize initial velocities
 
       if (solvent_model.eq."DEBYE".or.solvent_model.eq."DEBYE2") then
@@ -1721,6 +1745,15 @@ subroutine dynamics3
       write(6,'(141("-"))')
 
       !write(6,'(137x,$)')
+
+
+      !--(DEBUG)--start
+      if (ndump777.ne.0) then
+         open(777,file=job(1:ljob)//"/populations_"//traj_suffix//".dat")
+         open(778,file=job(1:ljob)//"/coherences_"//traj_suffix//".dat")
+      endif
+      !--(DEBUG)--end
+
 
       !-- transform initial values at time t=0
       call z1z2_to_zpze(z1,z2,zp,ze)
@@ -1979,6 +2012,60 @@ subroutine dynamics3
 
             endif
 
+            !-----------------------------------------------------------------
+            !-- check the traces of the matrices of moments (A-FSSH algorithm)
+            !   (should be zero?)
+            !-----------------------------------------------------------------
+            !if (decoherence) then
+            !   zmom1_norm = zmom1_trace()
+            !   zmom2_norm = zmom2_trace()
+            !   pzmom1_norm = pzmom1_trace()
+            !   pzmom2_norm = pzmom2_trace()
+            !   if (abs(zmom1_norm).gt.1.d-6) then
+            !      write(*,'(/1x,"-------------------------------------------------------------------------------")')
+            !      write(*,'( 1x,"DYNAMICS3(A-FSSH): Trace(zmom1) is not zero at timestep ",i6)') istep
+            !      write(*,'( 1x,"                   The value is: ",g20.10)') zmom1_norm
+            !      write(*,'(/1x,"-------------------------------------------------------------------------------")')
+            !   endif
+            !   if (abs(zmom2_norm).gt.1.d-6) then
+            !      write(*,'(/1x,"-------------------------------------------------------------------------------")')
+            !      write(*,'( 1x,"DYNAMICS3(A-FSSH): Trace(zmom2) is not zero at timestep ",i6)') istep
+            !      write(*,'( 1x,"                   The value is: ",g20.10)') zmom2_norm
+            !      write(*,'(/1x,"-------------------------------------------------------------------------------")')
+            !   endif
+            !   if (abs(pzmom1_norm).gt.1.d-6) then
+            !      write(*,'(/1x,"-------------------------------------------------------------------------------")')
+            !      write(*,'( 1x,"DYNAMICS3(A-FSSH): Trace(pzmom1) is not zero at timestep ",i6)') istep
+            !      write(*,'( 1x,"                   The value is: ",g20.10)') pzmom1_norm
+            !      write(*,'(/1x,"-------------------------------------------------------------------------------")')
+            !   endif
+            !   if (abs(pzmom2_norm).gt.1.d-6) then
+            !      write(*,'(/1x,"-------------------------------------------------------------------------------")')
+            !      write(*,'( 1x,"DYNAMICS3(A-FSSH): Trace(pzmom2) is not zero at timestep ",i6)') istep
+            !      write(*,'( 1x,"                   The value is: ",g20.10)') pzmom2_norm
+            !      write(*,'(/1x,"-------------------------------------------------------------------------------")')
+            !   endif
+            !endif
+            !-----------------------------------------------------------------
+
+
+            !--(DEBUG)--start
+            !
+            !-- print out the populations and coherences (channels 777 and 778)
+
+            if (ndump777.ne.0.and.mod(istep,ndump777).eq.0) then
+               if (decoherence) then
+                  call print_populations_den(777,zeit)
+                  call print_coherences_den(778,zeit,istate)
+               else
+                  call print_populations_amp(777,zeit)
+                  call print_coherences_amp(778,zeit,istate)
+               endif
+            endif
+            !--(DEBUG)--end
+
+
+
             !-- Normalize swithing probabilities by the current state population
             !   and zero out the negative ones
             !-------------------------------------------------------------------
@@ -2086,7 +2173,15 @@ subroutine dynamics3
          write(itraj_channel,'("#",141("-"))')
       endif
       close(itraj_channel)
-      
+
+      !--(DEBUG)--start
+      !-- close files with populations and coherences
+      if (ndump777.ne.0) then
+         close(777)
+         close(778)
+      endif
+      !--(DEBUG)--end
+
       write(6,*)
       write(6,'(141("-"))')
       write(6,'("# Total number of allowed  switches: ",i5)') number_of_switches
