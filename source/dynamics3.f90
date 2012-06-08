@@ -149,6 +149,9 @@ subroutine dynamics3
 !  COUPLE - couple TDSE to EOM for moments in decoherence algorithm (Eq.18),
 !           Augmented Fewest Switches Surface Hopping (AFSSH) [N. Shenvi, J. E. Subotnik, 2012]
 !
+!  ADJUST_ALONG_MOMENTS - adjust velocities along the difference of vectors of moments in decoherence algorithm,
+!           Augmented Fewest Switches Surface Hopping (AFSSH-0) [N. Shenvi, J. E. Subotnik, 2011]
+!
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
@@ -692,6 +695,14 @@ subroutine dynamics3
             else
                decouple = .true.
                write(6,'(/1x,"The TDSE in decoherence algorithm (AFSSH) will be decoupled from EOM for the moments (original algorithm)")')
+            endif
+
+            if (index(options," ADJUST_ALONG_MOMENTS").ne.0) then
+               along_moments = .true.
+               write(6,'(/1x,"The adjustment of velocities will be performed along the direction of the difference")')
+               write(6,'( 1x,"between the moments of momenta in decoherence algorithm (AFSSH-0)")')
+            else
+               along_moments = .false.
             endif
 
          else
@@ -2086,7 +2097,11 @@ subroutine dynamics3
                !-- attempt adjusting velocities (and possibly moments for A-FSSH)
 
                if (decoherence) then
-                  call adjust_velocities_and_moments(istate,new_state,vz1,vz2,success)
+                  if (.not.along_moments) then
+                     call adjust_velocities_and_moments(istate,new_state,vz1,vz2,success)
+                  else
+                     call adjust_velocities_and_moments_0(istate,new_state,vz1,vz2,success)
+                  endif
                else
                   call adjust_velocities(istate,new_state,vz1,vz2,success)
                endif
