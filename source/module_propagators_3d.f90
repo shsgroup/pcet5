@@ -221,6 +221,7 @@ module propagators_3d
    public :: propagate_moments_and_density
    public :: switch_state
    public :: adjust_velocities
+   public :: adjust_velocities_and_moments_0
    public :: adjust_velocities_and_moments
    public :: reset_switch_prob
    public :: reset_zmoments
@@ -2871,6 +2872,8 @@ contains
 
    !-------------------------------------------------------------------------------------
    !-- Adjust velocities and moments of momenta after surface hopping took place (A-FSSH)
+   !   (velocities and moments adjustments are made in the direction
+   !    of the nonadiabatic coupling vector, A-FSSH-2)
    !-------------------------------------------------------------------------------------
    subroutine adjust_velocities_and_moments(istate,new_state,vz1,vz2,success)
 
@@ -2976,7 +2979,12 @@ contains
 
                   root1 = 0.5d0*(-b + sqrt(discr_afssh))/a
                   root2 = 0.5d0*(-b - sqrt(discr_afssh))/a
-                  eta_k = min(abs(root1),abs(root2))
+
+                  if (abs(root1).lt.abs(root2)) then
+                     eta_k = root1
+                  else
+                     eta_k = root2
+                  endif
 
                   pzmom1(k,k) = cmplx(eta_k*usc_z1,0.d0)
                   pzmom2(k,k) = cmplx(eta_k*usc_z2,0.d0)
@@ -2998,6 +3006,140 @@ contains
       endif
 
    end subroutine adjust_velocities_and_moments
+
+
+   !-------------------------------------------------------------------------------------
+   !-- Adjust velocities and moments of momenta after surface hopping took place (A-FSSH)
+   !   (velocities adjustment is made in the direction of the difference
+   !    of moments of momenta, A-FSSH-0)
+   !-------------------------------------------------------------------------------------
+   subroutine adjust_velocities_and_moments_0(istate,new_state,vz1,vz2,success)
+
+      integer, intent(in)    :: istate, new_state
+      real(kind=8), intent(inout) :: vz1, vz2
+      logical, intent(out)   :: success
+
+      integer :: k, ii, kk
+      real(kind=8) :: u_z1, u_z2, u_norm
+      real(kind=8) :: a, b, c, discr, discr_afssh
+      real(kind=8) :: rokk, gamma, dgamma, eta_k
+      real(kind=8) :: bb, root1, root2
+      integer, dimension(nstates) :: states_readjusted
+
+      states_readjusted = 0
+
+      u_z1 = pzmom1(new_state,new_state) + pzmom1(istate,istate)
+      u_z2 = pzmom2(new_state,new_state) + pzmom2(istate,istate)
+      u_norm = sqrt(u_z1*u_z1 + u_z2*u_z2)
+      u_z1 = u_z1/u_norm
+      u_z2 = u_z2/u_norm
+
+      a = 0.5d0*(u_z1*u_z1/effmass1 + u_z2*u_z2/effmass2)
+      b  = vz1*u_z1 + vz2*u_z2
+      c = fe(new_state) - fe(istate)
+
+      discr = b*b - 4.d0*a*c
+
+      if (discr.lt.0.d0) then
+
+         !-- not enough energy for a switch: do nothing
+         success = .false.
+
+         !=== DEBUG ===================================================================
+         write(*,'(137("-"))')
+         write(*,*) "REJECTED SWITCH:",istate," --->",new_state
+         write(*,*) "Switch probability: ", switch_prob(new_state)
+         write(*,*) "Energy gap:", c, " kcal/mol"
+         write(*,'(137("-"))')
+         !=== end DEBUG ===============================================================
+
+      else
+
+         !-- calculate adjustment coefficient
+         gamma = -b/(2.d0*a)
+         dgamma = sqrt(discr)/(2.d0*a)
+         root1 = gamma - dgamma
+         root2 = gamma + dgamma
+
+         if (abs(root1).lt.abs(root2)) then
+            gamma = root1
+         else
+            gamma = root2
+         endif
+
+         !-- adjust velocities
+         vz1 = vz1 + gamma*u_z1/effmass1
+         vz2 = vz2 + gamma*u_z2/effmass2
+
+         success = .true.
+
+         !=== DEBUG ===================================================================
+         write(*,'(137("-"))')
+         write(*,*) "SWITCH: ",istate," --->", new_state
+         write(*,*) "Switch probability: ", switch_prob(new_state)
+         write(*,*) "Kinetic energy gain (loss if negative): ", -c, " kcal/mol"
+         write(*,*) "Velocity adjustments: vz1 = vz1 + ", gamma*u_z1/effmass1
+         write(*,*) "                      vz2 = vz2 + ", gamma*u_z2/effmass2
+         !=== end DEBUG ===============================================================
+
+
+         !-- A-FSSH specific part: adjustments of the moments of momenta
+         !   (Eqs. 40-42, but in the direction)
+
+         !-- reset all moments
+         call reset_zmoments
+         call reset_pzmoments
+
+         a = 0.5d0*(u_z1*u_z1/effmass1 + u_z2*u_z2/effmass2)
+         bb = vz1*u_z1 + vz2*u_z2
+
+         ii = 0
+
+         do k=1,nstates
+
+            rokk = real(density_matrix(k,k))
+
+            if (rokk.gt.1.d-8) then
+
+               b = rokk*bb
+               c = rokk*rokk*(fe(k) - fe(new_state))
+               discr_afssh = b*b - 4.d0*a*c
+
+               if (discr_afssh.ge.0) then
+
+                  ii = ii + 1
+                  states_readjusted(ii) = k
+
+                  root1 = 0.5d0*(-b + sqrt(discr_afssh))/a
+                  root2 = 0.5d0*(-b - sqrt(discr_afssh))/a
+
+                  if (abs(root1).lt.abs(root2)) then
+                     eta_k = root1
+                  else
+                     eta_k = root2
+                  endif
+
+                  pzmom1(k,k) = cmplx(eta_k*u_z1,0.d0)
+                  pzmom2(k,k) = cmplx(eta_k*u_z2,0.d0)
+
+                  !=== DEBUG ===================================================================
+                  !write(*,'("Moments of momenta readjusted for state ",i2,": ",2g15.6)') k,eta_k*u_z1,eta_k*u_z2
+                  !write(*,'(137("-"))')
+                  !=== end DEBUG ===============================================================
+
+               endif
+
+            endif
+
+         enddo
+
+         write(*,'(1x,"Moments of momenta readjusted for states: ",100i4)') (states_readjusted(kk),kk=1,ii)
+         write(*,'(137("-"))')
+
+      endif
+
+   end subroutine adjust_velocities_and_moments_0
+
 
    !-------------------------------------------------------------------------------------
    !-- renormalize density matrix and moments in case of collapsing and resetting events
