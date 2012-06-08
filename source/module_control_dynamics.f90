@@ -27,19 +27,20 @@ module control_dynamics
    character(len=10) :: solvent_model
    character(len=10) :: interpolation="LINEAR"
 
-   logical :: mdqt=.false.        ! flag for MDQT dynamics
-   logical :: phase_corr=.false.  ! flag for MDQT dynamics with phase correction (Shenvi-Subotnik)
-   logical :: decoherence=.false. ! flag for MDQT dynamics with decoherence (AFSSH) (Landry-Shenvi-Subotnik)
-   logical :: decouple=.true.     ! flag for decoupling of TDSE in AFSSH algorithm
-   integer :: nsteps=100          ! number of steps
-   integer :: ndump=1             ! dump trajectory every ndump steps
-   integer :: ntraj=1             ! number of trajectories
-   integer :: nqsteps             ! number of timesteps in TDSE
-   integer :: maxnqsteps          ! maximum number of timesteps in TDSE
-   real(8) :: tstep               ! time step for solvent dynamics (ps)
-   real(8) :: qtstep              ! timestep for TDSE (ps)
-   real(8) :: temp                ! temperature (K)
-   real(8) :: dzeta=1.d0          ! coefficient for decoherence rate (A-FSSH, Eq.32)
+   logical :: mdqt=.false.          ! flag for MDQT dynamics
+   logical :: phase_corr=.false.    ! flag for MDQT dynamics with phase correction (Shenvi-Subotnik)
+   logical :: decoherence=.false.   ! flag for MDQT dynamics with decoherence (AFSSH) (Landry-Shenvi-Subotnik)
+   logical :: decouple=.true.       ! flag for decoupling of TDSE in AFSSH algorithm
+   logical :: along_moments=.false. ! flag for the direction of velocity adjustments (A-FSSH-0)
+   integer :: nsteps=100            ! number of steps
+   integer :: ndump=1               ! dump trajectory every ndump steps
+   integer :: ntraj=1               ! number of trajectories
+   integer :: nqsteps               ! number of timesteps in TDSE
+   integer :: maxnqsteps            ! maximum number of timesteps in TDSE
+   real(8) :: tstep                 ! time step for solvent dynamics (ps)
+   real(8) :: qtstep                ! timestep for TDSE (ps)
+   real(8) :: temp                  ! temperature (K)
+   real(8) :: dzeta=1.d0            ! coefficient for decoherence rate (A-FSSH, Eq.32)
 !=======================================================================
 
 contains
