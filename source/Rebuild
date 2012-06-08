@@ -47,8 +47,8 @@ cp -f ../bin/*.x /home64/souda/PCET/pcet5/bin
 echo "Executables were copied to /home64/souda/PCET/pcet5/bin" >> Rebuild.log
 
 if [ -s "Rebuild.err" ]; then
-   echo "There were errors: check Rebuild.err!"
-   echo "There were errors: check Rebuild.err!" >> Rebuild.log
+   echo "There might have been warnings and/or errors: check Rebuild.err!"
+   echo "There might have been warnings and/or errors: check Rebuild.err!" >> Rebuild.log
 else
    rm -f Rebuild.err
 fi
