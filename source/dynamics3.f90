@@ -1720,7 +1720,7 @@ subroutine dynamics3
          call calculate_vibronic_couplings
 
          !-- calculate force matrices (A-FSSH specific)
-         if (decoherence) call calculate_force_matrices
+         if (decoherence) call calculate_force_matrices(z1,z2)
 
       endif
 
@@ -1874,7 +1874,7 @@ subroutine dynamics3
 
                !-- calculate force matrices at t+dt (A-FSSH)
                !------------------------------------------------------
-               call calculate_force_matrices
+               call calculate_force_matrices(z1,z2)
 
                !-- calculate interpolation coefficients for the force matrices
                !------------------------------------------------------------------
