@@ -1088,18 +1088,21 @@ contains
    !--------------------------------------------------------------------
    !-- Calculation of the force matrices (A-FSSH) (F-matrices)
    !--------------------------------------------------------------------
-   subroutine calculate_force_matrices
+   subroutine calculate_force_matrices(z1,z2)
+
+      real(kind=8), intent(in) :: z1, z2
 
       integer :: i, j
       real(kind=8) :: gp, ge, g1, g2, fij1, fij2
 
-      !-- calculate gradients in zp,ze frame
       do i=1,nstates
+         !-- calculate interaction gradients in zp,ze frame
          call dvdzz3(mode,iset,i,nzdim,z,ielst,gp,ge)
          !-- transform gradients
          call gpge_to_g1g2(gp,ge,g1,g2)
-         fmatz1(i,i) = -g1
-         fmatz2(i,i) = -g2
+         !-- add gradients from the self energy
+         fmatz1(i,i) = -g1 - f0*z1
+         fmatz2(i,i) = -g2 - f0*z2
       enddo
 
       !-- off-diagonal terms are expressed in terms of derivative couplings
