@@ -40,19 +40,21 @@ do
    fi
 done
 
-# copy the executables to shscluster2
-echo
-echo -n "===> copying executables to shscluster2 ... "
-cp -f ../bin/*.x /home64/souda/PCET/pcet5/bin
-echo "Executables were copied to /home64/souda/PCET/pcet5/bin" >> Rebuild.log
-
 if [ -s "Rebuild.err" ]; then
    echo "There might have been warnings and/or errors: check Rebuild.err!"
    echo "There might have been warnings and/or errors: check Rebuild.err!" >> Rebuild.log
 else
+   echo "No warnings or errors!"
    rm -f Rebuild.err
 fi
 
-echo -e "Done \a"
 echo -e "\a"
+
+# copy the executables to shscluster2
+echo
+echo -n "===> copying executables to shscluster2 ... "
+cp -f ../bin/*.x /home64/souda/PCET/pcet5/bin
+echo -e "Done \a"
+
+echo "Executables were copied to /home64/souda/PCET/pcet5/bin" >> Rebuild.log
 echo -e "\a"
