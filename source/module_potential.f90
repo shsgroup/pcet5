@@ -21,6 +21,20 @@ module potential
    private
 
    !-----------------------------------------------------------------------------
+   ! constant potential for a fixed solute (ET model)
+   ! (parameters for ...
+   !-----------------------------------------------------------------------------
+   type, private :: constant
+      real(8) :: v12
+      real(8) :: v34
+      real(8) :: v13
+      real(8) :: v24
+      real(8) :: v14
+      real(8) :: v23
+      real(8), dimension(4) :: bias  !-energy bias parameters for diabatic states
+   end type constant
+
+   !-----------------------------------------------------------------------------
    ! one-dimensional harmonic potential for general D--H--A systems (DA is fixed)
    !-----------------------------------------------------------------------------
    type, private :: harm_1d
@@ -199,6 +213,10 @@ module potential
    end type hybrid_2D
 
    !-----------------------------------------------------------------------------
+   type(constant), private, target, save :: constpar = constant(&
+                                     & zero,zero,zero,zero,zero,zero,&
+                                     & (/zero,zero,zero,zero/))
+
    type(mm5_1D),    private, target, save :: mm5par  = mm5_1D(&
                                      & zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,&
                                      & zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,&
@@ -228,6 +246,7 @@ module potential
                                      & zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,&
                                      & (/zero,zero,zero,zero/))
 
+
    logical :: leadsp
    logical, public, save  :: coulomb=.true.
    integer, dimension(60) :: istart
@@ -244,7 +263,8 @@ module potential
    public  :: h0mat_leps0, h0mat_leps2
    public  :: h0mat_hyb
    public  :: h0mat_harm, dh0mat_harm, d2h0mat_harm
-   private :: sethyb, setleps, setmm5, setmm5gen, setharm
+   public  :: h0mat_constant
+   private :: sethyb, setleps, setmm5, setmm5gen, setharm, setconst
 
 !----------------------------------------------------------------
 contains
@@ -256,6 +276,7 @@ contains
       integer, intent(in) :: iunit  ! parameter file unit
       integer, intent(in) :: id     ! id of the potential (unique)
 
+      type(constant)  :: constpar_
       type(harm_1d)   :: harmpar_
       type(mm5_1d)    :: mm5par_
       type(mm5gen_1d) :: mm5genpar_
@@ -277,6 +298,10 @@ contains
       endif
 
       select case(id)
+
+         case(0)
+            call setconst(iunit,constpar_)
+            constpar = constpar_
 
          case(1)
             call setmm5(iunit,mm5par_)
@@ -301,6 +326,185 @@ contains
       end select
 
    end subroutine set_potential
+
+   !======================================================================
+   ! Reads parameters of the constant potential
+   !======================================================================
+   subroutine setconst(ifile,pars)
+
+      implicit none
+
+      integer, intent(in) :: ifile
+      type(constant), intent(out) :: pars
+
+      integer, parameter :: npars=7
+      character(8),  dimension(npars) :: pa
+      character(15), dimension(npars) :: dime
+
+      integer :: io_status, i, nvalue, numpar
+      real(8), dimension(10) :: vpari
+      real(8)  :: vpar
+
+      pa = (/ 'CORR    ',&
+              'V12     ',&
+              'V34     ',&
+              'V13     ',&
+              'V24     ',&
+              'V14     ',&
+              'V23     '   /)
+
+      dime = (/ 'kcal/mol       ',&
+                'kcal/mol       ',&
+                'kcal/mol       ',&
+                'kcal/mol       ',&
+                'kcal/mol       ',&
+                'kcal/mol       ',&
+                'kcal/mol       '   /)
+
+      !-- PT coupling parameters VPT
+      pars%v12 = 50.d0
+      pars%v34 = 50.d0
+
+      !-- ET coupling parameters VET
+      pars%v13 = 1.d0
+      pars%v24 = 1.d0
+
+      !-- EPT mixed coupling parameters VEPT
+      pars%v14 = zero
+      pars%v23 = zero
+
+      ! Constant correction terms
+      pars%bias(1) = zero
+      pars%bias(2) = zero
+      pars%bias(3) = zero
+      pars%bias(4) = zero
+      
+      !**************************************************
+      !***   Read parameters from the external file   ***
+      !**************************************************
+
+      write(6,'(/)')
+      write(6,'(1x,''Parameters used in calculation:'')')
+      write(6,'(1x,59(''=''))')
+      write(6,'(5x,''parameter'',5x,''dimension'',5x,''value(s)'')')
+      write(6,'(1x,59(''-''))')
+
+      ! read from the parameter file (ifile)
+      do
+
+         read(ifile,'(a)',iostat=io_status) line
+
+         if (io_status.lt.0) exit
+         if (io_status.gt.0) then
+            write(*,'(/5x,''msg from setharm: error in reading external file'')')
+            stop
+         endif
+
+         if (line.eq.' ') cycle
+
+         if (line(1:1).eq.'#'.or.&
+             line(1:1).eq.'*'.or.&
+             line(1:1).eq.'C'.or.&
+             line(1:1).eq.'!'.or.&
+             line(1:1).eq.'c')      cycle
+
+         ! Clean the input data
+         do i = 1,len(line)
+            if (line(i:i).eq.tab.or.line(i:i).eq.comma) line(i:i)=space
+         enddo
+
+         ! Initialize ISTART to interpret blanks as zero's
+         do i=1,60
+            istart(i)=80
+         enddo
+
+         ! Find initial digit of all numbers,
+         ! check for leading spaces followed
+         ! by a character and store in ISTART
+
+         leadsp=.true.
+         nvalue=0
+         do i=1,len(line)
+            if (leadsp.and.line(i:i).ne.space) then
+               nvalue = nvalue + 1
+               istart(nvalue) = i
+            endif
+            leadsp=(line(i:i).eq.space)
+         enddo
+
+         ! Parameter symbol is read
+
+         string = line(istart(1):istart(2)-1)
+         par_symbol = string(1:8)
+
+         ! Check for error in parameter symbol
+
+         numpar = 0
+         do i=1,npars
+            if (par_symbol.eq.pa(i)) then
+               numpar=i
+               exit
+            endif
+         enddo
+
+         ! All O.K.
+
+         if (numpar.eq.1) then
+            do i=1,nvalue-1
+               vpari(i) = reada(line,istart(1+i))
+            enddo
+         else
+            vpar = reada(line,istart(2))
+         endif
+
+         ! Begin to set the parameter PA(NUMPAR)
+
+         select case(numpar)
+
+            case(0)
+               write(6,'(//5x,''SETHARM: unrecognized parameter name:  <'',a,''>'')') par_symbol
+               stop
+
+            case(1)
+                do i=1,4
+                   pars%bias(i) = vpari(i)
+                enddo
+
+            case(2)
+                pars%v12 = vpar
+
+            case(3)
+                pars%v34 = vpar
+            
+            case(4)
+                pars%v13 = vpar
+
+            case(5)
+                pars%v24 = vpar
+
+            case(6)
+                pars%v14 = vpar
+            
+            case(7)
+                pars%v23 = vpar
+
+         end select
+
+         if (numpar.eq.1) then
+            do i=1,nvalue-1
+               write(6,'(5x,a8,2x,a15,3x,f12.5)') par_symbol,dime(numpar),vpari(i)
+            enddo
+         else
+            write(6,'(5x,a8,2x,a15,3x,f12.5)') par_symbol,dime(numpar),vpar
+         endif
+
+      enddo
+
+      write(6,'(1x,59(''='')/)')
+
+      return
+
+   end subroutine setconst
 
    !======================================================================
    ! Reads parameters of the model harmonic potential
@@ -1844,6 +2048,81 @@ contains
       return
 
    end subroutine sethyb
+
+
+   !-- Gas-phase Hamiltonians --------------------------------------------------
+
+
+   subroutine h0mat_constant(h0_)
+   !======================================================================!
+   ! Calculates the gas phase Hamiltonian matrix using
+   ! constant potential for a fixed solute (kcal/mole)
+   !======================================================================!
+      implicit none
+
+      real(8), intent(out), dimension(4,4) :: h0_
+
+      integer :: pdgas, nhgas, pagas, i, ia, ja
+      real(8)  :: dp, dp2, q, ua, ub, odh, oah, rdh, rah
+
+      !-- local variables: parameters
+      real(8) :: v12
+      real(8) :: v34
+      real(8) :: v13
+      real(8) :: v24
+      real(8) :: v14
+      real(8) :: v23
+      real(8), dimension(4) :: bias
+
+      !-- pointer to the real set of parameters
+      type(constant), pointer :: par
+
+      par => constpar
+
+      v12  = par%v12
+      v34  = par%v34
+      v13  = par%v13
+      v24  = par%v24
+      v14  = par%v14
+      v23  = par%v23
+      bias = par%bias
+
+      h0_ = zero
+
+      !==== DIAGONAL ELEMENTS
+
+      h0_(1,1) = bias(1)
+      h0_(2,2) = bias(2)
+      h0_(3,3) = bias(3)
+      h0_(4,4) = bias(4)
+
+      !==== OFF-DIAGONAL ELEMENTS
+
+      !-- PT couplings
+
+      h0_(1,2) = v12
+      h0_(2,1) = v12
+      h0_(3,4) = v34
+      h0_(4,3) = v34
+
+      !-- ET couplings
+
+      h0_(1,3) = v13
+      h0_(3,1) = v13
+      h0_(2,4) = v24
+      h0_(4,2) = v24
+
+      !-- Mixed EPT couplings
+
+      h0_(1,4) = v14
+      h0_(4,1) = v14
+      h0_(2,3) = v23
+      h0_(3,2) = v23
+
+      return
+
+   end subroutine h0mat_constant
+
 
    subroutine h0mat_harm(h0_)
    !======================================================================!
