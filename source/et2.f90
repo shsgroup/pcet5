@@ -242,7 +242,12 @@ subroutine et2
    xyzgas(2,nhgas) = yyp
    xyzgas(3,nhgas) = zzp
 
-   if (igas.eq.1) then
+   if (igas.eq.0) then
+
+      ! constant potential for a fixed solute
+      call h0mat_constant(h0k)
+
+   elseif (igas.eq.1) then
 
       ! MM5 potential for Nocera-like systems
       call h0mat_mm5(h0k)
