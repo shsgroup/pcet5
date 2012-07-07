@@ -49,6 +49,7 @@ subroutine setjob
    character(1024) :: options
    character(  40) :: fname
    logical :: ok
+   logical :: quantum_proton
 
    integer :: ikey, ingrid, ingrids, npntsi, inprst, ilims, ialim, islash, itset
    integer :: irhmin, npntspow2, iarlim, igquant, ingast, icoulomb
@@ -98,8 +99,11 @@ subroutine setjob
 
    else
 
-         write(*,'(/1x,"*** (in setjob): you must specify the METHOD keyword ***"/)')
-         stop
+      !-- default value: 1
+      method = 1
+      write(6,'(/1x,"Default method=1 will be used for calculation of the vibronic states (if needed)")')
+      !write(*,'(/1x,"*** (in setjob): you must specify the METHOD keyword ***"/)')
+      !stop
 
    endif
 
@@ -186,7 +190,11 @@ subroutine setjob
 
    ikey = index(keywrd,' QUANTUM(')
 
+   quantum_proton = .false.
+
    if (ikey.ne.0) then
+
+      quantum_proton = .true.
 
       call getopt(keywrd,ikey+9,options)
 
@@ -375,7 +383,7 @@ subroutine setjob
    aglim     = 0.d0
    bglim     = 0.d0
    npntsg    = 1
-   npntssolg = 1
+   npntssolg = 0
    ngast     = 0
    dm        = hmass
    am        = hmass
@@ -584,9 +592,10 @@ subroutine setjob
 
    endif
 
-   !========================================================
+   !================================================================================
    ! Type of the gas-phase potential
-   !========================================================
+   !================================================================================
+   ! CONST  - constant potential for a fixed solute (no internal degrees of freedom)
    ! MM5    - MM EVB five site potential (for Nocera-like systems)
    ! WATER  - MM EVB potential for water cluster (Voth-Schmidt)
    ! LEPS0  - original five site LEPS 2D potential (with ET Coulomb)
@@ -595,7 +604,7 @@ subroutine setjob
    ! MMGEN  - MM EVB five site potential (for general O-H...O systems)
    ! GEOM=  - read external file with the geometry
    ! PARS=  - read external file with parameters
-   !========================================================
+   !================================================================================
 
    ikey = index(keywrd,' HGAS(')
 
@@ -609,7 +618,16 @@ subroutine setjob
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Type of the potential: MM5
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   if (index(options,' MM5').ne.0) then
+
+   if (index(options,' CONSTANT').ne.0) then
+
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      ! Constant potential for a fixed solute
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      write(6,'(/1x,"Constant gas phase potential will be used (fixed solute)")')
+      igas = 0
+
+   elseif (index(options,' MM5').ne.0) then
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ! MM5 for Nocera-like systems
@@ -725,7 +743,7 @@ subroutine setjob
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ! Put here your potential...
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      write(*,'( 1x,"*** (in SETJOB): HARM, MM5, MMGEN, WATER, LEPS0, LEPS5, and HYBRID potentials are available ***"/)')
+      write(*,'( 1x,"*** (in SETJOB): CONSTANT, HARM, MM5, MMGEN, WATER, LEPS0, LEPS5, and HYBRID potentials are available ***"/)')
       stop
 
    endif
@@ -749,7 +767,7 @@ subroutine setjob
       open(1,file=fname(1:lenf),status='old')
       call set_potential(1,igas)
       close(1)
-      write(6,'(/1x,"Parameters for the gas phase potential from the file <",a,">")') fname(1:lenf)
+      write(6,'(/1x,"Parameters for the gas phase potential from external file <",a,">")') fname(1:lenf)
       call system("cp "//fname(1:lenf)//" "//job(1:ljob))
 
    endif
@@ -815,12 +833,14 @@ subroutine setjob
 
    endif
 
-   !==============================================================
+   !===============================================================
    ! Solvent model
-   !==============================================================
+   !===============================================================
    ! FRCM    - Frequency Resolved Cavity Model (Basilevsky, Rostov)
    ! ELLIPSE - Simple electrostatic model with ellipsoidal cavity
-   !==============================================================
+   ! TSET    - Reorganization energy matrix is reconstructed from
+   !           the values given in input (new in version 5.2)
+   !===============================================================
 
    ikey = index(keywrd,' SOLV(')
 
@@ -965,10 +985,20 @@ subroutine setjob
    endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   ! Ellipsoidal model
+   ! Solvation model
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   if (index(options,' ELLIPSE').NE.0) THEN
+   if (index(options,' TSET').ne.0) then
+
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      ! Reconstruction of reorganization energy matrix from
+      ! input values of partial reorganization energies
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      write(6,'(/1x,"Reorganization energy matrices will be reconstructed from partial reorganization energies specified in input")')
+      isolv = 0
+
+
+   elseif (index(options,' ELLIPSE').NE.0) THEN
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ! Simple electrostatic model with ellipsoidal cavity
@@ -1084,18 +1114,10 @@ subroutine setjob
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   elseif (index(options,' TSET').ne.0) then
-
-      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      ! Reconstruction of reorganization energy matrix from
-      ! input values of partial reorganization energies
-      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      write(6,'(/1x,"Reorganization energy matrices will be reconstructed from partial reorganization energies specified in input")')
-      isolv = 3
 
    else
 
-      write(*,'(/1x,"*** (in SETJOB): You MUST specify the solvation model (ELLIPSE/FRCM/TSET) with SOLV ***"/)')
+      write(*,'(/1x,"*** (in SETJOB): You MUST specify the solvation model (TSET/ELLIPSE/FRCM) with SOLV ***"/)')
       stop
 
    endif
@@ -1139,13 +1161,11 @@ subroutine setjob
 
       if (isolv.eq.2) then
 
-         if (npntssol.ge.0) then
-
-         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         ! put the hydrogen atom at the center of mass
-         ! of the pt interface
-         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+         if (npntssol.ge.0.and.quantum_proton) then
+            !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            ! put the hydrogen atom at the center of mass
+            ! of the pt interface
+            !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
             nhpt = iptsol(2)
             xyzsol(1,nhpt) = 0.d0
             xyzsol(2,nhpt) = 0.d0
@@ -1187,15 +1207,17 @@ subroutine setjob
 
       endif
 
-      if (isolv.eq.3) then
-         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         ! put the hydrogen atom at the center of mass
-         ! of the pt interface
-         !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         nhpt = iptsol(2)
-         xyzsol(1,nhpt) = 0.d0
-         xyzsol(2,nhpt) = 0.d0
-         xyzsol(3,nhpt) = 0.d0
+      if (isolv.eq.0) then
+         if (npntssol.ge.0.and.quantum_proton) then
+            !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            ! put the hydrogen atom at the center of mass
+            ! of the pt interface
+            !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            nhpt = iptsol(2)
+            xyzsol(1,nhpt) = 0.d0
+            xyzsol(2,nhpt) = 0.d0
+            xyzsol(3,nhpt) = 0.d0
+         endif
       endif
 
    else
@@ -1212,7 +1234,7 @@ subroutine setjob
 
    ixyz = index(options,' XYZOUT=')
 
-   if (ixyz.ne.0.and.isolv.lt.3) then
+   if (ixyz.ne.0.and.isolv.gt.0) then
 
       ispa = index(options(ixyz+8:),' ')
       fname = options(ixyz+8:ixyz+ispa+6)
