@@ -11,7 +11,7 @@
 
 include Makefile.machine
 
-VERSION = 5.2c
+VERSION = 5.3
 
 ###MODDIR  = ./mod
 
@@ -46,6 +46,7 @@ $(MODDIR)/%.mod : $(OBJDIR)/module_%.o
 SRCOBJ = $(OBJDIR)/pcet.o        \
          $(OBJDIR)/deinitmat.o   \
          $(OBJDIR)/dynamics3.o   \
+         $(OBJDIR)/dynamicset2.o \
          $(OBJDIR)/et2.o         \
          $(OBJDIR)/getmin.o      \
          $(OBJDIR)/initmat.o     \
@@ -80,11 +81,12 @@ SRCSRC = pcet.f90        \
          banner.f90      \
          deinitmat.f90   \
          dynamics3.f90   \
+         dynamicset2.f90 \
          et2.f90         \
          getmin.f90      \
          initmat.f90     \
          lbfgsb.f        \
-         rdiag.f        \
+         rdiag.f         \
          minima2.f90     \
          minima3.f90     \
          path2.f90       \
@@ -113,6 +115,7 @@ SRCSRC = pcet.f90        \
 
 MODOBJ  = $(OBJDIR)/module_control.o     \
           $(OBJDIR)/module_control_dynamics.o \
+          $(OBJDIR)/module_data_et2.o \
           $(OBJDIR)/module_cst.o         \
           $(OBJDIR)/module_dielectric_functions.o \
           $(OBJDIR)/module_eispack.o     \
@@ -136,6 +139,7 @@ MODOBJ  = $(OBJDIR)/module_control.o     \
           $(OBJDIR)/module_parsol.o      \
           $(OBJDIR)/module_potential.o   \
           $(OBJDIR)/module_propagators_3d.o \
+          $(OBJDIR)/module_propagators_et2.o \
           $(OBJDIR)/module_rk_parameters.o \
           $(OBJDIR)/module_quantum.o     \
           $(OBJDIR)/module_random_generators.o \
@@ -153,6 +157,7 @@ MODMOD  = $(MODDIR)/control.mod     \
           $(MODDIR)/cst.mod         \
           $(MODDIR)/dielectric_functions.mod \
           $(MODDIR)/eispack.mod     \
+          $(MODDIR)/data_et2.mod     \
           $(MODDIR)/lapack_wrappers.mod     \
           $(MODDIR)/elcm.mod        \
           $(MODDIR)/elmnts.mod      \
@@ -173,6 +178,7 @@ MODMOD  = $(MODDIR)/control.mod     \
           $(MODDIR)/parsol.mod      \
           $(MODDIR)/potential.mod   \
           $(MODDIR)/propagators_3d.mod \
+          $(MODDIR)/propagators_et2.mod \
           $(MODDIR)/rk_parameters.mod \
           $(MODDIR)/quantum.mod     \
           $(MODDIR)/random_generators.mod \
@@ -188,6 +194,7 @@ MODSRC  = module_control.f90     \
           module_cst.f90         \
           module_dielectric_functions.f90 \
           module_eispack.f90     \
+          module_data_et2.f90     \
           module_lapack_wrappers.f90     \
           module_elcm.f90        \
           module_elmnts.f90      \
@@ -208,6 +215,7 @@ MODSRC  = module_control.f90     \
           module_parsol.f90      \
           module_potential.f90   \
           module_propagators_3d.f90 \
+          module_propagators_et2.f90 \
           module_rk_parameters.f90 \
           module_quantum.f90     \
           module_random_generators.f90 \

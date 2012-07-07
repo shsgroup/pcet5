@@ -10,6 +10,7 @@ $(OBJDIR)/module_pardim.o
 
 $(OBJDIR)/dynamics3.o : dynamics3.f90 \
 $(OBJDIR)/module_parsol.o \
+$(OBJDIR)/module_geogas.o \
 $(OBJDIR)/module_quantum.o \
 $(OBJDIR)/module_random_generators.o \
 $(OBJDIR)/module_control_dynamics.o \
@@ -21,6 +22,23 @@ $(OBJDIR)/module_cst.o \
 $(OBJDIR)/module_keys.o \
 $(OBJDIR)/module_laser.o \
 $(OBJDIR)/module_pardim.o \
+$(OBJDIR)/module_timers.o 
+
+$(OBJDIR)/dynamicset2.o : dynamicset2.f90 \
+$(OBJDIR)/module_pardim.o \
+$(OBJDIR)/module_parsol.o \
+$(OBJDIR)/module_data_et2.o \
+$(OBJDIR)/module_random_generators.o \
+$(OBJDIR)/module_control_dynamics.o \
+$(OBJDIR)/module_propagators_et2.o \
+$(OBJDIR)/module_control.o \
+$(OBJDIR)/module_strings.o \
+$(OBJDIR)/module_cst.o \
+$(OBJDIR)/module_keys.o \
+$(OBJDIR)/module_geogas.o \
+$(OBJDIR)/module_potential.o \
+$(OBJDIR)/module_frcm.o \
+$(OBJDIR)/module_elcm.o \
 $(OBJDIR)/module_timers.o 
 
 $(OBJDIR)/et2.o : et2.f90 \
@@ -183,10 +201,19 @@ $(OBJDIR)/module_pardim.o
 
 $(OBJDIR)/module_propagators_3d.o : module_propagators_3d.f90 \
 $(OBJDIR)/module_random_generators.o \
+$(OBJDIR)/module_control_dynamics.o \
 $(OBJDIR)/module_feszz_3d.o \
 $(OBJDIR)/module_solmat.o \
 $(OBJDIR)/module_parsol.o \
 $(OBJDIR)/module_laser.o \
+$(OBJDIR)/module_rk_parameters.o \
+$(OBJDIR)/module_cst.o
+
+$(OBJDIR)/module_propagators_et2.o : module_propagators_et2.f90 \
+$(OBJDIR)/module_random_generators.o \
+$(OBJDIR)/module_control_dynamics.o \
+$(OBJDIR)/module_data_et2.o \
+$(OBJDIR)/module_parsol.o \
 $(OBJDIR)/module_rk_parameters.o \
 $(OBJDIR)/module_cst.o
 
