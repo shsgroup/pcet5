@@ -286,6 +286,7 @@ program pcet
       !---------------------------------------------
       call printb
 
+
       !-------------------------------------------------
       ! Set options and parameters for the current job
       !---------------------------------------------
@@ -298,14 +299,28 @@ program pcet
       !---------------------------------------------
       if (index(keywrd,' ET2').ne.0) then
          call et2
-         if (index(keywrd,' QUANTUM').eq.0) then
-            call deinitmat
-            cycle
-         endif
+         if (index(keywrd,' QUANTUM').eq.0) cycle
       endif
 
+      !--------------------------------------------------------------
+      !                  ######################
+      !__________________# New in version 5.3 #______________________
+      !                  ######################
+      !
+      ! DYNAMICSET2 - solvent dynamics with a single solvent
+      !               coordinate for a two-state ET model
+      !               (Marcus model) with a fixed donor-acceptor
+      !               distance (optional Surface Hopping dynamics)
+      !
+      !--------------------------------------------------------------
+      if (index(keywrd,' DYNAMICSET2').ne.0) then
+         call dynamicset2
+         cycle
+      endif
+      !--------------------------------------------------------------
+
       !-------------------------------------------------
-      ! Initialize matrices on the grid
+      ! Initialize matrices on the proton grid
       !---------------------------------------------
       call initmat
 
@@ -424,9 +439,10 @@ program pcet
       !                  ######################
       !
       ! DYNAMICS2 - solvent dynamics with a single solvent
-      !             coordinate (optional Surface Hopping dynamics)
-      !             and fixed gating distance (gating coordinate
-      !             will be dynamical in the later version)
+      !             coordinate for a two-state PCET model
+      !             (optional Surface Hopping dynamics)
+      !             with a fixed gating distance (gating coordinate
+      !             will be dynamical in the later version).
       !
       ! DYNAMICS3 - solvent dynamics in the 2D space of solvent
       !             coordinates (optional Surface Hopping dynamics)
