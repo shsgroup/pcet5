@@ -627,9 +627,11 @@ contains
 
       ! all data read in, clean up and return
 
-      if (na(3).eq.0) then
-          nb(3) = 1
-          na(3) = 2
+      if (natoms_.ge.3) then
+         if (na(3).eq.0) then
+             nb(3) = 1
+             na(3) = 2
+         endif
       endif
 
       return
