@@ -511,12 +511,11 @@ subroutine setmat
          ze_1a = reada(options,ikey+islash)
          write(6,'(1x,"(user input)")')
       else
-         zp_1a = 0.d0
-         ze_1a = 0.d0
-         write(6,'(1x,"(default values)")')
+         write(*,'(/1x,"*** (INPUT ERROR in SETMAT): you must specify the energy gaps at the true minimum of 1a state ***"/)')
+         stop
       endif
-      write(6,'(10x,"Z_p (kcal/mol): ",f13.6)') zp_1a
-      write(6,'(10x,"Z_e (kcal/mol): ",f13.6)') ze_1a
+      write(6,'(10x,"PT energy gap (Z_p) at 1a minimum: ",f13.6," kcal/mol")') zp_1a
+      write(6,'(10x,"ET energy gap (Z_e) at 1a minimum: ",f13.6," kcal/mol")') ze_1a
 
       !-- Read reorganization energies
    
@@ -546,7 +545,7 @@ subroutine setmat
 
       !-- reconstruct total reorganization energy matrix
 
-      tr11 = gsolv_1a
+      tr11 = -2.d0*gsolv_1a
       tr12 = -zp_1a
       tr13 = -ze_1a
       tr14 = -(zp_1a + ze_1a)
