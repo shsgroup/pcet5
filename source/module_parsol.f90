@@ -75,7 +75,7 @@ contains
    !=======================================================================
    subroutine set_debye_model_parameters()
       taul  = eps8_dyn*taud/eps0_dyn
-      !f0 = four*pi*eps0_dyn*eps8_dyn/(eps0_dyn - eps8_dyn)
+      f0 = four*pi*eps0_dyn*eps8_dyn/(eps0_dyn - eps8_dyn)
       effmass1 = 0.d0
       effmass2 = 0.d0
    end subroutine set_debye_model_parameters
@@ -85,7 +85,7 @@ contains
 
       real(8) :: alpha, alpha2, alpha3, gamma1
 
-      !f0 = four*pi*eps0_dyn*eps8_dyn/(eps0_dyn - eps8_dyn)
+      f0 = four*pi*eps0_dyn*eps8_dyn/(eps0_dyn - eps8_dyn)
 
       alpha = (eps1_dyn - eps8_dyn)*tau1 + (eps0_dyn - eps1_dyn)*tau2
       alpha2 = alpha*alpha
@@ -108,7 +108,7 @@ contains
    subroutine set_onodera_model_parameters()
       taul  = eps8_dyn*taud/eps0_dyn
       tau0l = eps8_dyn*tau0/eps0_dyn
-      !f0 = four*pi*eps0_dyn*eps8_dyn/(eps0_dyn - eps8_dyn)
+      f0 = four*pi*eps0_dyn*eps8_dyn/(eps0_dyn - eps8_dyn)
       if (tau0.gt.0) then
          effmass1 = f0*tau0*taul
          effmass2 = f0*tau0*taul
@@ -120,7 +120,7 @@ contains
 
       real(8) :: eta_up, alpha, alpha2, alpha3, gamma1, gamma2
 
-      !f0 = four*pi*eps0_dyn*eps8_dyn/(eps0_dyn - eps8_dyn)
+      f0 = four*pi*eps0_dyn*eps8_dyn/(eps0_dyn - eps8_dyn)
 
       alpha = (eps1_dyn - eps8_dyn)*tau1 + (eps0_dyn - eps1_dyn)*tau2                                                                            
       alpha2 = alpha*alpha                                                                                                   
