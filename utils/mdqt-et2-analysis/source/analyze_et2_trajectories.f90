@@ -213,7 +213,10 @@ program analyze_et2_trajectories
    number_of_states = 0
    number_of_occ_states = 0
 
+   !--------------------------------------------------------------------------------
    !--(ET-2 specific) there are only two states in ET, so we already know the answer
+   !                  assuming that both states get occupied at least once
+   !
    !number_of_states = 2
    !number_of_occ_states = 2
    !--------------------------------------------------------------------------------
@@ -257,9 +260,12 @@ program analyze_et2_trajectories
    !-- sort the array istate_occ
    !call shellsort(number_of_occ_states,istate_occ)
 
-   !--(ET-2 specific)--
+   !-------------------
+   !--(ET-2 specific)
+   !-------------------
    !istate_occ(1) = 1
    !istate_occ(2) = 2
+   !-------------------
 
    write(*,'(/1x,"Highest occupied adiabatic state: ",i3)') number_of_states
    write(*,'( 1x,"Number of unique occupied states: ",i3)') number_of_occ_states
