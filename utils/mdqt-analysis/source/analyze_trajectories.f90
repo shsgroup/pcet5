@@ -260,20 +260,12 @@ program analyze_trajectories
    write(*,'(1x,"Scanning MDQT trajectories to identify unique occupied states... ")')
    time_start = secondi()
 
-   number_of_states = 0
-
-   do itraj=1,number_of_traj
-      do istep=1,number_of_timesteps
-         iocc = istate(itraj,istep)
-         if (iocc.gt.number_of_states) number_of_states = iocc
-      enddo
-   enddo
-
    !=============================================================
    !-- Scan the occupied state array and create a list of states
    !   occupied at least once for the whole set of trajectories.
    !=============================================================
 
+   number_of_states = 0
    number_of_occ_states = 0
 
    !-- unwrap 2D array and store in the temporary array
@@ -281,53 +273,41 @@ program analyze_trajectories
    allocate (all_states(number_of_traj*number_of_timesteps))
 
    k = 0
-
    do itraj=1,number_of_traj
       do istep=1,number_of_timesteps
          k = k + 1
+         iocc = istate(itraj,istep)
          all_states(k) = istate(itraj,istep)
+         if (iocc.gt.number_of_states) number_of_states = iocc
       enddo
    enddo
 
-   !-- find the number of unique occupied states
+   !-- sort the array all_states
+   call shellsort(number_of_traj*number_of_timesteps,all_states)
 
-   do i=1,number_of_traj*number_of_timesteps
-      found = .false.
-      do k=i+1,number_of_traj*number_of_timesteps
-         if (all_states(i).eq.all_states(k)) found = .true.
-      enddo
-      if (.not.found) then
-         number_of_occ_states = number_of_occ_states + 1
-      endif
-   enddo
-
-   !-- fill the array of unique occupied states
-
-   allocate(istate_occ(number_of_occ_states))
+   allocate(istate_occ(number_of_states))
    istate_occ = 0
 
-   ii = 0
-   do i=1,number_of_traj*number_of_timesteps
-      found = .false.
-      do k=i+1,number_of_traj*number_of_timesteps
-         if (all_states(i).eq.all_states(k)) found = .true.
-      enddo
-      if (.not.found) then
+   !-- find the number of unique occupied states
+   !-- and fill the array of unique occupied states
+
+   ii = 1
+   istate_occ(1) = all_states(1)
+   do i=2,number_of_traj*number_of_timesteps
+      if (all_states(i).ne.all_states(i-1)) then
          ii = ii + 1
          istate_occ(ii) = all_states(i)
       endif
    enddo
+   number_of_occ_states = ii
 
    !-- release temporary array
    deallocate(all_states)
 
-   !-- sort the array istate_occ
-
-   call shellsort(number_of_occ_states,istate_occ)
-
-   write(*,'(1x,"Highest occupied adiabatic state: ",i3/)') number_of_states
-   write(*,'(1x,"Unique occupied states:",/,(10(1x,i3)))') istate_occ
-
+   write(*,'(/1x,"Highest occupied adiabatic state: ",i3)') number_of_states
+   write(*,'( 1x,"Number of unique occupied states: ",i3)') number_of_occ_states
+   write(*,'( 1x,"Unique occupied states:",/,(10(1x,i3)))') (istate_occ(k),k=1,number_of_occ_states)
+ 
    time_end = secondi()
    write(*,'(/1x,"Done in ",f12.3," sec"/)') time_end-time_start
 
