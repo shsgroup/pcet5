@@ -2,9 +2,9 @@ subroutine dynamics3
 !===================================================================C
 !
 !  Driver for solvent dynamics on (multiple) two-dimensional
-!  vibronic free energy surfaces. Gating coordinate
-!  is assumed to be fixed (will be alleviated in later
-!  versions).
+!  vibronic free energy surfaces. Based on 4-state PCET model.
+!  Gating coordinate is assumed to be fixed (will be alleviated
+!  in later versions).
 !
 !  OPTIONS:
 !
