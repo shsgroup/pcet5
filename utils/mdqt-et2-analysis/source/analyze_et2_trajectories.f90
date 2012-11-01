@@ -391,13 +391,13 @@ program analyze_et2_trajectories
          ichannel_ze = 10 + 2*istate_occ(i)
 
          do i1=1,number_of_bins_z1
-            write(ichannel_z1,'(2f10.6,1x,g15.8)') time(1,istep), bin_center_z1(i1), state_histogram_z1(istate_occ(i),i1)
+            write(ichannel_z1,'(2f15.6,1x,g15.6)') time(1,istep), bin_center_z1(i1), state_histogram_z1(istate_occ(i),i1)
             !write(ichannel_z1) bin_center_z1(i1), state_histogram_z1(istate_occ(i),i1)
          enddo
          write(ichannel_z1,*)
 
          do i1=1,number_of_bins_ze
-            write(ichannel_ze,'(2f10.6,1x,g15.8)') time(1,istep), bin_center_ze(i1), state_histogram_ze(istate_occ(i),i1)
+            write(ichannel_ze,'(2f15.6,1x,g15.6)') time(1,istep), bin_center_ze(i1), state_histogram_ze(istate_occ(i),i1)
             !write(ichannel_ze) bin_center_ze(i1), state_histogram_ze(istate_occ(i),i1)
          enddo
          write(ichannel_ze,*)
@@ -783,6 +783,8 @@ program analyze_et2_trajectories
 
    open(2,file="weights_mean.dat")
    write(2,'("#",80("-"))')
+   write(2,'("#   Average diabatic populations (expectation values)")')
+   write(2,'("#",80("-"))')
    write(2,'("#",t10,"time",t30,"<1>",t50,"<2>")')
    write(2,'("#",80("-"))')
    do istep=1,number_of_timesteps
@@ -791,6 +793,8 @@ program analyze_et2_trajectories
    close(2)
 
    open(2,file="weights_assigned_mean.dat")
+   write(2,'("#",80("-"))')
+   write(2,'("#   Average diabatic populations (values by assignment)")')
    write(2,'("#",80("-"))')
    write(2,'("#",t10,"time",t30,"<1>",t50,"<2>")')
    write(2,'("#",80("-"))')
@@ -816,7 +820,11 @@ program analyze_et2_trajectories
    w2tav = w2_mean(1)
 
    open(2,file="weights_tav.dat")
+   write(2,'("#",80("-"))')
+   write(2,'("#   Time averages of diabatic populations (expectation values)")')
+   write(2,'("#",80("-"))')
    write(2,'("#",t10,"time(ps)",t30,"<w1tav>",t50,"<w2tav>")')
+   write(2,'("#",80("-"))')
    write(2,'(11g20.10)') time(1,1), w1tav, w2tav
 
    do istep=2,number_of_timesteps
@@ -858,8 +866,12 @@ program analyze_et2_trajectories
    !   must be an odd number
 
    open(2,file="weights_corr_rtav.dat")
+   write(2,'("#",80("-"))')
+   write(2,'("#    Running time averages of diabatic populations (expectation values)")')
    write(2,'("#--- Time interval for averaging (ps): ",f12.6)') (ndt-1)*(time(1,2)-time(1,1))
+   write(2,'("#",80("-"))')
    write(2,'("#",t10,"time(ps)",t30,"<w1tav>",t50,"<w2tav>")')
+   write(2,'("#",80("-"))')
 
    do istep=1+ndt2,number_of_timesteps-ndt2
 
@@ -884,8 +896,12 @@ program analyze_et2_trajectories
    !-- for mean weights calculated by assignment
 
    open(2,file="weights_assigned_corr_rtav.dat")
+   write(2,'("#",80("-"))')
+   write(2,'("#    Running time averages of diabatic populations (by assignment)")')
    write(2,'("#--- Time interval for averaging (ps): ",f12.6)') (ndt-1)*(time(1,2)-time(1,1))
+   write(2,'("#",80("-"))')
    write(2,'("#",t10,"time(ps)",t30,"<w1tav>",t50,"<w2tav>")')
+   write(2,'("#",80("-"))')
 
    do istep=1+ndt2,number_of_timesteps-ndt2
 
@@ -939,8 +955,13 @@ program analyze_et2_trajectories
    !-- output to the external file for visualization
 
    open(2,file="pop_ad.dat")
+   write(2,'("#",40("-"))')
+   write(2,'("#   Adiabatic populations")')
+   write(2,'("#",40("-"))')
+   write(2,'("#",t5,"time(ps)",t19,"<1>",t31,"<2>")')
+   write(2,'("#",40("-"))')
    do istep=1,number_of_timesteps
-      write(2,'(101f10.6)') time(1,istep), (pop_ad(k,istep),k=1,number_of_states)
+      write(2,'(101f12.6)') time(1,istep), (pop_ad(k,istep),k=1,number_of_states)
    enddo
    close(2)
 
