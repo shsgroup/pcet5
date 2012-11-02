@@ -86,6 +86,7 @@ module random_generators
    interface set_random_seed
       module procedure set_random_seed_input
       module procedure set_random_seed_clock
+      module procedure set_random_seed_pbsid
    end interface
 
    public :: set_duni_random_seeds, initialize_duni
@@ -111,6 +112,35 @@ contains
       call date_and_time(values=current_values)
       iseed = -(current_values(8) + 1)
    end subroutine set_random_seed_clock
+
+   !---------------------------------------------------------------------
+   subroutine set_random_seed_pbsid(pbsvar)
+
+      character(len=*), intent(in) :: pbsvar
+      character(len=240) :: varstring
+      integer :: ierr, getenvqq, intvar, idot
+
+      ierr = getenvqq(pbsvar,varstring)
+
+      if (ierr.lt.0) then
+         write(*,'(1x," *** Error code while getting the value of the environment variable ",a," : ",i4)') trim(pbsvar), ierr
+         stop
+      elseif (ierr.eq.0) then
+         write(*,'(1x," *** (Random seed generation) The environment variable ",a," is not defined")') trim(pbsvar)
+         stop
+      endif
+
+      !-- extract actual ID by cutting off the hostname
+      idot = index(varstring,".")
+      varstring = varstring(1:idot-1)
+
+      !-- convert to integer
+      read(varstring,'(i)') intvar
+
+      !-- use three last digits
+      iseed = -mod(intvar,1000)
+
+   end subroutine set_random_seed_pbsid
 
    !--------------------------------------------------------------------
    subroutine reset_random_seed
