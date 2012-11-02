@@ -30,7 +30,7 @@ module data_et2
    public
    save
 
-   real(8) :: lambda, gsolv_1, gsolv_2, z_1
+   real(8) :: lambda, gsolv_1, gsolv_2, z_1, z_2
    real(8) :: scale_factor
    real(8) :: delta_shift
 
