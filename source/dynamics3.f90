@@ -566,91 +566,150 @@ subroutine dynamics3
    !-- Onodera model with two relaxation periods
    elseif (solvent_model.eq."ONODERA2") then
 
-      ioption = index(options,' TAU0=')
-      ioption2 = index(options,' EFFMASS=')
-
+      ioption = index(options,' EPS0=')
       if (ioption.ne.0) then
+         eps0_dyn = reada(options,ioption+6)
+      else
+         eps0_dyn = eps0
+      endif
 
-         tau0 = reada(options,ioption+6)
-         if (tau0.eq.0.d0) then
-            write(*,'(/1x,"*** (in DYNAMICS3): Use EFFMASS option instead of setting TAU0 to zero ***"/)')
+      ioption = index(options,' EPS8=')
+      if (ioption.ne.0) then
+         eps8_dyn = reada(options,ioption+6)
+      else
+         eps8_dyn = eps8
+      endif
+
+
+      if (index(options,' GLEPARS').eq.0) then
+
+         ioption = index(options,' TAU0=')
+         ioption2 = index(options,' EFFMASS=')
+
+         if (ioption.ne.0) then
+
+            tau0 = reada(options,ioption+6)
+            if (tau0.eq.0.d0) then
+               write(*,'(/1x,"*** (in DYNAMICS3): Use EFFMASS option instead of setting TAU0 to zero ***"/)')
+               call clean_exit
+            endif
+
+         elseif (ioption2.ne.0) then
+
+            tau0 = 0.d0
+            ikey = ioption2 + 9
+            ispa = index(options(ikey:),space)
+            islash1 = index(options(ikey:ikey+ispa-1),'/')
+            if (islash1.eq.0) then
+               effmass1 = reada(options,ikey)
+               effmass2 = effmass1
+            else
+               effmass1 = reada(options(ikey:ikey+islash1-2),1)
+               effmass2 = reada(options,ikey+islash1)
+            endif
+
+         else
+
+            write(*,'(/1x,"*** (in DYNAMICS3): You MUST specify either TAU0 or EFFMASS option for ONODERA-2 model ***"/)')
+            call clean_exit
+
+         endif
+
+         ioption = index(options,' TAU1=')
+         if (ioption.ne.0) then
+            tau1 = reada(options,ioption+6)
+         else
+            write(*,'(/1x,"*** (in DYNAMICS): You MUST specify TAU1= option for ONODERA-2 model ***"/)')
             call clean_exit
          endif
 
-      elseif (ioption2.ne.0) then
-
-         tau0 = 0.d0
-         ikey = ioption2 + 9
-         ispa = index(options(ikey:),space)
-         islash1 = index(options(ikey:ikey+ispa-1),'/')
-         if (islash1.eq.0) then
-            effmass1 = reada(options,ikey)
-            effmass2 = effmass1
+         ioption = index(options,' TAU2=')
+         if (ioption.ne.0) then
+            tau2 = reada(options,ioption+6)
          else
-            effmass1 = reada(options(ikey:ikey+islash1-2),1)
-            effmass2 = reada(options,ikey+islash1)
+            write(*,'(/1x,"*** (in DYNAMICS): You MUST specify TAU2= option for ONODERA-2 model ***"/)')
+            call clean_exit
          endif
 
+         ioption = index(options,' EPS1=')
+         if (ioption.ne.0) then
+            eps1_dyn = reada(options,ioption+6)
+         else
+            write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS1= option for ONODERA-2 model ***"/)')
+            call clean_exit
+         endif
+
+         call set_onodera2_model_parameters()
+         write(6,'(1x,"Static dielectric constant EPS0          ",f15.6)') eps0_dyn
+         write(6,'(1x,"Optical dielectric constant EPS_inf      ",f15.6)') eps8_dyn
+         write(6,'(1x,"Inverse Pekar factor f_0                 ",f15.6)') f0
+         write(6,'(1x,"Additional dielectric constant EPS1      ",f15.6)') eps1_dyn
+         write(6,'(1x,"Onodera relaxation time TAU0 (ps)        ",f15.6)') tau0
+         write(6,'(1x,"First relaxation time TAU1 (ps)          ",f15.6)') tau1
+         write(6,'(1x,"Second relaxation time TAU1 (ps)         ",f15.6)') tau2
+         write(6,'(1x,"Effective masses of the solvent (ps^2)   ",2f15.6)') effmass1, effmass2
+
       else
 
-         write(*,'(/1x,"*** (in DYNAMICS3): You MUST specify either TAU0 or EFFMASS option for ONODERA-2 model ***"/)')
-         call clean_exit
+         !-- parameters of the GLE
+
+         ioption = index(options,' EFFMASS=')
+
+         if (ioption.ne.0) then
+
+            ikey = ioption + 9
+            ispa = index(options(ikey:),space)
+            islash1 = index(options(ikey:ikey+ispa-1),'/')
+            if (islash1.eq.0) then
+               effmass1 = reada(options,ikey)
+               effmass2 = effmass1
+            else
+               effmass1 = reada(options(ikey:ikey+islash1-2),1)
+               effmass2 = reada(options,ikey+islash1)
+            endif
+
+         else
+
+            write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify EFFMASS= option for ONODERA-2 model ***"/)')
+            call clean_exit
+
+         endif
+
+         ioption = index(options,' GAMMA=')
+         if (ioption.ne.0) then
+            gamma = reada(options,ioption+7)
+         else
+            write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify GAMMA= option for ONODERA-2 model ***"/)')
+            call clean_exit
+         endif
+
+         ioption = index(options,' TAUALPHA=')
+         if (ioption.ne.0) then
+            taualpha = reada(options,ioption+10)
+         else
+            write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify TAUALPHA= option for ONODERA-2 model ***"/)')
+            call clean_exit
+         endif
+
+         ioption = index(options,' ETA=')
+         if (ioption.ne.0) then
+            etax = reada(options,ioption+5)
+            etay = gamma*taualpha
+         else
+            write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify ETA= option for ONODERA-2 model ***"/)')
+            call clean_exit
+         endif
+
+         write(6,'(1x,"Static dielectric constant EPS0        ",f15.6)') eps0_dyn
+         write(6,'(1x,"Optical dielectric constant EPS_inf    ",f15.6)') eps8_dyn
+         write(6,'(1x,"Inverse Pekar factor f_0               ",f15.6)') f0
+         write(6,'(1x,"Friction coefficient ETA_X (ps)        ",f15.6)') etax
+         write(6,'(1x,"Friction coefficient ETA_Y (ps)        ",f15.6)') etay
+         write(6,'(1x,"Parameter GAMMA                        ",f15.6)') gamma
+         write(6,'(1x,"Friction kernel time scale TAU_A (ps)  ",f15.6)') taualpha
+         write(6,'(1x,"Effective masses of the solvent (ps^2) ",2f15.6)') effmass1, effmass2
 
       endif
-
-      ioption = index(options,' TAU1=')
-      if (ioption.ne.0) then
-         tau1 = reada(options,ioption+6)
-      else
-         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify TAU1= option for ONODERA-2 model ***"/)')
-         call clean_exit
-      endif
-
-      ioption = index(options,' TAU2=')
-      if (ioption.ne.0) then
-         tau2 = reada(options,ioption+6)
-      else
-         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify TAU2= option for ONODERA-2 model ***"/)')
-         call clean_exit
-      endif
-
-      !ioption = index(options,' EPS0=')
-      !if (ioption.ne.0) then
-      !   eps0_dyn = reada(options,ioption+6)
-      !else
-      !   write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS0= option for ONODERA model ***"/)')
-      !   call clean_exit
-      !endif
-
-      eps0_dyn = eps0
-
-      ioption = index(options,' EPS1=')
-      if (ioption.ne.0) then
-         eps1_dyn = reada(options,ioption+6)
-      else
-         write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS1= option for ONODERA-2 model ***"/)')
-         call clean_exit
-      endif
-
-      !ioption = index(options,' EPS8=')
-      !if (ioption.ne.0) then
-      !   eps8_dyn = reada(options,ioption+6)
-      !else
-      !   write(*,'(/1x,"*** (in DYNAMICS): You MUST specify EPS8= option for ONODERA model ***"/)')
-      !   call clean_exit
-      !endif
-
-      eps8_dyn = eps8
-
-      call set_onodera2_model_parameters()
-      write(6,'(1x,"Static dielectric constant EPS0          ",f15.6)') eps0_dyn
-      write(6,'(1x,"Optical dielectric constant EPS_inf      ",f15.6)') eps8_dyn
-      write(6,'(1x,"Inverse Pekar factor f_0                 ",f15.6)') f0
-      write(6,'(1x,"Additional dielectric constant EPS1      ",f15.6)') eps1_dyn
-      write(6,'(1x,"Onodera relaxation time TAU0 (ps)        ",f15.6)') tau0
-      write(6,'(1x,"First relaxation time TAU1 (ps)          ",f15.6)') tau1
-      write(6,'(1x,"Second relaxation time TAU1 (ps)         ",f15.6)') tau2
-      write(6,'(1x,"Effective masses of the solvent (ps^2)   ",2f15.6)') effmass1, effmass2
 
       if (effmass1.eq.0.d0.or.effmass2.eq.0.d0) then
          write(*,'(/1x,"*** (in DYNAMICS3): The effective solvent masses MUST NOT BE ZERO, check your input ***"/)')
