@@ -98,10 +98,6 @@ module propagators_3d
    real(kind=8), allocatable, dimension(:,:,:) :: psiel, psipr
    real(kind=8), allocatable, dimension(:,:)   :: enel, envib
 
-   !-- arrays for the force matrices
-   !------------------------------------------------------
-   real(kind=8), allocatable, dimension(:,:) :: fmatz1, fmatz1_prev
-   real(kind=8), allocatable, dimension(:,:) :: fmatz2, fmatz2_prev
 
    !-- arrays for absorption probabilities (vibronic spectrum)
    !---------------------------------------------------------
@@ -119,16 +115,7 @@ module propagators_3d
    real(kind=8), allocatable, dimension(:,:) :: coupz1_prev
    real(kind=8), allocatable, dimension(:,:) :: coupz2_prev
 
-   !-- arrays for moments of classical coordinates (AFSSH)
-   !------------------------------------------------------
-   complex(kind=8), allocatable, dimension(:,:) :: zmom1
-   complex(kind=8), allocatable, dimension(:,:) :: zmom2
-   complex(kind=8), allocatable, dimension(:,:) :: pzmom1
-   complex(kind=8), allocatable, dimension(:,:) :: pzmom2
-   complex(kind=8), allocatable, dimension(:,:) :: zmom1_copy
-   complex(kind=8), allocatable, dimension(:,:) :: zmom2_copy
-   complex(kind=8), allocatable, dimension(:,:) :: pzmom1_copy
-   complex(kind=8), allocatable, dimension(:,:) :: pzmom2_copy
+   !== MDQT arrays ====================================================
 
    !-- array for the dot product of the classical velocity and coupling
    !-------------------------------------------------------------------
@@ -162,8 +149,31 @@ module propagators_3d
    !---------------------------------------------------------
    real(kind=8), allocatable, dimension(:)   :: a0_fe, a1_fe, a2_fe
    real(kind=8), allocatable, dimension(:,:) :: a0_vdotd, a1_vdotd, a2_vdotd
+
+   !== AFSSH arrays ====================================================
+
+   !-- arrays for moments of classical coordinates (AFSSH)
+   !------------------------------------------------------
+   complex(kind=8), allocatable, dimension(:,:) :: zmom1
+   complex(kind=8), allocatable, dimension(:,:) :: zmom2
+   complex(kind=8), allocatable, dimension(:,:) :: pzmom1
+   complex(kind=8), allocatable, dimension(:,:) :: pzmom2
+   complex(kind=8), allocatable, dimension(:,:) :: zmom1_copy
+   complex(kind=8), allocatable, dimension(:,:) :: zmom2_copy
+   complex(kind=8), allocatable, dimension(:,:) :: pzmom1_copy
+   complex(kind=8), allocatable, dimension(:,:) :: pzmom2_copy
+
+   !-- arrays for the force matrices
+   !------------------------------------------------------
+   real(kind=8), allocatable, dimension(:,:) :: fmatz1, fmatz1_prev
+   real(kind=8), allocatable, dimension(:,:) :: fmatz2, fmatz2_prev
+
+   !-- arrays with interpolation coefficients
+   !---------------------------------------------------------
    real(kind=8), allocatable, dimension(:,:) :: a0_fmatz1, a1_fmatz1, a2_fmatz1
    real(kind=8), allocatable, dimension(:,:) :: a0_fmatz2, a1_fmatz2, a2_fmatz2
+
+   !== Public routines
 
    public :: set_mode
    public :: get_free_energy
@@ -337,8 +347,10 @@ contains
 
    !---------------------------------------------------------------------
    subroutine allocate_vibronic_states
+
       integer :: nz
       nz = ielst*nprst
+
       allocate (fe(nstates))
       allocate (fe_prev(nstates))
       allocate (absorption_prob(nstates))
@@ -349,6 +361,11 @@ contains
       allocate (psipr(ielst,nprst,npnts))
       allocate (enel(ielst,npnts))
       allocate (envib(ielst,nprst))
+      allocate (coupz1(nstates,nstates))
+      allocate (coupz2(nstates,nstates))
+      allocate (coupz1_prev(nstates,nstates))
+      allocate (coupz2_prev(nstates,nstates))
+
       fe = 0.d0
       fe_prev = 0.d0
       absorption_prob = 0.d0
@@ -359,6 +376,11 @@ contains
       psipr = 0.d0
       enel = 0.d0
       envib = 0.d0
+      coupz1 = 0.d0
+      coupz2 = 0.d0
+      coupz1_prev = 0.d0
+      coupz2_prev = 0.d0
+
    end subroutine allocate_vibronic_states
    !---------------------------------------------------------------------
 
@@ -371,10 +393,7 @@ contains
 
    !---------------------------------------------------------------------
    subroutine allocate_mdqt_arrays
-      allocate (coupz1(nstates,nstates))
-      allocate (coupz2(nstates,nstates))
-      allocate (coupz1_prev(nstates,nstates))
-      allocate (coupz2_prev(nstates,nstates))
+
       allocate (amplitude(nstates),amplitude_copy(nstates))
       allocate (density_matrix(nstates,nstates))
       allocate (density_matrix_copy(nstates,nstates))
@@ -387,10 +406,7 @@ contains
       allocate (a0_vdotd(nstates,nstates))
       allocate (a1_vdotd(nstates,nstates))
       allocate (a2_vdotd(nstates,nstates))
-      coupz1 = 0.d0
-      coupz2 = 0.d0
-      coupz1_prev = 0.d0
-      coupz2_prev = 0.d0
+
       amplitude = 0.d0
       amplitude_copy = 0.d0
       density_matrix = 0.d0
@@ -406,6 +422,7 @@ contains
       a0_vdotd = 0.d0
       a1_vdotd = 0.d0
       a2_vdotd = 0.d0
+
    end subroutine allocate_mdqt_arrays
    !---------------------------------------------------------------------
 
@@ -455,16 +472,20 @@ contains
    !---------------------------------------------------------------------
 
    subroutine deallocate_vibronic_states
-      if (allocated(fe))      deallocate (fe)
-      if (allocated(fe_prev)) deallocate (fe_prev)
-      if (allocated(z))       deallocate (z)
-      if (allocated(z_prev))  deallocate (z_prev)
-      if (allocated(psiel))   deallocate (psiel)
-      if (allocated(psipr))   deallocate (psipr)
-      if (allocated(enel))    deallocate (enel)
-      if (allocated(envib))   deallocate (envib)
+      if (allocated(fe))              deallocate (fe)
+      if (allocated(fe_prev))         deallocate (fe_prev)
+      if (allocated(z))               deallocate (z)
+      if (allocated(z_prev))          deallocate (z_prev)
+      if (allocated(psiel))           deallocate (psiel)
+      if (allocated(psipr))           deallocate (psipr)
+      if (allocated(enel))            deallocate (enel)
+      if (allocated(envib))           deallocate (envib)
       if (allocated(absorption_prob)) deallocate (absorption_prob)
-      if (allocated(fc_prob)) deallocate (fc_prob)
+      if (allocated(fc_prob))         deallocate (fc_prob)
+      if (allocated(coupz1))          deallocate (coupz1)
+      if (allocated(coupz2))          deallocate (coupz2)
+      if (allocated(coupz1_prev))     deallocate (coupz1_prev)
+      if (allocated(coupz2_prev))     deallocate (coupz2_prev)
    end subroutine deallocate_vibronic_states
 
    subroutine deallocate_evb_weights
@@ -472,10 +493,6 @@ contains
    end subroutine deallocate_evb_weights
 
    subroutine deallocate_mdqt_arrays
-      if (allocated(coupz1))              deallocate (coupz1)
-      if (allocated(coupz2))              deallocate (coupz2)
-      if (allocated(coupz1_prev))         deallocate (coupz1_prev)
-      if (allocated(coupz2_prev))         deallocate (coupz2_prev)
       if (allocated(amplitude))           deallocate (amplitude)
       if (allocated(amplitude_copy))      deallocate (amplitude_copy)
       if (allocated(density_matrix))      deallocate (density_matrix)
@@ -1529,8 +1546,6 @@ contains
       endif
 
    end subroutine interpolate_kinenergy
-
-
 
    !--------------------------------------------------------------------
    !-- calculate interpolation coefficients
