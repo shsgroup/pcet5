@@ -25,7 +25,7 @@ module propagators_et2
    complex(kind=8), parameter :: ii=(0.d0,1.d0)
 
    character(len=5) :: mode
-   integer :: iset, nstates, nzdim, ielst
+   integer :: iset, nstates, ielst
 
    !-- arrays for the energies and wavefunctions
    !------------------------------------------------------
@@ -106,8 +106,11 @@ module propagators_et2
    public :: interpolate_kinenergy
    public :: interpolate_force_matrices
    public :: set_initial_amplitudes_pure
+   public :: set_initial_amplitudes_mixture
    public :: print_initial_amplitudes
    public :: set_initial_density_pure
+   public :: set_initial_density_mixture
+   public :: assign_initial_state
    public :: calculate_v_dot_d_mid
    public :: calculate_bprob_amp
    public :: calculate_bprob_den
@@ -165,7 +168,6 @@ contains
       write(*,*) "mode:    ",mode
       write(*,*) "iset:    ",iset
       write(*,*) "nstates: ",nstates
-      write(*,*) "nzdim:   ",nzdim
       write(*,*) "ielst:   ",ielst
       write(*,*)
       write(*,*) "Splittings: ",(fe(k)-fe(k-1),k=2,nstates)
@@ -395,6 +397,26 @@ contains
       amplitude(istate) = cmplx(1.d0,0.d0)
    end subroutine set_initial_amplitudes_pure
 
+
+   !-----------------------------------------------------------------------
+   !-- Set initial amplitudes to correspond to a coherent mixture
+   !   of adiabatic states corresponding to a given initial diabatic state
+   !-----------------------------------------------------------------------
+   subroutine set_initial_amplitudes_mixture(dstate_)
+      integer, intent(in) :: dstate_
+      integer :: i
+      real(kind=8) :: w, wfnorm
+      amplitude = 0.d0
+      wfnorm = 0.d0
+      do i=1,nstates
+         w = z(dstate_,i)
+         amplitude(i) = cmplx(w,0.d0)
+         wfnorm = wfnorm + w*w
+      enddo
+      amplitude = amplitude/sqrt(wfnorm)
+   end subroutine set_initial_amplitudes_mixture
+
+
    !--------------------------------------------------------------------
    !-- Print initial amplitudes of the time-dependent wavefunction
    !--------------------------------------------------------------------
@@ -485,6 +507,24 @@ contains
       density_matrix(istate,istate) = cmplx(1.d0,0.d0)
    end subroutine set_initial_density_pure
 
+   !-----------------------------------------------------------------------
+   !-- Set initial density matrix to correspond to a coherent mixture
+   !   of adiabatic states corresponding to a given initial diabatic state
+   !-----------------------------------------------------------------------
+
+   subroutine set_initial_density_mixture(dstate_)
+      integer, intent(in) :: dstate_
+      integer :: i, j
+      density_matrix = 0.d0
+      do i=1,nstates
+         do j=i,nstates
+            r = z(dstate_,i)*z(dstate_,j)
+            density_matrix(i,j) = cmplx(r,0.d0)
+            if (i.ne.j) density_matrix(j,i) = cmplx(r,0.d0)
+         enddo
+      enddo
+   end subroutine set_initial_density_mixture
+
    !--------------------------------------------------------------------
    !-- Interface to the calculation of the adiabatic states,
    !   interaction gradients, and nonadiabatic couplings
@@ -504,7 +544,7 @@ contains
       call z1_to_ze(z1,ze)
 
       !-- calculate electronic states and interaction gradients
-      call fes_et2(mode,ze,fe,ge,z,coupze)
+      call fes_et2(mode,ze,fe,gradient=ge,eigenvectors=z,nacoupling=coupze)
 
       !-- transform gradients back to z1 frame
       do i=1,nstates
@@ -523,6 +563,42 @@ contains
       enddo
 
    end subroutine calculate_electronic_states
+
+
+   !--------------------------------------------------------------------
+   !-- Assign initial (adiabatic) state according to the normalized
+   !   weight of this state in the given initial diabatic state
+   !--------------------------------------------------------------------
+   function assign_initial_state(dstate_) result(istate_)
+
+      integer, intent(in) :: dstate_
+      integer :: istate_
+
+      integer :: i
+      real(4) :: r
+      real(kind=8) :: s, w
+
+      istate_ = 0
+
+      !-- generate a random number between 0 and 1
+      !   from a uniform distribution
+      r = ran2nr()
+
+      s = 0.d0
+      
+      do i=1,nstates
+
+         w = z(dstate_,i)
+         s = s + w*w
+
+         if (s.gt.r) then
+            istate_ = i
+            exit
+         endif
+
+      enddo
+
+   end function assign_initial_state
 
 
    !--------------------------------------------------------------------
@@ -775,7 +851,7 @@ contains
       do i=1,nstates
          do j=i+1,nstates
             vd = 0.d0
-            do k=1,nzdim
+            do k=1,nstates
                vd  = vd + z_prev(k,i)*z(k,j) - z(k,i)*z_prev(k,j)
             enddo
             vd = vd/(2.d0*tstep_)
