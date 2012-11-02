@@ -19,7 +19,7 @@ SHELL=/bin/sh
 
 .SUFFIXES: .f90 .mod .o
 
-OBJS = analyze_et2_trajectories.o module_string_utilities.o module_sorting.o module_timers.o
+OBJS = analyze_et2_trajectories.o module_string_utilities.o module_sorting.o module_timers.o module_marcus.o
 
 BINDIR = ../bin
 
@@ -36,4 +36,4 @@ clean:
 .f90.o: 
 	$(F90) $(F90FLAGS) $*.f90
 
-analyze_et2_trajectories.o: module_string_utilities.o module_sorting.o module_timers.o
+analyze_et2_trajectories.o: module_string_utilities.o module_sorting.o module_timers.o module_marcus.o

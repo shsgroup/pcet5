@@ -12,6 +12,7 @@
 
 program analyze_et2_trajectories
 
+   use marcus
    use string_utilities
    use sorting
    use timers
@@ -30,7 +31,7 @@ program analyze_et2_trajectories
 
    integer :: number_of_traj, number_of_timesteps, number_of_states
    integer :: number_of_occ_states
-   integer :: itraj, istep, eof=0
+   integer :: itraj, istep, eof=0, ierr1, ierr2
    integer :: i, ilargest, ii, iocc, k, i1, iargc, nsteps
    integer :: ibin_1, ibin_e
    integer :: ichannel_z1, ichannel_ze
@@ -78,20 +79,66 @@ program analyze_et2_trajectories
    real(kind=8),      dimension(100) :: rarr
    real(kind=8),      dimension(2)   :: tmparray
 
-!--------------------------------------------------------------------------------------
+   !-- Marcus parameters
+
+   logical :: marcus_flag
+   real(kind=8) :: electronic_coupling
+   real(kind=8) :: reorganization_energy
+   real(kind=8) :: reaction_free_energy
+   real(kind=8) :: temperature
+   namelist /marcus_parameters/ electronic_coupling, reorganization_energy, reaction_free_energy, temperature
+
+   real(kind=8), dimension(2) :: p_marcus
+
+   !--------------------------------------------------------------------------------------
 
    total_time_start = secondi()
 
-   number_of_traj = iargc()
+   !-- read Marcus parameters from the input file
+
+   call getarg(1,filename)
+
+   open(1,file=trim(filename),status="old",iostat=ierr1)
+   read(1,nml=marcus_parameters,iostat=ierr2)
+
+   if (ierr1.ne.0.or.ierr2.ne.0) then
+   
+      marcus_flag = .false.
+      write(*,*) "*** Error reading the file with Marcus parameters."
+      write(*,*) "*** Marcus rate constant and populations will not be calculated."
+      write(*,*)
+
+   else
+
+      marcus_flag = .true.
+      call set_marcus_parameters(electronic_coupling, reorganization_energy, reaction_free_energy, temperature)
+
+      !-- calculate Marcus nonadiabatic rate constant in ps^(-1)
+      call calculate_marcus_rate_constant()
+
+      write(*,'(/1x,"======================================================")')
+      write(*,'( 1x,"Marcus model parameters")')
+      write(*,'( 1x,"------------------------------------------------------")')
+      write(*,'( 1x,"Temperature:                ",f12.3," K")')        temperature
+      write(*,'( 1x,"Electronic coupling:        ",f12.3," kcal/mol")') electronic_coupling
+      write(*,'( 1x,"Reorganization free energy: ",f12.3," kcal/mol")') reorganization_energy
+      write(*,'( 1x,"ET reaction free energy:    ",f12.3," kcal/mol")') reaction_free_energy
+      write(*,'( 1x,"ET activation free energy:  ",f12.3," kcal/mol")') (reorganization_energy+reaction_free_energy)**2.d0/(4.d0*reorganization_energy)
+      write(*,'( 1x,"ET Marcus rate constant:    ",e16.9," ps^(-1)")')  k_marcus
+      write(*,'( 1x,"======================================================"/)')
+
+   endif
+
+   number_of_traj = iargc() - 1
    if (number_of_traj == 0) then
-      write(*,*) "No arguments... Come again..."
+      write(*,*) "No trajectory files specified... Come again..."
       stop
    endif
 
    !-- scan the first trajectory file
    !   to get the number of time steps
 
-   call getarg(1,filename)
+   call getarg(2,filename)
    filename = trim(filename)
    open(1,file=filename)
 
@@ -138,10 +185,8 @@ program analyze_et2_trajectories
 
    loop_over_trajectories: do itraj=1,number_of_traj
 
-      call getarg(itraj,filename)
-      filename = trim(filename)
-
-      open(1,file=filename)
+      call getarg(itraj+1,filename)
+      open(1,file=trim(filename))
 
       nsteps = 0
 
@@ -808,6 +853,33 @@ program analyze_et2_trajectories
 
    deallocate (w1)
    deallocate (w2)
+
+   !---------------------------------------------------------------
+   !--(9)-- Time-dependent Marcus diabatic populations
+   !---------------------------------------------------------------
+
+   if (marcus_flag) then
+
+      write(*,'(/1x,"Writing out Marcus populations... ",$)')
+      time_start = secondi()
+
+      open(2,file="marcus_diab_pop.dat")
+      write(2,'("#",80("-"))')
+      write(2,'("#   Marcus diabatic populations")')
+      write(2,'("#   Nonadiabatic rate constant: ",g20.10," ps^(-1)")') k_marcus
+      write(2,'("#",80("-"))')
+      write(2,'("#",t10,"time",t30,"P(1)",t50,"P(2)")')
+      write(2,'("#",80("-"))')
+      do istep=1,number_of_timesteps
+         p_marcus = marcus_diabatic_populations(time(1,istep))
+         write(2,'(3g20.10)') time(1,istep), p_marcus(1), p_marcus(2)
+      enddo
+      close(2)
+
+      time_end = secondi()
+      write(*,'("Done in ",f12.3," sec"/)') time_end-time_start
+
+   endif
 
    !------------------------------------------------------------------------------
    !--(10)-- Time-averaged EVB weights
