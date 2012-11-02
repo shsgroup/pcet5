@@ -18,7 +18,9 @@ subroutine dynamicset2
 !  ISTATE=<N> - index of the occupied adiabatic electronic state
 !               (1 for ground state) at t=0.
 !
-!  PURESTATE - the initial density matrix always corresponds to a pure state
+!  PURESTATEDENSITY - the initial density matrix corresponds to a pure state
+!
+!  MIXEDSTATEDENSITY - the initial density matrix corresponds to a coherent mixture of states
 !
 !  NOWEIGHTS - do not calculate the evb weights along the trajectory (default is YES)
 !
@@ -51,8 +53,14 @@ subroutine dynamicset2
 !            ONODERA2 - Onodera model with short time correction and two relaxation timescales
 !                       (generalized Langevin dynamics).
 !
-!                   Note that the parameters of the corresponding dielectric
-!                   function must be specified within the SOLVENT keyword.
+!  EPSPARS - specify parameters of the dielectric function for ONODERA2 model:
+!            TAU0/EFFMASS, EPS1, TAU1, TAU2
+!
+!  GLEPARS - specify parameters of the GLE for ONODERA2 model:
+!            EFFMASS, GAMMA, TAUALPHA, ETA
+!
+!            Note that the EPS0 and EPS8 parameters of the corresponding dielectric
+!            function can be specified within the SOLV keyword.
 !
 !  TSTEP=<float> - timestep for solvent dynamics in picoseconds (default=0.0005)
 !
@@ -136,8 +144,9 @@ subroutine dynamicset2
    logical :: switch=.false.
    logical :: success=.false.
    logical :: scaled=.false.
-   logical :: pure=.true.
-   logical :: purestate=.false.
+   logical :: initial_state_pure=.true.
+   logical :: initial_state_diab=.false.
+   logical :: purestate=.true.
 
    integer :: nstates_dyn, nzdim_dyn, ielst_dyn, iseed_inp, iset_dyn
    integer :: initial_state=-1, iground=1
@@ -402,59 +411,11 @@ subroutine dynamicset2
    !-- Onodera model with two relaxation periods
    elseif (solvent_model.eq."ONODERA2") then
 
-      ioption = index(options,' TAU0=')
-      ioption2 = index(options,' EFFMASS=')
-
-      if (ioption.ne.0) then
-
-         tau0 = reada(options,ioption+6)
-         if (tau0.eq.0.d0) then
-            write(*,'(/1x,"*** (in DYNAMICSET2): Use EFFMASS option instead of setting TAU0 to zero ***"/)')
-            call clean_exit
-         endif
-
-      elseif (ioption2.ne.0) then
-
-         tau0 = 0.d0
-         ikey = ioption2 + 9
-         effmass1 = reada(options,ikey)
-
-      else
-
-         write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify either TAU0 or EFFMASS option for ONODERA-2 model ***"/)')
-         call clean_exit
-
-      endif
-
-      ioption = index(options,' TAU1=')
-      if (ioption.ne.0) then
-         tau1 = reada(options,ioption+6)
-      else
-         write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify TAU1= option for ONODERA-2 model ***"/)')
-         call clean_exit
-      endif
-
-      ioption = index(options,' TAU2=')
-      if (ioption.ne.0) then
-         tau2 = reada(options,ioption+6)
-      else
-         write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify TAU2= option for ONODERA-2 model ***"/)')
-         call clean_exit
-      endif
-
       ioption = index(options,' EPS0=')
       if (ioption.ne.0) then
          eps0_dyn = reada(options,ioption+6)
       else
          eps0_dyn = eps0
-      endif
-
-      ioption = index(options,' EPS1=')
-      if (ioption.ne.0) then
-         eps1_dyn = reada(options,ioption+6)
-      else
-         write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify EPS1= option for ONODERA-2 model ***"/)')
-         call clean_exit
       endif
 
       ioption = index(options,' EPS8=')
@@ -464,15 +425,122 @@ subroutine dynamicset2
          eps8_dyn = eps8
       endif
 
-      call set_onodera2_model_parameters()
-      write(6,'(1x,"Static dielectric constant EPS0        ",f15.6)') eps0_dyn
-      write(6,'(1x,"Optical dielectric constant EPS_inf    ",f15.6)') eps8_dyn
-      write(6,'(1x,"Inverse Pekar factor f_0               ",f15.6)') f0
-      write(6,'(1x,"Additional dielectric constant EPS1    ",f15.6)') eps1_dyn
-      write(6,'(1x,"Onodera relaxation time TAU0 (ps)      ",f15.6)') tau0
-      write(6,'(1x,"First relaxation time TAU1 (ps)        ",f15.6)') tau1
-      write(6,'(1x,"Second relaxation time TAU1 (ps)       ",f15.6)') tau2
-      write(6,'(1x,"Effective mass of the solvent (ps^2)   ",f15.6)') effmass1
+      if (index(options,' EPSPARS').ne.0) then
+
+         !-- parameters of the dielectric function
+
+         ioption = index(options,' TAU0=')
+         ioption2 = index(options,' EFFMASS=')
+
+         if (ioption.ne.0) then
+
+            tau0 = reada(options,ioption+6)
+            if (tau0.eq.0.d0) then
+               write(*,'(/1x,"*** (in DYNAMICSET2): Use EFFMASS option instead of setting TAU0 to zero ***"/)')
+               call clean_exit
+            endif
+
+         elseif (ioption2.ne.0) then
+
+            tau0 = 0.d0
+            ikey = ioption2 + 9
+            effmass1 = reada(options,ikey)
+
+         else
+
+            write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify either TAU0 or EFFMASS option for ONODERA-2 model ***"/)')
+            call clean_exit
+
+         endif
+
+         ioption = index(options,' TAU1=')
+         if (ioption.ne.0) then
+            tau1 = reada(options,ioption+6)
+         else
+            write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify TAU1= option for ONODERA-2 model ***"/)')
+            call clean_exit
+         endif
+
+         ioption = index(options,' TAU2=')
+         if (ioption.ne.0) then
+            tau2 = reada(options,ioption+6)
+         else
+            write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify TAU2= option for ONODERA-2 model ***"/)')
+            call clean_exit
+         endif
+
+         ioption = index(options,' EPS1=')
+         if (ioption.ne.0) then
+            eps1_dyn = reada(options,ioption+6)
+         else
+            write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify EPS1= option for ONODERA-2 model ***"/)')
+            call clean_exit
+         endif
+
+         call set_onodera2_model_parameters()
+         write(6,'(1x,"Static dielectric constant EPS0        ",f15.6)') eps0_dyn
+         write(6,'(1x,"Optical dielectric constant EPS_inf    ",f15.6)') eps8_dyn
+         write(6,'(1x,"Inverse Pekar factor f_0               ",f15.6)') f0
+         write(6,'(1x,"Additional dielectric constant EPS1    ",f15.6)') eps1_dyn
+         write(6,'(1x,"Onodera relaxation time TAU0 (ps)      ",f15.6)') tau0
+         write(6,'(1x,"First relaxation time TAU1 (ps)        ",f15.6)') tau1
+         write(6,'(1x,"Second relaxation time TAU1 (ps)       ",f15.6)') tau2
+         write(6,'(1x,"Effective mass of the solvent (ps^2)   ",f15.6)') effmass1
+
+      elseif (index(options,' GLEPARS').ne.0) then
+
+         !-- parameters of the GLE
+
+         ioption = index(options,' EFFMASS=')
+         if (ioption.ne.0) then
+            effmass1 = reada(options,ioption+9)
+            effmass2 = effmass1
+         else
+            write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify EFFMASS= option for ONODERA-2 model ***"/)')
+            call clean_exit
+         endif
+
+         ioption = index(options,' GAMMA=')
+         if (ioption.ne.0) then
+            gamma = reada(options,ioption+7)
+         else
+            write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify GAMMA= option for ONODERA-2 model ***"/)')
+            call clean_exit
+         endif
+
+         ioption = index(options,' TAUALPHA=')
+         if (ioption.ne.0) then
+            taualpha = reada(options,ioption+10)
+         else
+            write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify TAUALPHA= option for ONODERA-2 model ***"/)')
+            call clean_exit
+         endif
+
+         ioption = index(options,' ETA=')
+         if (ioption.ne.0) then
+            etax = reada(options,ioption+5)
+            etay = gamma*taualpha
+         else
+            write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify ETA= option for ONODERA-2 model ***"/)')
+            call clean_exit
+         endif
+
+         write(6,'(1x,"Static dielectric constant EPS0        ",f15.6)') eps0_dyn
+         write(6,'(1x,"Optical dielectric constant EPS_inf    ",f15.6)') eps8_dyn
+         write(6,'(1x,"Inverse Pekar factor f_0               ",f15.6)') f0
+         write(6,'(1x,"Friction coefficient ETA_X (ps)        ",f15.6)') etax
+         write(6,'(1x,"Friction coefficient ETA_Y (ps)        ",f15.6)') etay
+         write(6,'(1x,"Parameter GAMMA                        ",f15.6)') gamma
+         write(6,'(1x,"Friction kernel time scale TAU_A (ps)  ",f15.6)') taualpha
+         write(6,'(1x,"Effective mass of the solvent (ps^2)   ",f15.6)') effmass1
+
+      else
+
+         write(*,'(/1x,"*** (in DYNAMICSET2): You must specify either EPSPARS or GLEPARS, check your input ***"/)')
+         call clean_exit
+
+      endif
+
 
       if (effmass1.eq.0.d0) then
          write(*,'(/1x,"*** (in DYNAMICSET2): The effective solvent mass MUST NOT BE ZERO, check your input ***"/)')
@@ -734,6 +802,7 @@ subroutine dynamicset2
 
          ikey = ikeya + 6
          z_1 = reada(solvoptions,ikey)
+         z_2 = z_1 - 2.d0*lambda
 
          t2r(1,1) = -2.d0*gsolv_1
          t2r(1,2) = -z_1
@@ -742,9 +811,11 @@ subroutine dynamicset2
 
          gsolv_2 = z_1 + gsolv_1 - lambda
 
-         write(6,'(1x,"Solvation free energy of the product diabatic state (calculated):  ",f15.3," kcal/mol")') gsolv_2
-         write(6,'(1x,"Difference in solvation energies of diabatic states (calculated):  ",f15.3," kcal/mol")') gsolv_2-gsolv_1
-         write(6,'(1x,"Value of the equilibrium energy gap in the reactant state (from input): ",f13.6)') z_1
+         write(6,'(1x,"Reorganization free energy (from input):                                ",f12.3," kcal/mol")') lambda
+         write(6,'(1x,"Solvation free energy of the product diabatic state (calculated):       ",f12.3," kcal/mol")') gsolv_2
+         write(6,'(1x,"Difference in solvation energies of diabatic states (calculated):       ",f12.3," kcal/mol")') gsolv_2-gsolv_1
+         write(6,'(1x,"Value of the equilibrium energy gap in the reactant state (from input): ",f12.3," kcal/mol")') z_1
+         write(6,'(1x,"Value of the equilibrium energy gap in the product  state (calculated): ",f12.3," kcal/mol")') z_2
          write(6,'(1x,"(GSOLV2= option is ignored if present)")')
 
       elseif (ikeyb.ne.0) then
@@ -753,15 +824,18 @@ subroutine dynamicset2
          gsolv_2 = reada(solvoptions,ikey)
 
          z_1 = gsolv_2 - gsolv_1 + lambda
+         z_2 = z_1 - 2.d0*lambda
 
          t2r(1,1) = -2.d0*gsolv_1
          t2r(1,2) = -z_1
          t2r(2,1) = -z_1
          t2r(2,2) = 2.d0*lambda
 
-         write(6,'(1x,"Solvation free energy of the product diabatic state (from input):  ",f15.3," kcal/mol")') gsolv_2
-         write(6,'(1x,"Difference in solvation energies of diabatic states (calculated):  ",f15.3," kcal/mol")') gsolv_2-gsolv_1
-         write(6,'(1x,"Value of the equilibrium energy gap in the reactant state (calculated): ",f13.6)') z_1
+         write(6,'(1x,"Reorganization free energy (from input):                                ",f12.3," kcal/mol")') lambda
+         write(6,'(1x,"Solvation free energy of the product diabatic state (from input):       ",f12.3," kcal/mol")') gsolv_2
+         write(6,'(1x,"Difference in solvation energies of diabatic states (calculated):       ",f12.3," kcal/mol")') gsolv_2-gsolv_1
+         write(6,'(1x,"Value of the equilibrium energy gap in the reactant state (calculated): ",f12.3," kcal/mol")') z_1
+         write(6,'(1x,"Value of the equilibrium energy gap in the product  state (calculated): ",f12.3," kcal/mol")') z_2
          write(6,'(1x,"(MIN1= option is ignored if present)")')
 
       else
@@ -828,6 +902,19 @@ subroutine dynamicset2
       t2inf(2,1) = tinfk(iprod,ireac)
       t2inf(2,2) = tinfk(iprod,iprod)
 
+      gsolv_1 = -0.5d0*t2(1,1)
+      gsolv_2 = -0.5d0*t2(2,2)
+      lambda  = 0.5d0*t2r(2,2)
+
+      z_1 = gsolv_2 - gsolv_1 + lambda
+      z_2 = z_1 - 2.d0*lambda
+
+      write(6,'(/1x,"Reorganization free energy:                                ",f12.3," kcal/mol")') lambda
+      write(6,'( 1x,"Solvation free energy of the product diabatic state:       ",f12.3," kcal/mol")') gsolv_2
+      write(6,'( 1x,"Difference in solvation energies of diabatic states:       ",f12.3," kcal/mol")') gsolv_2-gsolv_1
+      write(6,'( 1x,"Value of the equilibrium energy gap in the reactant state: ",f12.3," kcal/mol")') z_1
+      write(6,'( 1x,"Value of the equilibrium energy gap in the product  state: ",f12.3," kcal/mol")') z_2
+
    else
 
       write(*,'(//1x,"ERROR in DYNAMICSET2: unrecognized solvation model ISOLV =",i2)') isolv
@@ -866,12 +953,14 @@ subroutine dynamicset2
 
    write(ifes_channel,'("#",74("="))')
    write(ifes_channel,'("#   ET free energy profiles (units are based on kcal/mol)")')
-   write(ifes_channel,'("#   Reorganization energy:     ",f12.3," kcal/mol")') lambda
-   write(ifes_channel,'("#   Scaling factor:            ",f12.3," sqrt(kcal/mol)")') scale_factor
-   write(ifes_channel,'("#   Shift:                     ",f12.3," sqrt(kcal/mol)")') delta_shift
-   write(ifes_channel,'("#   ET reaction free energy:   ",f12.3," kcal/mol")') dg_reaction
-   write(ifes_channel,'("#   ET activation free energy: ",f12.3," kcal/mol")') dg_activation
-   write(ifes_channel,'("#   ET Marcus rate constant:   ",e20.9," 1/sec")') et_marcus_rate
+   write(ifes_channel,'("#   Reorganization energy:      ",f12.3," kcal/mol")') lambda
+   write(ifes_channel,'("#   Scaling factor:             ",f12.3," sqrt(kcal/mol)")') scale_factor
+   write(ifes_channel,'("#   Shift:                      ",f12.3," sqrt(kcal/mol)")') delta_shift
+   write(ifes_channel,'("#   ET reaction free energy:    ",f12.3," kcal/mol")') dg_reaction
+   write(ifes_channel,'("#   ET activation free energy:  ",f12.3," kcal/mol")') dg_activation
+   write(ifes_channel,'("#   Gap at the reactant minimum:",f12.3," kcal/mol")') z_1
+   write(ifes_channel,'("#   Gap at the product  minimum:",f12.3," kcal/mol")') z_2
+   write(ifes_channel,'("#   ET Marcus rate constant:    ",e20.9," 1/sec")') et_marcus_rate
    write(ifes_channel,'("#",74("-"))')
    write(ifes_channel,'("#",t7,"Z(gap)",t19,"z(scaled)",t30,"U1(diab)",t42,"U2(diab)",t54,"U1(adiab)",t66,"U2(adiab)")')
    write(ifes_channel,'("#",74("-"))')
@@ -1043,14 +1132,34 @@ subroutine dynamicset2
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    ioption = index(options," SEED=")
+
    if (ioption.ne.0) then
-      iseed_inp = reada(options,ioption+6)
-      call set_random_seed(iseed_inp)
-      write(6,'(1x,"Random seed for RAN2NR: ",i6/)') iseed
+
+      if (options(ioption+6:ioption+10).eq."PBSID") then
+
+         call set_random_seed("PBS_JOBID")
+         write(6,'(1x,"Random seed for RAN2NR (from PBS_JOBID): ",i6/)') iseed
+
+      elseif (options(ioption+6:ioption+10).eq."CLOCK") then
+
+         !-- use clock to generate random seed
+         call set_random_seed()
+         write(6,'(1x,"Random seed for RAN2NR (from current clock value): ",i6/)') iseed
+
+      else
+
+         iseed_inp = reada(options,ioption+6)
+         call set_random_seed(iseed_inp)
+         write(6,'(1x,"Random seed for RAN2NR (from input): ",i6/)') iseed
+
+      endif
+
    else
-      !-- use clock to generate random seed
+
+      !-- use clock to generate random seed (default)
       call set_random_seed()
-      write(6,'(1x,"Random seed for RAN2NR was generated based on the clock: ",i6/)') iseed
+      write(6,'(1x,"Random seed for RAN2NR was generated based on the clock (by default): ",i6/)') iseed
+
    endif
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1066,7 +1175,7 @@ subroutine dynamicset2
       
          !-- set seeds using current time
          call set_duni_random_seeds()
-         write(6,'(/1x,"Random seeds for DUNI: from clock:")')
+         write(6,'(/1x,"Random seeds for DUNI generated from the clock:")')
 
       else
 
@@ -1080,9 +1189,13 @@ subroutine dynamicset2
          idum3 = reada(options(ioption2+islash1+islash2:ioption2+islash1+islash2+islash3-1),1)
          idum4 = reada(options,ioption2+islash1+islash2+islash3)
          call set_duni_random_seeds(idum1,idum2,idum3,idum4)
-         write(6,'(/1x,"Random seeds for DUNI: from input:")')
+         write(6,'(/1x,"Random seeds for DUNI read from input:")')
 
       endif
+
+   else
+
+      write(6,'(/1x,"Random seeds for DUNI have fixed default values:")')
 
    endif
 
@@ -1108,21 +1221,37 @@ subroutine dynamicset2
    ! (center of the initial distribution)
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   ioption = index(options,' ZE0=')
+   ioption  = index(options,' ZE0=')
+   ioption2 = index(options,' ZE0R')
+   ioption3 = index(options,' ZE0P')
+
    if (ioption.ne.0) then
+
       ioption = ioption + 5
       ze0 = reada(options,ioption)
+      if (scaled) then
+         z10 = ze0
+         call z1_to_ze(z10,ze0)
+      endif
+
+   elseif (ioption2.ne.0) then
+
+      !-- reactant minimum
+      ze0 = z_1
+
+   elseif (ioption3.ne.0) then
+
+      !-- product minimum
+      ze0 = z_1 - 2.d0*lambda
+
    else
-      write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify ZE0= option for DYNAMICSET2 keyword ***"/)')
+
+      write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify one of the ZE0=, ZE0R, ZE0P options for DYNAMICSET2 keyword ***"/)')
       call clean_exit
+
    endif
 
-   if (.not.scaled) then
-      call ze_to_z1(ze0,z10)
-   else
-      z10 = ze0
-      call z1_to_ze(z10,ze0)
-   endif
+   call ze_to_z1(ze0,z10)
 
    write(6,'(/1x,"Center of the initial distribution of the solvent coordinate:",/,&
    &          1x,"Ze(0) = ",F10.3,2X,A,/,&
@@ -1147,33 +1276,52 @@ subroutine dynamicset2
    endif
    if (weights) call allocate_evb_weights
 
-
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    !-- nature of the initial density matrix
    !   (meaningful only for MDQT dynamics)
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   !purestate = index(options,' PURESTATE').ne.0
-
+   if (index(options,' MIXEDSTATEDENSITY').ne.0) purestate = .false.
+   if (index(options,' PURESTATEDENSITY').ne.0) purestate = .true.
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Type of the initial condition:
    !
-   ! PURE - initial state is a pure electronic state
-   !        specified by the ISTATE keyword
+   ! ISTATE - initial state is a pure electronic state
+   !          specified by the ISTATE keyword
+   !
+   ! DSTATE - initial state is a diabatic electronic state
+   !          specified by the DSTATE keyword
    !
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   pure = index(options,' ISTATE=') .ne. 0
+   initial_state_pure = index(options,' ISTATE=') .ne. 0
+   initial_state_diab = index(options,' DSTATE=') .ne. 0
 
-   if (.not.pure) then
+   !-- These two options should be mutually exclusive.
+
+   icount = 0
+   if (initial_state_pure)  icount = icount + 1
+   if (initial_state_diab)  icount = icount + 1
+
+   if (icount.eq.0) then
 
       !-- none of the relevant keywords has been specified: default mode "pure" and ISTATE=1
 
-      pure = .true.
+      initial_state_pure = .true.
       initial_state = 1
-      write(6,'(1x,"(Default initial condition) At t=0: Pure ground electronic adiabatic state.")')
+      write(6,'(1x,"(Default initial condition) At t=0: Pure ground adiabatic state.")')
 
-   else
+   elseif (icount.gt.1) then
+
+      !-- more than one keyword has been specified: ambiguity => stop the program
+
+      write(6,'(1x,"Ambiguious input in DYNAMICSET2: only ONE of (ISTATE, DSTATE) keywords must be specified.)")')
+      call clean_exit
+
+   endif
+
+
+   if (initial_state_pure) then
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       !  Initial state is a pure adiabatic state
@@ -1198,8 +1346,22 @@ subroutine dynamicset2
 
       endif
 
-   endif
+   elseif (initial_state_diab) then
 
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      !  Initial state is a diabatic state (coherent mixture of adiabatic states)
+      !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+      if (initial_state.lt.0) then
+         ioption2 = index(options,' DSTATE=')
+         write(6,'(/1x,"(Initial state is a diabatic electronic state - coherent mixture of adiabatic states)")')
+      endif
+
+      initial_state = reada(options,ioption2+8)
+      if (initial_state.eq.0) initial_state = 1
+      write(6,'(1x,"At t=0: initial diabatic electronic state: ",i6)') initial_state
+
+   endif
 
 
    !===DEBUG===
@@ -1362,9 +1524,13 @@ subroutine dynamicset2
 
       endif
 
+      !-- calculate electronic state for the initial value of solvent coordinate
+      !   at t=0 (very first time for this trajectory)
+      call calculate_electronic_states(z1)
+
       !-- Assign the initial occupied state
 
-      if (pure) then
+      if (initial_state_pure) then
 
          !-- always the same initial state
          istate = initial_state
@@ -1383,6 +1549,30 @@ subroutine dynamicset2
             call set_initial_density_pure(istate)
          endif
 
+      elseif (initial_state_diab) then
+
+         !-- The initial state is sampled according to its amplitude in the coherent mixture
+         istate = assign_initial_state(initial_state)
+
+         if (istate.gt.nstates_dyn) then
+            write(6,'(/1x,"From DYNAMICS3: index of the sampled initial state specified (",i2,") ",/,&
+            &          1x,"is greater than the number of states included in dynamics (",i2,").",/,&
+            &          1x,"Check the input option!")') istate, nstates_dyn
+            call clean_exit
+         endif
+
+         if (mdqt) then
+            !-- set initial amplitudes (and/or density matrix) at t=0
+            !   (coherent mixture of states or pure state with the largest amplitude)
+            if (purestate) then
+               call set_initial_amplitudes_pure(istate)
+               call set_initial_density_pure(istate)
+            else
+               call set_initial_amplitudes_mixture(initial_state)
+               call set_initial_density_mixture(initial_state)
+            endif
+         endif
+
       else
 
          write(6,'(/1x,"From DYNAMICS3: For unknown reason (VERY SERIOUS BUG?) no initial condition was chosen. Abort.")')
@@ -1390,16 +1580,14 @@ subroutine dynamicset2
 
       endif
 
-      !-- print out the initial amplitudes of the time-dependent wavefunction
-      call print_initial_amplitudes(6)
-
-      !-- calculate electronic states at t=0 (very first time for this trajectory)
-      call calculate_electronic_states(z1)
-
-      !-- in case of MDQT trajectory initialize the quantum
-      !   amplitudes of the initial wavefunction
 
       if (mdqt) then
+
+         !-- calculate electronic states at t=0 (very first time for this trajectory)
+         !call calculate_electronic_states(z1)
+
+         !-- print out the initial amplitudes of the time-dependent wavefunction
+         call print_initial_amplitudes(6)
 
          !-- calculate force matrices (A-FSSH specific)
          if (decoherence) call calculate_force_matrices(z1)
@@ -1429,7 +1617,7 @@ subroutine dynamicset2
          write(itraj_channel,'("#",111("-"))')
       endif
 
-      write(6,'(/1x,"===> Trajectory ",i5," starts on the vibronic state ",i3)') itraj, istate
+      write(6,'(/1x,"===> Trajectory ",i5," starts on the electronic state ",i3)') itraj, istate
       write(6,'( 1x,"===> Initial solvent coordinate (z1), (kcal/mol)^(1/2): ",f13.6)') z1
 
       write(6,*)
@@ -1480,7 +1668,7 @@ subroutine dynamicset2
          zeit_prev = real(istep-1)*tstep
          zeit = real(istep)*tstep
 
-         !-- MDQT: store couplings, vibronic energies, and velocities
+         !-- MDQT: store couplings, electronic energies, and velocities
          !         from the previous step (for iterpolation)
          
          if (mdqt) then
@@ -1641,7 +1829,7 @@ subroutine dynamicset2
                wf_norm = tdwf_norm()
             endif
 
-            if (abs(wf_norm-1.d0).gt.1.d-4) then
+            if (abs(wf_norm-1.d0).gt.1.d-3) then
 
                write(*,'(/1x,"-------------------------------------------------------------------------------")')
                write(*,'( 1x,"DYNAMICS3: Amplitudes are not normalized after timestep ",i6)') istep
