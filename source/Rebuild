@@ -26,9 +26,12 @@ if [ -e "Rebuild.err" ]; then
    rm -f Rebuild.err
 fi
 
+VERSION=`awk '/VERSION =/{print $3}' Makefile`
+
 for compiler in $*
 do
    if [ -e "Makefile.${compiler}" ]; then
+      ARCH=`awk '/ARCH =/{print $3}' Makefile.${compiler}`
       ln -s -f Makefile.${compiler} Makefile.machine
       echo "]===>"
       echo "]===> " ${compiler}
@@ -37,6 +40,11 @@ do
       time make all 2>> Rebuild.err
       echo -e "\a"
       echo `date '+%a %D at %r'` ": building with " ${compiler} " is done!" >> Rebuild.log
+      echo
+      EXE=pcet_${VERSION}_${ARCH}.x
+      echo "===> copying " ${EXE} " to shscluster2 ..."
+      echo
+      cp --remove-destination -p ../bin/${EXE} /homecluster/souda/PCET/pcet5/bin/${EXE}
    fi
 done
 
@@ -51,10 +59,10 @@ fi
 echo -e "\a"
 
 # copy the executables to shscluster2
-echo
-echo -n "===> copying executables to shscluster2 ... "
-cp -f ../bin/*.x /home64/souda/PCET/pcet5/bin
-echo -e "Done \a"
+#echo
+#echo -n "===> copying executables to shscluster2 ... "
+#cp -f ../bin/*.x /homecluster/souda/PCET/pcet5/bin
+#echo -e "Done \a"
 
-echo "Executables were copied to /home64/souda/PCET/pcet5/bin" >> Rebuild.log
+echo "Executables were copied to /homecluster/souda/PCET/pcet5/bin" >> Rebuild.log
 echo -e "\a"
