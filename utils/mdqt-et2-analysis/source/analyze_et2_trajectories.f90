@@ -125,7 +125,7 @@ program analyze_et2_trajectories
       write(*,'( 1x,"ET reaction free energy:    ",f12.3," kcal/mol")') reaction_free_energy
       write(*,'( 1x,"ET activation free energy:  ",f12.3," kcal/mol")') (reorganization_energy+reaction_free_energy)**2.d0/(4.d0*reorganization_energy)
       write(*,'( 1x,"ET Marcus rate constant:    ",e16.9," ps^(-1)")')  k_marcus
-      write(*,'( 1x,"======================================================"/)')
+      write(*,'( 1x,"======================================================")')
 
    endif
 
@@ -156,6 +156,7 @@ program analyze_et2_trajectories
    write(*,*)
    write(*,'(1x,"Number of timesteps:    ",i6)') number_of_timesteps
    write(*,'(1x,"Number of trajectories: ",i6)') number_of_traj
+   write(*,*)
 
    if (number_of_timesteps.eq.0) then
       write(*,*)
