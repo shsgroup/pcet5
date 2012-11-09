@@ -176,7 +176,7 @@ program analyze_et2_trajectories
    allocate(w1(number_of_traj,number_of_timesteps))
    allocate(w2(number_of_traj,number_of_timesteps))
 
-   write(*,'(1x,"All data arrays allocated, now reading data files... ",$)')
+   write(*,'(1x,"All data arrays allocated, now reading data files... ",t65,$)')
    time_start = secondi()
 
    !=============================================================
@@ -229,7 +229,7 @@ program analyze_et2_trajectories
    enddo loop_over_trajectories
 
    time_end = secondi()
-   write(*,'("Done in ",f12.3," sec")') time_end-time_start
+   write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
    !=============================================================
    !-- Write the time values (ps) to the external file
@@ -317,7 +317,7 @@ program analyze_et2_trajectories
    write(*,'( 1x,"Unique occupied states:",/,(10(1x,i3)))') (istate_occ(k),k=1,number_of_occ_states)
 
    time_end = secondi()
-   write(*,'(/1x,"Done in ",f12.3," sec"/)') time_end-time_start
+   write(*,'(/1x,"Done in ",f10.3," sec"/)') time_end-time_start
 
    !======================================
    !-- Start calculating the observables
@@ -375,7 +375,7 @@ program analyze_et2_trajectories
    !-- build histograms for occupied adiabatic states
    !---------------------------------------------------------------
 
-   write(*,'(1x,"Building state-resolved histograms for solvent coordinates... ",$)')
+   write(*,'(1x,"Building state-resolved histograms for solvent coordinates... ",t65,$)')
    time_start = secondi()
    
    allocate(state_histogram_z1(number_of_states,number_of_bins_z1))
@@ -460,13 +460,13 @@ program analyze_et2_trajectories
    deallocate (state_histogram_z1,state_histogram_ze)
    deallocate (istate_occ)
    time_end = secondi()
-   write(*,'("Done in ",f12.3," sec")') time_end-time_start
+   write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
    !---------------------------------------------------------------
    !-- build global histograms
    !---------------------------------------------------------------
 
-   write(*,'(1x,"Building global histograms for solvent coordinates... ",$)')
+   write(*,'(1x,"Building global histograms for solvent coordinates... ",t65,$)')
    time_start = secondi()
    
    !-- global distributions
@@ -526,13 +526,13 @@ program analyze_et2_trajectories
    deallocate (histogram_z1,histogram_ze)
    
    time_end = secondi()
-   write(*,'("Done in ",f12.3," sec")') time_end-time_start
+   write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
    !---------------------------------------------------------------
    !--(2)-- Time-dependent averages of solvent coordinates
    !---------------------------------------------------------------
 
-   write(*,'(1x,"Building time-dependent averages... ",$)')
+   write(*,'(1x,"Building time-dependent averages... ",t65,$)')
    time_start = secondi()
 
    allocate (z1_mean(number_of_timesteps))
@@ -568,13 +568,13 @@ program analyze_et2_trajectories
    close(2)
 
    time_end = secondi()
-   write(*,'("Done in ",f12.3," sec")') time_end-time_start
+   write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
    !---------------------------------------------------------------
    !--(3)-- Time-dependent second moments of solvent distribution
    !---------------------------------------------------------------
 
-   write(*,'(1x,"Building time-dependent variances... ",$)')
+   write(*,'(1x,"Building time-dependent variances... ",t65,$)')
    time_start = secondi()
 
    allocate (z1_var(number_of_timesteps))
@@ -612,13 +612,13 @@ program analyze_et2_trajectories
    deallocate (z1_var, ze_var)
 
    time_end = secondi()
-   write(*,'("Done in ",f12.3," sec")') time_end-time_start
+   write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
    !--------------------------------------------------------------------
    !--(4)-- Time-averages of solvent coordinates
    !--------------------------------------------------------------------
 
-   write(*,'(1x,"Building time-averages for solvent coordinates... ",$)')
+   write(*,'(1x,"Building time-averages for solvent coordinates... ",t65,$)')
    time_start = secondi()
 
    z1tav = z1_mean(1)
@@ -637,13 +637,13 @@ program analyze_et2_trajectories
    close(2)
 
    time_end = secondi()
-   write(*,'("Done in ",f12.3," sec")') time_end-time_start
+   write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
    !--------------------------------------------------------------------
    !--(5)-- Running (local) time-averages of solvent coordinates
    !--------------------------------------------------------------------
 
-   write(*,'(1x,"Building running time-averages for solvent coordinates... ",$)')
+   write(*,'(1x,"Building running time-averages for solvent coordinates... ",t65,$)')
    time_start = secondi()
 
    !-- time interval for averaging (number of timesteps),
@@ -672,7 +672,7 @@ program analyze_et2_trajectories
    close(2)
 
    time_end = secondi()
-   write(*,'("Done in ",f12.3," sec")') time_end-time_start
+   write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
    !---------------------------------------------------------------
    !--(6)-- Non-equilibrium time-correlation functions
@@ -680,7 +680,7 @@ program analyze_et2_trajectories
    !        (not clear what it means...)
    !---------------------------------------------------------------
 
-   write(*,'(1x,"Building time-correlation functions... ",$)')
+   write(*,'(1x,"Building time-correlation functions... ",t65,$)')
    time_start = secondi()
 
    allocate (z11_tcf(number_of_timesteps))
@@ -725,13 +725,13 @@ program analyze_et2_trajectories
    deallocate (z1_mean, ze_mean)
 
    time_end = secondi()
-   write(*,'("Done in ",f12.3," sec")') time_end-time_start
+   write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
    !---------------------------------------------------------------
    !--(7)-- Time-dependent average free energy and kinetic energy
    !---------------------------------------------------------------
 
-   write(*,'(1x,"Building average energies... ",$)')
+   write(*,'(1x,"Building average energies... ",t65,$)')
    time_start = secondi()
 
    allocate (efe_mean(number_of_timesteps))
@@ -770,13 +770,13 @@ program analyze_et2_trajectories
    deallocate (ekin_mean)
 
    time_end = secondi()
-   write(*,'("Done in ",f12.3," sec")') time_end-time_start
+   write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
    !---------------------------------------------------------------
    !--(8)-- Time-dependent EVB weights
    !---------------------------------------------------------------
 
-   write(*,'(1x,"Building average EVB weights... ",$)')
+   write(*,'(1x,"Building average EVB weights... ",t65,$)')
    time_start = secondi()
 
    allocate (w1_mean(number_of_timesteps))
@@ -847,7 +847,7 @@ program analyze_et2_trajectories
    close(2)
 
    time_end = secondi()
-   write(*,'("Done in ",f12.3," sec")') time_end-time_start
+   write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
    deallocate (w1)
    deallocate (w2)
@@ -858,7 +858,7 @@ program analyze_et2_trajectories
 
    if (marcus_flag) then
 
-      write(*,'(1x,"Writing out Marcus populations... ",$)')
+      write(*,'(1x,"Writing out Marcus populations... ",t65,$)')
       time_start = secondi()
 
       open(2,file="marcus_diab_pop.dat")
@@ -875,7 +875,7 @@ program analyze_et2_trajectories
       close(2)
 
       time_end = secondi()
-      write(*,'("Done in ",f12.3," sec")') time_end-time_start
+      write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
    endif
 
@@ -883,7 +883,7 @@ program analyze_et2_trajectories
    !--(10)-- Time-averaged EVB weights
    !------------------------------------------------------------------------------
 
-   write(*,'(1x,"Building time-averaged EVB weights... ",$)')
+   write(*,'(1x,"Building time-averaged EVB weights... ",t65,$)')
    time_start = secondi()
 
    w1tav = w1_mean(1)
@@ -923,13 +923,13 @@ program analyze_et2_trajectories
    close(2)
 
    time_end = secondi()
-   write(*,'("Done in ",f12.3," sec")') time_end-time_start
+   write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
    !--------------------------------------------------------------------
    !--(11)-- Running (local) time-averages of EVB weights
    !--------------------------------------------------------------------
 
-   write(*,'(1x,"Building running time-averages for EVB weights... ",$)')
+   write(*,'(1x,"Building running time-averages for EVB weights... ",t65,$)')
    time_start = secondi()
 
    !-- time interval for averaging (number of timesteps),
@@ -993,7 +993,7 @@ program analyze_et2_trajectories
    close(2)
 
    time_end = secondi()
-   write(*,'("Done in ",f12.3," sec")') time_end-time_start
+   write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
    deallocate (w1_mean,wh1_mean)
    deallocate (w2_mean,wh2_mean)
@@ -1002,7 +1002,7 @@ program analyze_et2_trajectories
    !--(10)-- Time-dependent adiabatic populations
    !---------------------------------------------------------------
 
-   write(*,'(1x,"Building time-dependent adiabatic populations... ",$)')
+   write(*,'(1x,"Building time-dependent adiabatic populations... ",t65,$)')
    time_start = secondi()
 
    allocate(pop_ad(number_of_states,number_of_timesteps))
@@ -1038,10 +1038,10 @@ program analyze_et2_trajectories
    deallocate (istate, pop_ad)
 
    time_end = secondi()
-   write(*,'("Done in ",f12.3," sec")') time_end-time_start
+   write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
    total_time_end = secondi()
-   write(*,'(/"===> All Done in ",f12.3," sec"/)') total_time_end-total_time_start
+   write(*,'(/"===> All Done in ",f10.3," sec"/)') total_time_end-total_time_start
 
 contains
 
