@@ -176,7 +176,7 @@ program analyze_et2_trajectories
    allocate(w1(number_of_traj,number_of_timesteps))
    allocate(w2(number_of_traj,number_of_timesteps))
 
-   write(*,'(1x,"All data arrays allocated, now reading data files... ",t65,$)')
+   write(*,'(1x,"All data arrays allocated, now reading data files... ",t64,"--> ",$)')
    time_start = secondi()
 
    !=============================================================
@@ -375,7 +375,7 @@ program analyze_et2_trajectories
    !-- build histograms for occupied adiabatic states
    !---------------------------------------------------------------
 
-   write(*,'(1x,"Building state-resolved histograms for solvent coordinates... ",t65,$)')
+   write(*,'(1x,"Building state-resolved histograms for solvent coordinates... ",t64,"--> ",$)')
    time_start = secondi()
    
    allocate(state_histogram_z1(number_of_states,number_of_bins_z1))
@@ -466,7 +466,7 @@ program analyze_et2_trajectories
    !-- build global histograms
    !---------------------------------------------------------------
 
-   write(*,'(1x,"Building global histograms for solvent coordinates... ",t65,$)')
+   write(*,'(1x,"Building global histograms for solvent coordinates... ",t64,"--> ",$)')
    time_start = secondi()
    
    !-- global distributions
@@ -532,7 +532,7 @@ program analyze_et2_trajectories
    !--(2)-- Time-dependent averages of solvent coordinates
    !---------------------------------------------------------------
 
-   write(*,'(1x,"Building time-dependent averages... ",t65,$)')
+   write(*,'(1x,"Building time-dependent averages... ",t64,"--> ",$)')
    time_start = secondi()
 
    allocate (z1_mean(number_of_timesteps))
@@ -574,7 +574,7 @@ program analyze_et2_trajectories
    !--(3)-- Time-dependent second moments of solvent distribution
    !---------------------------------------------------------------
 
-   write(*,'(1x,"Building time-dependent variances... ",t65,$)')
+   write(*,'(1x,"Building time-dependent variances... ",t64,"--> ",$)')
    time_start = secondi()
 
    allocate (z1_var(number_of_timesteps))
@@ -618,7 +618,7 @@ program analyze_et2_trajectories
    !--(4)-- Time-averages of solvent coordinates
    !--------------------------------------------------------------------
 
-   write(*,'(1x,"Building time-averages for solvent coordinates... ",t65,$)')
+   write(*,'(1x,"Building time-averages for solvent coordinates... ",t64,"--> ",$)')
    time_start = secondi()
 
    z1tav = z1_mean(1)
@@ -643,7 +643,7 @@ program analyze_et2_trajectories
    !--(5)-- Running (local) time-averages of solvent coordinates
    !--------------------------------------------------------------------
 
-   write(*,'(1x,"Building running time-averages for solvent coordinates... ",t65,$)')
+   write(*,'(1x,"Building running time-averages for solvent coordinates... ",t64,"--> ",$)')
    time_start = secondi()
 
    !-- time interval for averaging (number of timesteps),
@@ -680,7 +680,7 @@ program analyze_et2_trajectories
    !        (not clear what it means...)
    !---------------------------------------------------------------
 
-   write(*,'(1x,"Building time-correlation functions... ",t65,$)')
+   write(*,'(1x,"Building time-correlation functions... ",t64,"--> ",$)')
    time_start = secondi()
 
    allocate (z11_tcf(number_of_timesteps))
@@ -731,7 +731,7 @@ program analyze_et2_trajectories
    !--(7)-- Time-dependent average free energy and kinetic energy
    !---------------------------------------------------------------
 
-   write(*,'(1x,"Building average energies... ",t65,$)')
+   write(*,'(1x,"Building average energies... ",t64,"--> ",$)')
    time_start = secondi()
 
    allocate (efe_mean(number_of_timesteps))
@@ -776,7 +776,7 @@ program analyze_et2_trajectories
    !--(8)-- Time-dependent EVB weights
    !---------------------------------------------------------------
 
-   write(*,'(1x,"Building average EVB weights... ",t65,$)')
+   write(*,'(1x,"Building average EVB weights... ",t64,"--> ",$)')
    time_start = secondi()
 
    allocate (w1_mean(number_of_timesteps))
@@ -858,7 +858,7 @@ program analyze_et2_trajectories
 
    if (marcus_flag) then
 
-      write(*,'(1x,"Writing out Marcus populations... ",t65,$)')
+      write(*,'(1x,"Writing out Marcus populations... ",t64,"--> ",$)')
       time_start = secondi()
 
       open(2,file="marcus_diab_pop.dat")
@@ -883,7 +883,7 @@ program analyze_et2_trajectories
    !--(10)-- Time-averaged EVB weights
    !------------------------------------------------------------------------------
 
-   write(*,'(1x,"Building time-averaged EVB weights... ",t65,$)')
+   write(*,'(1x,"Building time-averaged EVB weights... ",t64,"--> ",$)')
    time_start = secondi()
 
    w1tav = w1_mean(1)
@@ -929,7 +929,7 @@ program analyze_et2_trajectories
    !--(11)-- Running (local) time-averages of EVB weights
    !--------------------------------------------------------------------
 
-   write(*,'(1x,"Building running time-averages for EVB weights... ",t65,$)')
+   write(*,'(1x,"Building running time-averages for EVB weights... ",t64,"--> ",$)')
    time_start = secondi()
 
    !-- time interval for averaging (number of timesteps),
@@ -1002,7 +1002,7 @@ program analyze_et2_trajectories
    !--(10)-- Time-dependent adiabatic populations
    !---------------------------------------------------------------
 
-   write(*,'(1x,"Building time-dependent adiabatic populations... ",t65,$)')
+   write(*,'(1x,"Building time-dependent adiabatic populations... ",t64,"--> ",$)')
    time_start = secondi()
 
    allocate(pop_ad(number_of_states,number_of_timesteps))
