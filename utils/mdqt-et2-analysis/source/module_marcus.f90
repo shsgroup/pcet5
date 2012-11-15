@@ -32,6 +32,7 @@ MODULE marcus
    public :: set_marcus_parameters
    public :: calculate_marcus_rate_constant
    public :: marcus_diabatic_populations
+   public :: fit_rate_constant
 
 CONTAINS
 
@@ -53,11 +54,45 @@ CONTAINS
       k_marcus = prefactor*exp(-beta*dgact)
    end subroutine calculate_marcus_rate_constant
 
-   function marcus_diabatic_populations(t_) result(p)
+   function marcus_diabatic_populations(t_, k_) result(p)
       real(kind=8), intent(in) :: t_    ! time in ps
+      real(kind=8), intent(in) :: k_    ! rate constant in ps^-1
       real(kind=8), dimension(2) :: p   ! diabatic populations
-      p(1) = (1.d0 + exp(-beta*dG)*exp(-k_marcus*(1.d0+exp(beta*dG))*t_))/(1.d0+exp(-beta*dG))
+      p(1) = (1.d0 + exp(-beta*dG)*exp(-k_*(1.d0+exp(beta*dG))*t_))/(1.d0+exp(-beta*dG))
       p(2) = 1.d0 - p(1)
    end function marcus_diabatic_populations
+
+   subroutine fit_rate_constant(n_,t_,pop_,kfit_,rcorr_)
+
+      integer, intent(in) :: n_
+      real(kind=8), dimension(n_), intent(in) :: t_
+      real(kind=8), dimension(n_), intent(in) :: pop_
+
+      real(kind=8), intent(out) :: kfit_
+      real(kind=8), intent(out) :: rcorr_
+
+      integer :: i
+      real(kind=8) :: popt, sx, sy, sxy, sxx, syy, bb
+      real(kind=8), dimension(n_) :: poptlog
+
+      bb = 1.d0 + exp(beta*dG)
+
+      sxy = 0.d0
+      sxx = 0.d0
+
+      do i=1,n_
+         popt = (exp(beta*dG) + 1.d0)*pop_(i) - exp(beta*dG)
+         poptlog(i) = log(popt)
+         sx = sx + t_(i)
+         sy = sy + poptlog(i)
+         sxy = sxy + t_(i)*poptlog(i)
+         sxx = sxx + t_(i)*t_(i)
+         syy = syy + poptlog(i)*poptlog(i)
+      enddo
+
+      kfit_ = -sxy/sxx/bb
+      rcorr_ = (n_*sxy - sx*sy)/sqrt((n_*sxx - sx*sx)*(n_*syy - sy*sy))
+
+   end subroutine fit_rate_constant
 
 END MODULE marcus

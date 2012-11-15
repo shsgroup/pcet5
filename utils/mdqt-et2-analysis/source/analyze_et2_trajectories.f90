@@ -85,10 +85,10 @@ program analyze_et2_trajectories
    real(kind=8) :: electronic_coupling
    real(kind=8) :: reorganization_energy
    real(kind=8) :: reaction_free_energy
-   real(kind=8) :: temperature
+   real(kind=8) :: temperature, k_fit, rcorr
    namelist /marcus_parameters/ electronic_coupling, reorganization_energy, reaction_free_energy, temperature
 
-   real(kind=8), dimension(2) :: p_marcus
+   real(kind=8), dimension(2) :: p_marcus, p_fit
 
    !--------------------------------------------------------------------------------------
 
@@ -869,13 +869,40 @@ program analyze_et2_trajectories
       write(2,'("#",t10,"time",t30,"P(1)",t50,"P(2)")')
       write(2,'("#",80("-"))')
       do istep=1,number_of_timesteps
-         p_marcus = marcus_diabatic_populations(time(1,istep))
+         p_marcus = marcus_diabatic_populations(time(1,istep),k_marcus)
          write(2,'(3g20.10)') time(1,istep), p_marcus(1), p_marcus(2)
       enddo
       close(2)
 
       time_end = secondi()
       write(*,'("Done in ",f10.3," sec")') time_end-time_start
+
+      write(*,'(1x,"Fitting the rate constant... ",t64,"--> ",$)')
+      time_start = secondi()
+
+      call fit_rate_constant(number_of_timesteps,time(1,:),wh1_mean,k_fit,rcorr)
+
+      open(2,file="fitted_diab_pop.dat")
+      write(2,'("#",80("-"))')
+      write(2,'("#   Fitted diabatic populations")')
+      write(2,'("#   Fitted rate constant:    ",g20.10," ps^(-1)")') k_fit
+      write(2,'("#   Correlation coefficient: ",g20.10)') rcorr
+      write(2,'("#",80("-"))')
+      write(2,'("#",t10,"time",t30,"Pfit(1)",t50,"Pfit(2)")')
+      write(2,'("#",80("-"))')
+      do istep=1,number_of_timesteps
+         p_fit = marcus_diabatic_populations(time(1,istep),k_fit)
+         write(2,'(3g20.10)') time(1,istep), p_fit(1), p_fit(2)
+      enddo
+      close(2)
+
+      time_end = secondi()
+      write(*,'("Done in ",f10.3," sec")') time_end-time_start
+
+      write(*,'( 1x,"------------------------------------------------------")')
+      write(*,'( 1x,"ET Marcus rate constant: ",e16.9," ps^(-1)")') k_marcus
+      write(*,'( 1x,"Fitted    rate constant: ",e16.9," ps^(-1)")') k_fit
+      write(*,'( 1x,"------------------------------------------------------")')
 
    endif
 
