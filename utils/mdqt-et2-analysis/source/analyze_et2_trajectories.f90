@@ -902,6 +902,7 @@ program analyze_et2_trajectories
       write(*,'( 1x,"------------------------------------------------------")')
       write(*,'( 1x,"ET Marcus rate constant: ",e16.9," ps^(-1)")') k_marcus
       write(*,'( 1x,"Fitted    rate constant: ",e16.9," ps^(-1)")') k_fit
+      write(*,'( 1x,"(correlation coefficient: ",g20.9,")")') rcorr
       write(*,'( 1x,"------------------------------------------------------")')
 
    endif
