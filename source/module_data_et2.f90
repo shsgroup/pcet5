@@ -111,14 +111,13 @@ contains
    ! and nonadiabatic couplings for a two-state ET model.
    ! Note: gradients do not include contribution from self energy
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   subroutine fes_et2(mode,energy_gap,free_energy,gradient,eigenvectors,nacoupling)
+   subroutine fes_et2(mode,energy_gap,free_energy,gradient,eigenvectors)
 
       character(len=5), intent(in) :: mode
       real(kind=8), intent(in)  :: energy_gap
       real(kind=8), dimension(2),   intent(out) :: free_energy
       real(kind=8), optional, dimension(2),   intent(out) :: gradient
       real(kind=8), optional, dimension(2,2), intent(out) :: eigenvectors
-      real(kind=8), optional, dimension(2,2), intent(out) :: nacoupling
 
       real(kind=8) :: self_energy, h11, h22, h12, dh12, sh12, sqd, vnorm
       real(kind=8) :: v1, v2, v1norm, v2norm
@@ -126,7 +125,6 @@ contains
       free_energy = 0.d0
       if (present(gradient))     gradient = 0.d0
       if (present(eigenvectors)) eigenvectors = 0.d0
-      if (present(nacoupling))   nacoupling = 0.d0
 
       self_energy = selfen_et2(energy_gap)
 
@@ -161,12 +159,6 @@ contains
             eigenvectors(2,1) = 1.d0/v1norm
             eigenvectors(1,2) = v2/v2norm
             eigenvectors(2,2) = 1.d0/v2norm
-         endif
-
-         !-- nonadiabatic couplings
-         if (present(nacoupling).and.present(eigenvectors)) then
-            nacoupling(1,2) = eigenvectors(2,1)*eigenvectors(2,2)/(free_energy(2)-free_energy(1))
-            nacoupling(2,1) = -nacoupling(1,2)
          endif
 
       elseif (mode.eq."DIAB4".or.h12.eq.0.d0) then
