@@ -1674,10 +1674,10 @@ subroutine dynamicset2
          if (mdqt) then
             vz1_prev = vz1
             ekin_prev = ekin
-            call store_nonadiabatic_couplings                             !  coupz(:,:) -> coupz_prev(:,:)
-            call store_electronic_energies                                !  fe(:)      -> fe_prev(:)
-            if (interpolation.eq."QUADRATIC") call store_wavefunctions    !  z(:,:)     -> z_prev(:,:)
-            if (decoherence) call store_force_matrices                    !  fmatz(:,:) -> fmatz_prev(:,:)
+            call store_nonadiabatic_couplings             !  coupz(:,:) -> coupz_prev(:,:)
+            call store_electronic_energies                !  fe(:)      -> fe_prev(:)
+            call store_wavefunctions                      !  z(:,:)     -> z_prev(:,:)
+            if (decoherence) call store_force_matrices    !  fmatz(:,:) -> fmatz_prev(:,:)
          endif
 
          !-- Propagate solvent coordinates and velocities
@@ -1726,6 +1726,10 @@ subroutine dynamicset2
             !   at t and t+dt
             !-------------------------------------------------------
             call calculate_v_dot_d(vz1,vz1_prev)
+
+            !--(AVS-DEBUG)---
+            !if (mod(istep,100).eq.0) write(777,'(3g20.10)') zeit, coupz1(1,2), v_dot_d(1,2)
+            !--(AVS-DEBUG)---
 
             !-- Calculate the nonadiabatic coupling terms (v*d_{kl})
             !   at half timestep for quadratic interpolation scheme

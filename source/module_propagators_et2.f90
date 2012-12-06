@@ -91,6 +91,10 @@ module propagators_et2
    real(kind=8), allocatable, dimension(:,:) :: a0_vdotd, a1_vdotd, a2_vdotd
    real(kind=8), allocatable, dimension(:,:) :: a0_fmatz1, a1_fmatz1, a2_fmatz1
 
+   !--(AVS-DEBUG)---
+   !public :: v_dot_d, coupz1
+   !--(AVS-DEBUG)---
+
    public :: set_mode_et2
    public :: get_free_energy
    public :: allocate_electronic_states, deallocate_electronic_states
@@ -532,19 +536,39 @@ contains
    subroutine calculate_electronic_states(z1)
 
       real(kind=8), intent(in) :: z1
-      real(kind=8) :: ze, dze, dz1
+      real(kind=8) :: ze, dze, dz1, p
       integer :: i, j
       real(kind=8), dimension(nstates) :: ge
       real(kind=8), dimension(nstates,nstates) :: coupze
 
       ge = 0.d0
-      coupze = 0.d0
 
       !-- transform to ze frame
       call z1_to_ze(z1,ze)
 
       !-- calculate electronic states and interaction gradients
-      call fes_et2(mode,ze,fe,gradient=ge,eigenvectors=z,nacoupling=coupze)
+      call fes_et2(mode,ze,fe,gradient=ge,eigenvectors=z)
+
+      !-- check phase of the wavefunction (adjust if needed)
+      do i=1,nstates
+         p = dot_product(z(1:nstates,i),z_prev(1:nstates,i))
+         if (p.lt.0) then
+            write(*,*) "### Phase of adiabatic state ",i," flipped: adjusted ###"
+            do j=1,nstates
+               z(j,i) = -z(j,i)
+            enddo
+         endif
+      enddo
+
+      !-- calculate couplings in ze frame
+
+      coupze = 0.d0
+      do i=1,nstates-1
+         do j=i+1,nstates
+            coupze(i,j) = z(2,i)*z(2,j)/(fe(j)-fe(i))
+            coupze(j,i) = -coupze(i,j)
+         enddo
+      enddo
 
       !-- transform gradients back to z1 frame
       do i=1,nstates
