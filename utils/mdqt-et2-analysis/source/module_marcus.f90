@@ -13,6 +13,9 @@ MODULE marcus
 
    !-------------
    !! parameters
+
+   integer, parameter :: QUAD=selected_real_kind(33,4931)
+
    real(kind=8), parameter :: pi=3.141592653d0
    real(kind=8), parameter :: au2ps=2.4189d-5
    real(kind=8), parameter :: au2kcal=627.5095d0
@@ -72,17 +75,22 @@ CONTAINS
       real(kind=8), intent(out) :: rcorr_
 
       integer :: i
-      real(kind=8) :: popt, sx, sy, sxy, sxx, syy, bb
-      real(kind=8), dimension(n_) :: poptlog
+      real(kind=QUAD) :: popt, sx, sy, sxy, sxx, syy, bb
+      real(kind=QUAD), dimension(n_) :: poptlog
 
-      bb = 1.d0 + exp(beta*dG)
+      bb = exp(beta*dG) + 1.0_QUAD
 
-      sxy = 0.d0
-      sxx = 0.d0
+      sxy = 0.0_QUAD
+      sxx = 0.0_QUAD
 
       do i=1,n_
-         popt = (exp(beta*dG) + 1.d0)*pop_(i) - exp(beta*dG)
-         poptlog(i) = log(popt)
+         popt = (exp(beta*dG) + 1.0_QUAD)*pop_(i) - exp(beta*dG)
+         if (popt.gt.0.0_QUAD) then
+            poptlog(i) = log(popt)/bb
+         else
+            write(*,*) "**** negative argument in LOG"
+            poptlog(i) = 0.0_QUAD
+         endif
          sx = sx + t_(i)
          sy = sy + poptlog(i)
          sxy = sxy + t_(i)*poptlog(i)
@@ -90,7 +98,7 @@ CONTAINS
          syy = syy + poptlog(i)*poptlog(i)
       enddo
 
-      kfit_ = -sxy/sxx/bb
+      kfit_ = -sxy/sxx
       rcorr_ = (n_*sxy - sx*sy)/sqrt((n_*sxx - sx*sx)*(n_*syy - sy*sy))
 
    end subroutine fit_rate_constant
