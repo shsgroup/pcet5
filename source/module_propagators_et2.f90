@@ -16,7 +16,7 @@ module propagators_et2
    use data_et2
    use random_generators
    use rk_parameters
-   use control_dynamics, only: decouple
+   use control_dynamics, only: decouple, coupling_cutoff
 
    !---------------------------------------------------------------------
    implicit none
@@ -140,6 +140,8 @@ module propagators_et2
    public :: propagate_amplitudes_phcorr_rk4
    public :: propagate_density_rk4
    public :: propagate_moments_and_density
+   public :: propagate_moments_and_amplitudes
+   public :: propagate_moments_and_amplitudes_phcorr
    public :: switch_state
    public :: adjust_velocities
    public :: adjust_velocities_and_moments_0
@@ -156,6 +158,9 @@ module propagators_et2
    public :: save_moments
    public :: restore_moments
    public :: collapse_and_reset_afssh
+   public :: collapse_and_reset_afssh_erratum
+   public :: interaction_region_check
+   public :: collapse_wavefunction
    public :: print_populations_den
    public :: print_populations_amp
    public :: print_coherences_den
@@ -1470,40 +1475,6 @@ contains
    !--------------------------------------------------------------------
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
    !--------------------------------------------------------------------
    !-- Right-hand side (time derivative) of von-Neumann equation
    !   for density matrix
@@ -1750,6 +1721,241 @@ contains
       enddo
 
    end subroutine tdafssh_derivatives
+
+
+   !--------------------------------------------------------------------
+   !-- Right-hand sides (time derivatives) of the equations
+   !   for the coordinate and momentum moments
+   !   as well as the amplitudes
+   !   (A-FSSH algorithm, Eq.2,14-18)
+   !--------------------------------------------------------------------
+   subroutine tdafssh_derivatives_amp(istate_,t_,amp_,zmom1_,pzmom1_,dampdt,dzmom1dt,dpzmom1dt)
+
+      integer, intent(in) :: istate_
+      real(kind=8), intent(in) :: t_
+      complex(kind=8), intent(in),  dimension(nstates) :: amp_
+      complex(kind=8), intent(out), dimension(nstates) :: dampdt
+      complex(kind=8), intent(in),  dimension(nstates,nstates) :: zmom1_, pzmom1_
+      complex(kind=8), intent(out), dimension(nstates,nstates) :: dzmom1dt, dpzmom1dt
+
+      integer :: i, j, k
+      real(kind=8) :: e0, de, ei, ej, vdik, vdkj
+      real(kind=8) :: f1ik, f1kj, f1sh
+      complex(kind=8) :: dampi
+
+      real(kind=8), dimension(nstates) :: tiiz1, tiipz1
+
+      dampdt    = cmplx(0.d0,0.d0)
+      dzmom1dt  = cmplx(0.d0,0.d0)
+      dpzmom1dt = cmplx(0.d0,0.d0)
+
+      !-- calculate diagonal elements of the derivatives
+
+      !-- interpolate diagonal elements of the F-matrices corresponding to the occupied state
+      f1sh = a0_fmatz1(istate_,istate_) + a1_fmatz1(istate_,istate_)*t_ + a2_fmatz1(istate_,istate_)*t_*t_
+
+      !-- interpolated value of the ground state energy
+      e0 = a0_fe(1) + a1_fe(1)*t_ + a2_fe(1)*t_*t_
+
+      do i=1,nstates
+
+         !-- calculate the interpolated value of energy
+         !   relative to the ground state energy
+         de = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_ - e0
+
+         dampi = -ii*amp_(i)*de/hbarps
+
+         tiiz1(i)  = real(pzmom1_(i,i))/effmass1
+         tiipz1(i) = 0.d0
+
+         do k=1,nstates
+            vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t_ + a2_vdotd(i,k)*t_*t_
+            f1ik = a0_fmatz1(i,k) + a1_fmatz1(i,k)*t_ + a2_fmatz1(i,k)*t_*t_
+            tiiz1(i)  = tiiz1(i) - 2.d0*vdik*real(zmom1_(i,k))
+            tiipz1(i) = tiipz1(i) + (f1ik-f1sh)*(real(amp_(i))*real(amp_(k))+imag(amp_(i))*imag(amp_(k)))&
+                                & - 2.d0*vdik*real(pzmom1_(i,k))
+            dampi = dampi - amp_(k)*vdik
+         enddo
+
+         dzmom1dt(i,i)  = cmplx(tiiz1(i),0.d0)
+         dpzmom1dt(i,i) = cmplx(tiipz1(i),0.d0)
+         dampdt(i) = dampi
+
+      enddo
+
+      do i=1,nstates
+         dzmom1dt(i,i)  = dzmom1dt(i,i)  - cmplx(tiiz1(istate_),0.d0)
+         dpzmom1dt(i,i) = dpzmom1dt(i,i) - cmplx(tiipz1(istate_),0.d0)
+      enddo
+
+
+      !-- calculate off-diagonal derivative parts for matrices of moments
+
+      do i=1,nstates-1
+         do j=i+1,nstates
+
+            !-- interpolate adiabatic energies
+            ei = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_
+            ej = a0_fe(j) + a1_fe(j)*t_ + a2_fe(j)*t_*t_
+
+            !-- first two terms in Eq. (14)
+            dzmom1dt(i,j)  = dzmom1dt(i,j) - (ii/hbarps)*zmom1_(i,j)*(ei - ej) + pzmom1_(i,j)/effmass1
+
+            !-- first term in Eq. (16)
+            dpzmom1dt(i,j)  = dpzmom1dt(i,j) - (ii/hbarps)*pzmom1_(i,j)*(ei - ej)
+
+            do k=1,nstates
+
+               !-- interpolate the nonadiabatic coupling terms
+               vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t_ + a2_vdotd(i,k)*t_*t_
+               vdkj = a0_vdotd(k,j) + a1_vdotd(k,j)*t_ + a2_vdotd(k,j)*t_*t_
+
+               !-- last term (with the coupling) in Eqs. (14) and (16)
+               dzmom1dt(i,j)  = dzmom1dt(i,j)  - (vdik*zmom1_(k,j)  - zmom1_(i,k)*vdkj)
+               dpzmom1dt(i,j) = dpzmom1dt(i,j) - (vdik*pzmom1_(k,j) - pzmom1_(i,k)*vdkj)
+
+               !-- interpolate the F-matrices
+               f1ik = a0_fmatz1(i,k) + a1_fmatz1(i,k)*t_ + a2_fmatz1(i,k)*t_*t_
+               f1kj = a0_fmatz1(k,j) + a1_fmatz1(k,j)*t_ + a2_fmatz1(k,j)*t_*t_
+
+               !-- second term in Eq. (16)
+
+               dpzmom1dt(i,j) = dpzmom1dt(i,j) + 0.5d0*((f1ik-f1sh)*amp_(k)*conjg(amp_(j)) &
+                                             & + amp_(i)*conjg(amp_(k))*(f1kj-f1sh))
+
+            enddo
+
+            dzmom1dt(j,i)  = conjg(dzmom1dt(i,j))
+            dpzmom1dt(j,i) = conjg(dpzmom1dt(i,j))
+
+         enddo
+      enddo
+
+   end subroutine tdafssh_derivatives_amp
+
+   !--------------------------------------------------------------------
+   !-- Right-hand sides (time derivatives) of the equations
+   !   for the coordinate and momentum moments
+   !   as well as the amplitudes
+   !   (A-FSSH algorithm, Eq.2,14-18)
+   !--------------------------------------------------------------------
+   subroutine tdafssh_derivatives_amp_phcorr(istate_,t_,amp_,zmom1_,pzmom1_,dampdt,dzmom1dt,dpzmom1dt)
+
+      integer, intent(in) :: istate_
+      real(kind=8), intent(in) :: t_
+      complex(kind=8), intent(in),  dimension(nstates) :: amp_
+      complex(kind=8), intent(out), dimension(nstates) :: dampdt
+      complex(kind=8), intent(in),  dimension(nstates,nstates) :: zmom1_, pzmom1_
+      complex(kind=8), intent(out), dimension(nstates,nstates) :: dzmom1dt, dpzmom1dt
+
+      integer :: i, j, k
+      real(kind=8) :: ekinocc, hocc, hii, efei, conservation, efeocc, ei, ej, vdik, vdkj
+      real(kind=8) :: f1ik, f1kj, f1sh
+      complex(kind=8) :: dampi
+
+      real(kind=8), dimension(nstates) :: tiiz1, tiipz1
+
+      dampdt    = cmplx(0.d0,0.d0)
+      dzmom1dt  = cmplx(0.d0,0.d0)
+      dpzmom1dt = cmplx(0.d0,0.d0)
+
+      !-- calculate diagonal elements of the derivatives
+
+      !-- interpolate diagonal elements of the F-matrices corresponding to the occupied state
+      f1sh = a0_fmatz1(istate_,istate_) + a1_fmatz1(istate_,istate_)*t_ + a2_fmatz1(istate_,istate_)*t_*t_
+
+      !-- interpolated value of the kinetic energy in the occupied state
+      ekinocc = a0_ekin + a1_ekin*t_ + a2_ekin*t_*t_
+      hocc = -2.d0*ekinocc
+
+      !-- interpolated value of the free energy of occupied state
+      efeocc = a0_fe(istate_) + a1_fe(istate_)*t_ + a2_fe(istate_)*t_*t_
+
+      do i=1,nstates
+
+         if (i.eq.istate_) then
+            hii = hocc
+         else
+            !-- calculate the interpolated value of energy
+            !   of the current state
+            efei = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_
+            conservation = ekinocc + efeocc - efei
+            if (conservation.gt.0.d0) then
+               hii = -2.d0*sqrt(ekinocc*conservation)
+            else
+               hii = 0.d0
+            endif
+         endif
+
+         dampi = -ii*amp_(i)*hii/hbarps
+
+         tiiz1(i)  = real(pzmom1_(i,i))/effmass1
+         tiipz1(i) = 0.d0
+
+         do k=1,nstates
+            vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t_ + a2_vdotd(i,k)*t_*t_
+            f1ik = a0_fmatz1(i,k) + a1_fmatz1(i,k)*t_ + a2_fmatz1(i,k)*t_*t_
+            tiiz1(i)  = tiiz1(i) - 2.d0*vdik*real(zmom1_(i,k))
+            tiipz1(i) = tiipz1(i) + (f1ik-f1sh)*(real(amp_(i))*real(amp_(k))+imag(amp_(i))*imag(amp_(k)))&
+                                & - 2.d0*vdik*real(pzmom1_(i,k))
+            dampi = dampi - amp_(k)*vdik
+         enddo
+
+         dzmom1dt(i,i)  = cmplx(tiiz1(i),0.d0)
+         dpzmom1dt(i,i) = cmplx(tiipz1(i),0.d0)
+         dampdt(i) = dampi
+
+      enddo
+
+      do i=1,nstates
+         dzmom1dt(i,i)  = dzmom1dt(i,i)  - cmplx(tiiz1(istate_),0.d0)
+         dpzmom1dt(i,i) = dpzmom1dt(i,i) - cmplx(tiipz1(istate_),0.d0)
+      enddo
+
+
+      !-- calculate off-diagonal derivative parts for matrices of moments
+
+      do i=1,nstates-1
+         do j=i+1,nstates
+
+            !-- interpolate adiabatic energies
+            ei = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_
+            ej = a0_fe(j) + a1_fe(j)*t_ + a2_fe(j)*t_*t_
+
+            !-- first two terms in Eq. (14)
+            dzmom1dt(i,j)  = dzmom1dt(i,j) - (ii/hbarps)*zmom1_(i,j)*(ei - ej) + pzmom1_(i,j)/effmass1
+
+            !-- first term in Eq. (16)
+            dpzmom1dt(i,j)  = dpzmom1dt(i,j) - (ii/hbarps)*pzmom1_(i,j)*(ei - ej)
+
+            do k=1,nstates
+
+               !-- interpolate the nonadiabatic coupling terms
+               vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t_ + a2_vdotd(i,k)*t_*t_
+               vdkj = a0_vdotd(k,j) + a1_vdotd(k,j)*t_ + a2_vdotd(k,j)*t_*t_
+
+               !-- last term (with the coupling) in Eqs. (14) and (16)
+               dzmom1dt(i,j)  = dzmom1dt(i,j)  - (vdik*zmom1_(k,j)  - zmom1_(i,k)*vdkj)
+               dpzmom1dt(i,j) = dpzmom1dt(i,j) - (vdik*pzmom1_(k,j) - pzmom1_(i,k)*vdkj)
+
+               !-- interpolate the F-matrices
+               f1ik = a0_fmatz1(i,k) + a1_fmatz1(i,k)*t_ + a2_fmatz1(i,k)*t_*t_
+               f1kj = a0_fmatz1(k,j) + a1_fmatz1(k,j)*t_ + a2_fmatz1(k,j)*t_*t_
+
+               !-- second term in Eq. (16)
+
+               dpzmom1dt(i,j) = dpzmom1dt(i,j) + 0.5d0*((f1ik-f1sh)*amp_(k)*conjg(amp_(j)) &
+                                             & + amp_(i)*conjg(amp_(k))*(f1kj-f1sh))
+
+            enddo
+
+            dzmom1dt(j,i)  = conjg(dzmom1dt(i,j))
+            dpzmom1dt(j,i) = conjg(dpzmom1dt(i,j))
+
+         enddo
+      enddo
+
+   end subroutine tdafssh_derivatives_amp_phcorr
 
 
    !--------------------------------------------------------------------
@@ -2001,6 +2207,131 @@ contains
       amplitude = y + qtstep_*(dy1 + 2.d0*dy2 + 2.d0*dy3 + dy4)/6.d0
 
    end subroutine propagate_amplitudes_phcorr_rk4
+
+
+   subroutine propagate_moments_and_amplitudes(istate_,t_,qtstep_)
+
+      integer, intent(in) :: istate_
+      real(kind=8), intent(in) :: t_, qtstep_
+      
+      integer :: i, j
+      real(kind=8) :: dt, dt2
+
+      complex(kind=8), dimension(nstates,nstates) :: z1_y, z1_dy1, z1_dy2, z1_dy3, z1_dy4
+      complex(kind=8), dimension(nstates,nstates) :: pz1_y, pz1_dy1, pz1_dy2, pz1_dy3, pz1_dy4
+      complex(kind=8), dimension(nstates) :: amp_y, amp_dy1, amp_dy2, amp_dy3, amp_dy4
+
+      dt = qtstep_
+      dt2 = 0.5d0*qtstep_
+
+      !-- Runge-Kutta steps
+
+      amp_y = amplitude
+      z1_y = zmom1
+      pz1_y = pzmom1
+      call tdafssh_derivatives_amp(istate_,t_,amp_y,z1_y,pz1_y,amp_dy1,z1_dy1,pz1_dy1)
+
+      amp_y = amplitude + dt2*amp_dy1
+      z1_y = zmom1 + dt2*z1_dy1
+      pz1_y = pzmom1 + dt2*pz1_dy1
+      call tdafssh_derivatives_amp(istate_,t_+dt2,amp_y,z1_y,pz1_y,amp_dy2,z1_dy2,pz1_dy2)
+
+      amp_y = amplitude + dt2*amp_dy2
+      z1_y = zmom1 + dt2*z1_dy2
+      pz1_y = pzmom1 + dt2*pz1_dy2
+      call tdafssh_derivatives_amp(istate_,t_+dt2,amp_y,z1_y,pz1_y,amp_dy3,z1_dy3,pz1_dy3)
+
+      amp_y  = amplitude + dt*amp_dy3
+      z1_y  = zmom1          + dt*z1_dy3
+      pz1_y = pzmom1         + dt*pz1_dy3
+      call tdafssh_derivatives_amp(istate_,t_+dt,amp_y,z1_y,pz1_y,amp_dy4,z1_dy4,pz1_dy4)
+
+      !-- final moments and density matrix (array operations)
+      amplitude = amplitude + dt*(amp_dy1 + 2.d0*amp_dy2 + 2.d0*amp_dy3 + amp_dy4)/6.d0
+      zmom1 = zmom1 + dt*(z1_dy1 + 2.d0*z1_dy2 + 2.d0*z1_dy3 + z1_dy4)/6.d0
+      pzmom1 = pzmom1 + dt*(pz1_dy1 + 2.d0*pz1_dy2 + 2.d0*pz1_dy3 + pz1_dy4)/6.d0
+
+      !-- symmetrize (in the hermitian sense) matrices of moments
+
+      do i=1,nstates-1
+         do j=i+1,nstates
+            zmom1(j,i)  = conjg(zmom1(i,j))
+            pzmom1(j,i) = conjg(pzmom1(i,j))
+         enddo
+      enddo
+
+      !== DEBUG start ==============================
+      !write(*,*) "--------------------------------------------------------------------------------"
+      !write(*,*) "Checking moments for occupied states"
+      !write(*,*) "<i|zmom1|i>  = ", zmom1(istate_,istate_)
+      !write(*,*) "<i|pzmom1|i> = ", pzmom1(istate_,istate_)
+      !write(*,*) "--------------------------------------------------------------------------------"
+      !== DEBUG end ================================
+
+   end subroutine propagate_moments_and_amplitudes
+
+
+
+   subroutine propagate_moments_and_amplitudes_phcorr(istate_,t_,qtstep_)
+
+      integer, intent(in) :: istate_
+      real(kind=8), intent(in) :: t_, qtstep_
+      
+      integer :: i, j
+      real(kind=8) :: dt, dt2
+
+      complex(kind=8), dimension(nstates,nstates) :: z1_y, z1_dy1, z1_dy2, z1_dy3, z1_dy4
+      complex(kind=8), dimension(nstates,nstates) :: pz1_y, pz1_dy1, pz1_dy2, pz1_dy3, pz1_dy4
+      complex(kind=8), dimension(nstates) :: amp_y, amp_dy1, amp_dy2, amp_dy3, amp_dy4
+
+      dt = qtstep_
+      dt2 = 0.5d0*qtstep_
+
+      !-- Runge-Kutta steps
+
+      amp_y = amplitude
+      z1_y = zmom1
+      pz1_y = pzmom1
+      call tdafssh_derivatives_amp_phcorr(istate_,t_,amp_y,z1_y,pz1_y,amp_dy1,z1_dy1,pz1_dy1)
+
+      amp_y = amplitude + dt2*amp_dy1
+      z1_y = zmom1 + dt2*z1_dy1
+      pz1_y = pzmom1 + dt2*pz1_dy1
+      call tdafssh_derivatives_amp_phcorr(istate_,t_+dt2,amp_y,z1_y,pz1_y,amp_dy2,z1_dy2,pz1_dy2)
+
+      amp_y = amplitude + dt2*amp_dy2
+      z1_y = zmom1 + dt2*z1_dy2
+      pz1_y = pzmom1 + dt2*pz1_dy2
+      call tdafssh_derivatives_amp_phcorr(istate_,t_+dt2,amp_y,z1_y,pz1_y,amp_dy3,z1_dy3,pz1_dy3)
+
+      amp_y  = amplitude + dt*amp_dy3
+      z1_y  = zmom1          + dt*z1_dy3
+      pz1_y = pzmom1         + dt*pz1_dy3
+      call tdafssh_derivatives_amp_phcorr(istate_,t_+dt,amp_y,z1_y,pz1_y,amp_dy4,z1_dy4,pz1_dy4)
+
+      !-- final moments and density matrix (array operations)
+      amplitude = amplitude + dt*(amp_dy1 + 2.d0*amp_dy2 + 2.d0*amp_dy3 + amp_dy4)/6.d0
+      zmom1 = zmom1 + dt*(z1_dy1 + 2.d0*z1_dy2 + 2.d0*z1_dy3 + z1_dy4)/6.d0
+      pzmom1 = pzmom1 + dt*(pz1_dy1 + 2.d0*pz1_dy2 + 2.d0*pz1_dy3 + pz1_dy4)/6.d0
+
+      !-- symmetrize (in the hermitian sense) matrices of moments
+
+      do i=1,nstates-1
+         do j=i+1,nstates
+            zmom1(j,i)  = conjg(zmom1(i,j))
+            pzmom1(j,i) = conjg(pzmom1(i,j))
+         enddo
+      enddo
+
+      !== DEBUG start ==============================
+      !write(*,*) "--------------------------------------------------------------------------------"
+      !write(*,*) "Checking moments for occupied states"
+      !write(*,*) "<i|zmom1|i>  = ", zmom1(istate_,istate_)
+      !write(*,*) "<i|pzmom1|i> = ", pzmom1(istate_,istate_)
+      !write(*,*) "--------------------------------------------------------------------------------"
+      !== DEBUG end ================================
+
+   end subroutine propagate_moments_and_amplitudes_phcorr
 
 
    !---------------------------------------------------------------------
@@ -2436,6 +2767,8 @@ contains
       iir = 0
       do i=1,nstates
 
+         if (i.eq.istate_) cycle
+
          !-- calculate the collapse and reset rates (Eqs. 43 and 44)
 
          gamma_collapse =  decoherence_rate(istate_,i,dzeta_)*tstep_
@@ -2459,22 +2792,18 @@ contains
             roii = real(density_matrix(i,i))
 
             do k=1,nstates
-               density_matrix(i,k) = cmplx(0.d0,0.d0)
-               density_matrix(k,i) = cmplx(0.d0,0.d0)
-               density_matrix(k,k) = density_matrix(k,k)/(1.d0 - roii)
-            enddo
-
-            do k=1,nstates-1
-               do l=k+1,nstates
+               do l=k,nstates
                   density_matrix(k,l) = density_matrix(k,l)/(1.d0 - roii)
-                  density_matrix(l,k) = conjg(density_matrix(k,l))
+                  if (l.ne.k) density_matrix(l,k) = conjg(density_matrix(k,l))
                enddo
             enddo
+
+            density_matrix(i,:) = cmplx(0.d0,0.d0)
+            density_matrix(:,i) = cmplx(0.d0,0.d0)
 
             !=== start DEBUG printout ===
             !write(*,'("***Collapsing event for state ",i2,": gamma_collapse = ",g15.6)') i, gamma_collapse
             !=== end DEBUG printout =====
-
 
          endif
 
@@ -2500,6 +2829,133 @@ contains
       if (iir.gt.0) write(*,'("Resetting  events occured for states: ",100i4)') (states_reset(kk),kk=1,iir)
 
    end subroutine collapse_and_reset_afssh
+
+
+   !-------------------------------------------------------------------------------------
+   !-- renormalize density matrix and moments in case of collapsing and resetting events
+   !   (A-FSSH specific, Erratum version)
+   !-------------------------------------------------------------------------------------
+   subroutine collapse_and_reset_afssh_erratum(istate_,tstep_,dzeta_)
+
+      integer, intent(in)      :: istate_
+      real(kind=8), intent(in) :: tstep_, dzeta_
+
+      logical :: collapse, reset
+      integer :: i, j, n, iic, iir, kk
+      real(kind=4) :: s_random
+      real(kind=8) :: gamma_collapse, gamma_reset, rhoii, rhonn, renormi
+      integer, dimension(nstates) :: states_collapsed, states_reset
+
+      states_collapsed = 0
+      states_reset = 0
+
+      !-- (to match notation in L-S paper)
+      i = istate_
+      rhoii = real(density_matrix(i,i))
+
+      !-- loop over states to determine the probabilities of collapsing the wavefunction
+      !   and resetting the moments
+
+      iic = 0
+      iir = 0
+      do n=1,nstates   ! loop over n\=i in the LS paper
+
+         if (n.eq.i) cycle
+
+         !-- calculate the collapse and reset rates (Eqs. 43 and 44)
+
+         gamma_collapse =  decoherence_rate(i,n,dzeta_)*tstep_
+         gamma_reset    =  moments_reset_rate(i,n)*tstep_
+
+         !=== start DEBUG printout ===
+         !write(*,'("Collapsing and resetting probabilities for state ",i2,": ",2g15.6)') n, gamma_collapse, gamma_reset
+         !=== end DEBUG printout =====
+
+         !-- collapsing state |n> ?
+
+         s_random = ran2nr()
+         collapse = s_random.lt.gamma_collapse
+         reset    = s_random.lt.gamma_reset
+
+         if (collapse) then
+
+            iic = iic + 1
+            states_collapsed(iic) = n
+
+            rhonn = real(amplitude(n)*conjg(amplitude(n)))
+            rhoii = real(amplitude(i)*conjg(amplitude(i)))
+            renormi = sqrt((rhoii + rhonn)/rhoii)
+
+            !-- renormalize the amplitudes
+
+            amplitude(n) = cmplx(0.d0,0.d0)
+            amplitude(i) = amplitude(i)*renormi
+
+            !=== start DEBUG printout ===
+            !write(*,'("***Collapsing event for state ",i2,": gamma_collapse = ",g15.6)') i, gamma_collapse
+            !=== end DEBUG printout =====
+
+         endif
+
+         if (reset) then
+            !-- resetting event
+            iir = iir + 1
+            states_reset(iir) = n
+         endif
+
+         if (collapse.or.reset) then
+
+            !-- zero out the moments
+            do j=1,nstates
+               zmom1 (n,j) = cmplx(0.d0,0.d0)
+               pzmom1(n,j) = cmplx(0.d0,0.d0)
+               zmom1 (j,n) = cmplx(0.d0,0.d0)
+               pzmom1(j,n) = cmplx(0.d0,0.d0)
+            enddo
+
+         endif
+
+      enddo
+
+      if (iic.gt.0) write(*,'("Collapsing events occured for states: ",100i4)') (states_collapsed(kk),kk=1,iic)
+      if (iir.gt.0) write(*,'("Resetting  events occured for states: ",100i4)') (states_reset(kk),kk=1,iir)
+
+   end subroutine collapse_and_reset_afssh_erratum
+
+
+   !-------------------------------------------------------------------------------------
+   !-- check if the trajectory is still in the interaction region
+   !   ("poor man's" version of decoherence)
+   !-------------------------------------------------------------------------------------
+   function interaction_region_check() result(flag)
+
+      logical :: flag
+      integer :: istate, jstate
+      real(kind=8) :: dij, coup_max
+
+      flag = .false.
+      coup_max = 0.d0
+
+      do istate=1,nstates-1
+         do jstate=istate+1,nstates
+            dij = abs(coupz1(istate,jstate))
+            if (dij.gt.coup_max) coup_max = dij
+         enddo
+      enddo
+
+      if (coup_max.gt.coupling_cutoff) flag = .true.
+
+   end function interaction_region_check
+
+   !-------------------------------------------------------------------------------------
+   !-- collapse the wavefunction if leaving the interaction region
+   !   ("poor man's" version of decoherence)
+   !-------------------------------------------------------------------------------------
+   subroutine collapse_wavefunction(istate_)
+      integer, intent(in) :: istate_
+      amplitude = cmplx(0.d0,0.d0)
+      amplitude(istate_) = cmplx(1.d0,0.d0)
+   end subroutine collapse_wavefunction
 
 
 !===============================================================================

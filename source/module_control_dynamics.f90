@@ -27,9 +27,17 @@ module control_dynamics
    character(len=10) :: solvent_model
    character(len=10) :: interpolation="LINEAR"
 
-   logical :: mdqt=.false.          ! flag for MDQT dynamics
-   logical :: phase_corr=.false.    ! flag for MDQT dynamics with phase correction (Shenvi-Subotnik)
-   logical :: decoherence=.false.   ! flag for MDQT dynamics with decoherence (AFSSH) (Landry-Shenvi-Subotnik)
+   logical :: mdqt=.false.            ! flag for MDQT dynamics
+   logical :: phase_corr=.false.      ! flag for MDQT dynamics with phase correction (Shenvi-Subotnik)
+   logical :: decoherence=.false.     ! flag for MDQT dynamics with decoherence (three algorithms available)
+   logical :: afssh=.false.           ! flag for AFSSH dynamics (Landry-Shenvi-Subotnik)
+
+   logical :: collapse_region_coupling=.false.  ! flag for MDQT dynamics with simple decoherence algorithm
+                                                ! (collapse leaving a region defined by the coupling magnitude)
+
+   logical :: collapse_region_min=.false.       ! flag for MDQT dynamics with simple decoherence algorithm
+                                                ! (collapse passing the minimum mving away from coupling region)
+
    logical :: decouple=.true.       ! flag for decoupling of TDSE in AFSSH algorithm
    logical :: along_moments=.false. ! flag for the direction of velocity adjustments (A-FSSH-0)
    integer :: nsteps=100            ! number of steps
@@ -41,6 +49,7 @@ module control_dynamics
    real(8) :: qtstep                ! timestep for TDSE (ps)
    real(8) :: temp                  ! temperature (K)
    real(8) :: dzeta=1.d0            ! coefficient for decoherence rate (A-FSSH, Eq.32)
+   real(8) :: coupling_cutoff=0.d0  ! magnitude of the n/a coupling defining the interaction region
 !=======================================================================
 
 contains

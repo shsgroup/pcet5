@@ -97,10 +97,18 @@ subroutine dynamicset2
 !  AFSSH - Decoherence algorithm, Augmented Fewest Switches Surface Hopping (AFSSH)
 !                [N. Shenvi, J. E. Subotnik, 2012, original algorithm]
 !
-!  COUPLE - couple TDSE to EOM for moments in decoherence algorithm (Eq.18),
-!           Augmented Fewest Switches Surface Hopping (AFSSH) [N. Shenvi, J. E. Subotnik, 2012]
-!           (this option is questionable because the density matrix evolving according
-!            to this equation is not positive definite)
+!  COLLAPSE_REGION_COUPLING - A simple decoherence algorithm: wavefunction is collapsed
+!                             to occupied state each time the trajectory leaves the interaction
+!                             region defined by the cutoff value for the magnitude of the largest
+!                             nonadiabatic coupling vector
+!
+!  COUPLING_CUTOFF=<float> - cutoff for the magnitude of nonadiabatic coupling vector
+!
+!  !!!COUPLE - couple TDSE to EOM for moments in decoherence algorithm (Eq.18),
+!  !!!         Augmented Fewest Switches Surface Hopping (AFSSH) [N. Shenvi, J. E. Subotnik, 2012]
+!  !!!         (this option is questionable because the density matrix evolving according
+!  !!!          to this equation is not positive definite)
+!  !!!         !!! ABANDONED !!!
 !
 !  ADJUST_ALONG_MOMENTS - adjust velocities along the difference of vectors of moments in decoherence algorithm,
 !           Augmented Fewest Switches Surface Hopping (AFSSH-0) [N. Shenvi, J. E. Subotnik, 2011]
@@ -147,6 +155,9 @@ subroutine dynamicset2
    logical :: initial_state_pure=.true.
    logical :: initial_state_diab=.false.
    logical :: purestate=.true.
+
+   logical :: interaction_region_prev=.false.
+   logical :: interaction_region=.false.
 
    integer :: nstates_dyn, nzdim_dyn, ielst_dyn, iseed_inp, iset_dyn
    integer :: initial_state=-1, iground=1
@@ -566,11 +577,35 @@ subroutine dynamicset2
                    &1x,"[N. Shenvi, J. E. Subotnik, and W. Yang, J. Chem. Phys. 135, 024101 (2011) ]"/)')
       endif
 
+
+      !-- decoherence options
+
+      if (index(options,' AFSSH').ne.0.or.&
+         &index(options,' COLLAPSE_REGION_COUPLING').ne.0) then                                                              
+
+         !-- make sure that only one decoherence option has been chosen
+         if (index(options,' AFSSH').ne.0.and.&
+            &index(options,' COLLAPSE_REGION_COUPLING').ne.0) then
+
+            write(6,'(/1x,"Only one decoherence option can be specified.")')
+            write(6,'( 1x,"Your input contains both AFSSH and COLLAPSE_REGION_COUPLING options in DYNAMICS2 keyword.")')
+            write(6,'( 1x,"Check your input and make up your mind!!! Aborting...")')
+            call clean_exit
+
+         endif
+
+         decoherence = .true.
+
+      endif
+
+
       if (index(options,' AFSSH').ne.0) then
 
          if (.not.phase_corr) then
 
-            decoherence = .true.
+            afssh = .true.
+            collapse_region_coupling = .false.
+
             if (index(options," DZETA=").ne.0) then
                dzeta = reada(options,ioption+7)
             else
@@ -603,6 +638,21 @@ subroutine dynamicset2
             call clean_exit
 
          endif
+
+
+      elseif (index(options,' COLLAPSE_REGION_COUPLING').ne.0) then
+
+         collapse_region_coupling = .true.
+         afssh = .false.
+
+         if (index(options," COUPLING_CUTOFF=").ne.0) then
+            coupling_cutoff = reada(options,ioption+17)
+         else
+            coupling_cutoff = 1.d-5
+         endif
+         write(6,'(/1x,"Simple decoherence algorithm with collapsing events occuring upon leaving the interaction region")')
+         write(6,'( 1x,"The interaction region is defined as region where the largest nonadiabatic coupling")')
+         write(6,'( 1x,"is smaller in magnitude than the cutoff value of ",g15.6," (kcal/mol)^{-1/2}"/)') coupling_cutoff
 
       endif
 
@@ -1272,7 +1322,7 @@ subroutine dynamicset2
    call allocate_electronic_states
    if (mdqt) then
       call allocate_mdqt_arrays
-      if (decoherence) call allocate_afssh_arrays
+      if (afssh) call allocate_afssh_arrays
    endif
    if (weights) call allocate_evb_weights
 
@@ -1490,7 +1540,7 @@ subroutine dynamicset2
       !--(DEBUG)--end
 
       !-- zero out the moments (A-FSSH)
-      if (mdqt.and.decoherence) then
+      if (mdqt.and.afssh) then
          call reset_zmoments
          call reset_pzmoments
       endif
@@ -1527,6 +1577,11 @@ subroutine dynamicset2
       !-- calculate electronic state for the initial value of solvent coordinate
       !   at t=0 (very first time for this trajectory)
       call calculate_electronic_states(z1)
+
+      if (collapse_region_coupling) then
+         interaction_region = interaction_region_check()
+         interaction_region_prev = interaction_region
+      endif
 
       !-- Assign the initial occupied state
 
@@ -1590,7 +1645,7 @@ subroutine dynamicset2
          call print_initial_amplitudes(6)
 
          !-- calculate force matrices (A-FSSH specific)
-         if (decoherence) call calculate_force_matrices(z1)
+         if (afssh) call calculate_force_matrices(z1)
 
       endif
 
@@ -1669,15 +1724,16 @@ subroutine dynamicset2
          zeit = real(istep)*tstep
 
          !-- MDQT: store couplings, electronic energies, and velocities
-         !         from the previous step (for iterpolation)
+         !         from the previous step (for interpolation)
          
          if (mdqt) then
             vz1_prev = vz1
             ekin_prev = ekin
             call store_nonadiabatic_couplings             !  coupz(:,:) -> coupz_prev(:,:)
+            if (collapse_region_coupling) interaction_region_prev = interaction_region
             call store_electronic_energies                !  fe(:)      -> fe_prev(:)
             call store_wavefunctions                      !  z(:,:)     -> z_prev(:,:)
-            if (decoherence) call store_force_matrices    !  fmatz(:,:) -> fmatz_prev(:,:)
+            if (afssh) call store_force_matrices    !  fmatz(:,:) -> fmatz_prev(:,:)
          endif
 
          !-- Propagate solvent coordinates and velocities
@@ -1722,6 +1778,11 @@ subroutine dynamicset2
             !-----------------------------------------------------------------
             call calculate_electronic_states(z1)
 
+            if (collapse_region_coupling) then
+               !-- are we still in the interaction region?
+               interaction_region = interaction_region_check()
+            endif
+
             !-- Calculate the nonadiabatic coupling terms (v*d_{kl})
             !   at t and t+dt
             !-------------------------------------------------------
@@ -1738,7 +1799,7 @@ subroutine dynamicset2
                call calculate_v_dot_d_mid(tstep)
             endif
 
-            if (decoherence) then
+            if (afssh) then
 
                !-- calculate force matrices at t+dt (A-FSSH)
                !------------------------------------------------------
@@ -1768,11 +1829,8 @@ subroutine dynamicset2
 
             !-- calculate the population of the current state at time t_prev
             !---------------------------------------------------------------
-            if (decoherence) then
-               population_current = calculate_population_den(istate)
-            else
-               population_current = calculate_population(istate)
-            endif
+            population_current = calculate_population(istate)
+
             call reset_switch_prob
 
             !--(DEBUG)--start
@@ -1785,11 +1843,10 @@ subroutine dynamicset2
 
             nqsteps_var = nqsteps
             qtstep_var = qtstep
-            if (decoherence) then
+            call save_amplitudes
+            if (afssh) then
                call save_density_matrix
                call save_moments
-            else
-               call save_amplitudes
             endif
 
             24 continue
@@ -1800,24 +1857,33 @@ subroutine dynamicset2
                zeitq_prev = (iqstep-1)*qtstep_var + zeit_prev
                zeitq = iqstep*qtstep_var + zeit_prev
 
-               !-- propagate amplitudes forward in time
-               !-------------------------------------------------------
-               if (phase_corr) then
-                  call propagate_amplitudes_phcorr_rk4(istate,zeitq_prev,qtstep_var)
-               elseif (decoherence) then
-                  call propagate_moments_and_density(istate,zeitq_prev,qtstep_var)
+               if (afssh) then
+
+                  !-- propagate moments and amplitudes forward in time
+                  !-------------------------------------------------------
+                  if (phase_corr) then
+                     call propagate_moments_and_amplitudes_phcorr(istate,zeitq_prev,qtstep_var)
+                  else
+                     call propagate_moments_and_amplitudes(istate,zeitq_prev,qtstep_var)
+                  endif
+
                else
-                  call propagate_amplitudes_rk4(zeitq_prev,qtstep_var)
-                  !call propagate_density_rk4(zeitq_prev,qtstep_var)
+
+                  !-- propagate amplitudes forward in time (AFSSH)
+                  !-------------------------------------------------------
+                  if (phase_corr) then
+                     call propagate_amplitudes_phcorr_rk4(istate,zeitq_prev,qtstep_var)
+                  else
+                     call propagate_amplitudes_rk4(zeitq_prev,qtstep_var)
+                  endif
+
                endif
+
+               call calculate_density_matrix
 
                !-- calculate transition probabilities from current state
                !--------------------------------------------------------
-               if (decoherence) then
-                  call calculate_bprob_den(istate,zeitq)
-               else
-                  call calculate_bprob_amp(istate,zeitq)
-               endif
+               call calculate_bprob_amp(istate,zeitq)
 
                !-- accumulate swithing probabilities (array operation)
                !------------------------------------------------------
@@ -1827,11 +1893,7 @@ subroutine dynamicset2
 
             !-- check the norm of the time-dependent wavefunction
             !-----------------------------------------------------
-            if (decoherence) then
-               wf_norm = density_trace()
-            else
-               wf_norm = tdwf_norm()
-            endif
+            wf_norm = tdwf_norm()
 
             if (abs(wf_norm-1.d0).gt.1.d-3) then
 
@@ -1851,11 +1913,10 @@ subroutine dynamicset2
                   write(*,'( 1x,"and the quantum propagation will be repeated with a 10 times smaller timestep.")')
                   write(*,'(/1x,"-------------------------------------------------------------------------------")')
 
-                  if (decoherence) then
+                  call restore_amplitudes
+                  if (afssh) then
                      call restore_density_matrix
                      call restore_moments
-                  else
-                     call restore_amplitudes
                   endif
                   goto 24
 
@@ -1895,7 +1956,7 @@ subroutine dynamicset2
             !-- check the traces of the matrices of moments (A-FSSH algorithm)
             !   (should be zero?)
             !-----------------------------------------------------------------
-            !if (decoherence) then
+            !if (afssh) then
             !   zmom1_norm = zmom1_trace()
             !   pzmom1_norm = pzmom1_trace()
             !   if (abs(zmom1_norm).gt.1.d-6) then
@@ -1919,7 +1980,7 @@ subroutine dynamicset2
             !-- print out the populations and coherences (channels 777 and 778)
 
             if (ndump777.ne.0.and.mod(istep,ndump777).eq.0) then
-               if (decoherence) then
+               if (afssh) then
                   call print_populations_den(777,zeit)
                   call print_coherences_den(778,zeit,istate)
                else
@@ -1950,7 +2011,7 @@ subroutine dynamicset2
 
                !-- attempt adjusting velocities (and possibly moments for A-FSSH)
 
-               if (decoherence) then
+               if (afssh) then
                   if (.not.along_moments) then
                      call adjust_velocities_and_moments(istate,new_state,vz1,success)
                   else
@@ -1986,7 +2047,18 @@ subroutine dynamicset2
 
             !-- A-FSSH specific part: collapsing events and resetting the moments
 
-            if (decoherence) call collapse_and_reset_afssh(istate,tstep,dzeta)
+            if (afssh) then
+               call collapse_and_reset_afssh_erratum(istate,tstep,dzeta)
+               call calculate_density_matrix
+            endif
+
+            !-- Collapse the wavefunction if leaving the interaction region: "poor man's" decoherence
+            if (collapse_region_coupling) then
+               if (interaction_region_prev.and.(.not.interaction_region)) then
+                  call collapse_wavefunction(istate)
+                  write(*,'("*** Leaving interaction region: wavefunction collapsed to pure state ",i2)') istate
+               endif
+            endif
 
          endif  !mdqt
 
