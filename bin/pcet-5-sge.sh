@@ -28,7 +28,7 @@ if [ x$1 == x ]; then
     echo $0 "<options> <input_file_name>"
     echo "---------------------------------------------------------------------------------"
     echo "Options:"
-    echo "-q | --queue         : PBS queue (default batch)"
+    echo "-q | --queue         : SGE queue (default batch)"
     echo "-w | --walltime      : wall time (default 240 hours)"
     echo "-s | --scratch-base  : global/local - base scratch directory (default local)"
     echo "-c | --compiler      : intel/pgi - build compiler (default intel)"
@@ -83,10 +83,10 @@ if [ x$SCRBASE == xglobal ]; then
    SCRATCH=/scratch
 elif [ x$SCRBASE == xlocal ]; then
    echo Scratch directory - local scratch space on the compute node: /scr/${USER}
-   SCRATCH=/state/partition1/scr
+   SCRATCH=/state/partition1
 else
    echo Default scratch directory - local scratch space on the compute node: /scr/${USER}
-   SCRATCH=/state/partition1/scr
+   SCRATCH=/state/partition1
 fi
 
 
@@ -125,21 +125,21 @@ JOBDIR=${INPUTNAME}_$$_job_$job
 # create the SGE script
 #########################
 
-cat << EnD > $JOBNAME.pbs
+cat << EnD > $JOBNAME.sge
 #$ -S /bin/sh
 #$ -N $JOBNAME
 #$ -q $SGEQUEUE
 #$ -l h_rt=$WALLTIME
 #$ -j yes
-#$ -pe pe_slots $THREADS
 #$ -cwd
 #$ -V
+######## -pe pe_slots $THREADS
 
 module load intel/intel-11
 module load openmpi/intel-11
 
 # define and create the scratch directories
-SCRDIR=$SCRATCH/\${PBS_O_LOGNAME}/\${PBS_JOBNAME}_\${PBS_JOBID}
+SCRDIR=$SCRATCH/\${SGE_O_LOGNAME}/\${JOB_NAME}_\${JOB_ID}
 mkdir \$SCRDIR
 
 cd \$SGE_O_WORKDIR
@@ -209,16 +209,16 @@ echo "==========================================================================
 
 # deliver the output directory
 tar cvzf $JOBNAME.tar.gz *
-cp $JOBNAME.tar.gz \$PBS_O_WORKDIR
+cp $JOBNAME.tar.gz \$SGE_O_WORKDIR
 
 echo "Removing scratch directories..."
 rm -rf \$SCRDIR
 
-modulecmd bash purge
+module purge
 
 EnD
 
-qsub ${HERE}/${JOBNAME}.pbs
+qsub ${HERE}/${JOBNAME}.sge
 #sleep 1.2
 
 done
