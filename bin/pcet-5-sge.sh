@@ -130,7 +130,7 @@ cat << EnD > $JOBNAME.pbs
 #$ -N $JOBNAME
 #$ -q $SGEQUEUE
 #$ -l h_rt=$WALLTIME
-#$ -j y
+#$ -j yes
 #$ -pe pe_slots $THREADS
 #$ -cwd
 #$ -V
@@ -187,12 +187,11 @@ done
 
 cd \$SCRDIR
 
-NODELIST=\`cat \$PBS_NODEFILE | tr -cs "[:alnum:]" "," | rev | cut -b 2- | rev\`
+#NODELIST=\`cat \$PBS_NODEFILE | tr -cs "[:alnum:]" "," | rev | cut -b 2- | rev\`
 echo "=========================================================================="
-echo "Starting PCET on: " \$NODELIST
+echo "Starting PCET on " \$NSLOTS " SGE slots"
 echo "Date: " \`date\`
 echo "--------------------------------------------------------------------------"
-echo "PBS Node ID:              " $NODEID
 echo "Number of OpenMP threads: " $THREADS
 echo "--------------------------------------------------------------------------"
 echo "SCRATCH directory: " \$SCRDIR
