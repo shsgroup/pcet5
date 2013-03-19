@@ -85,6 +85,9 @@ subroutine dynamicset2
 !  NDUMP777=<int> - populations and coherences output frequency
 !                   (every NDUMP777 steps; no output if NDUMP777=0, default)
 !
+!  NDUMP888=<int> - couplings output frequency
+!                   (every NDUMP888 steps; no output if NDUMP888=0, default)
+!
 !  T=<float> - temperature in K
 !
 !  RESTART[=<file>] - restart trajectories (and random number sequences)
@@ -161,7 +164,7 @@ subroutine dynamicset2
 
    integer :: nstates_dyn, nzdim_dyn, ielst_dyn, iseed_inp, iset_dyn
    integer :: initial_state=-1, iground=1
-   integer :: istate, new_state, ndump6, ndump777
+   integer :: istate, new_state, ndump6, ndump777, ndump888
    integer :: number_of_skipped_trajectories=0
    integer :: number_of_failed_trajectories=0
    integer :: itraj_start=1
@@ -581,7 +584,7 @@ subroutine dynamicset2
       !-- decoherence options
 
       if (index(options,' AFSSH').ne.0.or.&
-         &index(options,' COLLAPSE_REGION_COUPLING').ne.0) then                                                              
+         &index(options,' COLLAPSE_REGION_COUPLING').ne.0) then
 
          !-- make sure that only one decoherence option has been chosen
          if (index(options,' AFSSH').ne.0.and.&
@@ -606,7 +609,8 @@ subroutine dynamicset2
             afssh = .true.
             collapse_region_coupling = .false.
 
-            if (index(options," DZETA=").ne.0) then
+            ioption = index(options," DZETA=")
+            if (ioption.ne.0) then
                dzeta = reada(options,ioption+7)
             else
                dzeta = 1.d0
@@ -645,7 +649,8 @@ subroutine dynamicset2
          collapse_region_coupling = .true.
          afssh = .false.
 
-         if (index(options," COUPLING_CUTOFF=").ne.0) then
+         ioption = index(options," COUPLING_CUTOFF=")
+         if (ioption.ne.0) then
             coupling_cutoff = reada(options,ioption+17)
          else
             coupling_cutoff = 1.d-5
@@ -1177,6 +1182,20 @@ subroutine dynamicset2
       ndump777 = 0
    endif
 
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Couplings output frequency (every NDUMP888 steps)
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   ioption = index(options," NDUMP888=")
+   
+   if (ioption.ne.0) then
+      ndump888 = reada(options,ioption+10)
+      write(6,'(1x,"Dump couplings every ",i10," steps"/)') ndump888
+   else
+      ndump888 = 0
+   endif
+
+
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Random seed for RAN2NR (negative to reinitialize)
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1188,7 +1207,12 @@ subroutine dynamicset2
       if (options(ioption+6:ioption+10).eq."PBSID") then
 
          call set_random_seed("PBS_JOBID")
-         write(6,'(1x,"Random seed for RAN2NR (from PBS_JOBID): ",i6/)') iseed
+         write(6,'(1x,"Random seed for RAN2NR (from PBS variable PBS_JOBID): ",i6/)') iseed
+
+      elseif (options(ioption+6:ioption+10).eq."SGEID") then
+
+         call set_random_seed("JOB_ID")
+         write(6,'(1x,"Random seed for RAN2NR (from SGE variable JOB_ID): ",i6/)') iseed
 
       elseif (options(ioption+6:ioption+10).eq."CLOCK") then
 
@@ -1687,6 +1711,12 @@ subroutine dynamicset2
          open(777,file=job(1:ljob)//"/populations_"//traj_suffix//".dat")
          open(778,file=job(1:ljob)//"/coherences_"//traj_suffix//".dat")
       endif
+      if (ndump888.ne.0) then
+         open(888,file=job(1:ljob)//"/couplings_"//traj_suffix//".dat")
+         write(888,'("#",132("-"))')
+         write(888,'("#",t6,"t(ps)",t22,"|d(1,2)|",t42,"d12",t62,"v*d12",t82,"U(ground)",t102,"U(excited)",t120,"Adiabatic gap")')
+         write(888,'("#",132("-"))')
+      endif
       !--(DEBUG)--end
 
       !-- transform initial values at time t=0
@@ -1725,7 +1755,7 @@ subroutine dynamicset2
 
          !-- MDQT: store couplings, electronic energies, and velocities
          !         from the previous step (for interpolation)
-         
+
          if (mdqt) then
             vz1_prev = vz1
             ekin_prev = ekin
@@ -1737,9 +1767,9 @@ subroutine dynamicset2
          endif
 
          !-- Propagate solvent coordinates and velocities
-         
+
          if (solvent_model.eq."DEBYE") then
-         
+
             !-- overdamped Langevin equation (pure Debye model)
             call langevin_debye_1d(istate,z1,vz1,tstep,temp,ekin1,efes)
             ekin = ekin1
@@ -1787,10 +1817,6 @@ subroutine dynamicset2
             !   at t and t+dt
             !-------------------------------------------------------
             call calculate_v_dot_d(vz1,vz1_prev)
-
-            !--(AVS-DEBUG)---
-            !if (mod(istep,100).eq.0) write(777,'(3g20.10)') zeit, coupz1(1,2), v_dot_d(1,2)
-            !--(AVS-DEBUG)---
 
             !-- Calculate the nonadiabatic coupling terms (v*d_{kl})
             !   at half timestep for quadratic interpolation scheme
@@ -1888,7 +1914,7 @@ subroutine dynamicset2
                !-- accumulate swithing probabilities (array operation)
                !------------------------------------------------------
                call accumulate_switch_prob(qtstep_var)
-               
+
             enddo
 
             !-- check the norm of the time-dependent wavefunction
@@ -1974,7 +2000,6 @@ subroutine dynamicset2
             !endif
             !-----------------------------------------------------------------
 
-
             !--(DEBUG)--start
             !
             !-- print out the populations and coherences (channels 777 and 778)
@@ -1988,8 +2013,11 @@ subroutine dynamicset2
                   call print_coherences_amp(778,zeit,istate)
                endif
             endif
+            !-- print out couplings (channel 888)
+            if (ndump888.ne.0.and.mod(istep,ndump888).eq.0) then
+               call print_couplings_and_splittings(888,zeit)
+            endif
             !--(DEBUG)--end
-
 
 
             !-- Normalize swithing probabilities by the current state population
@@ -2115,6 +2143,7 @@ subroutine dynamicset2
          close(777)
          close(778)
       endif
+      if (ndump888.ne.0) close(888)
       !--(DEBUG)--end
 
       write(6,*)
