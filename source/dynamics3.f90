@@ -775,7 +775,8 @@ subroutine dynamics3
             afssh = .true.
             collapse_region_coupling = .false.
 
-            if (index(options," DZETA=").ne.0) then
+            ioption = index(options," DZETA=")
+            if (ioption.ne.0) then
                dzeta = reada(options,ioption+7)
             else
                dzeta = 1.d0
@@ -815,7 +816,8 @@ subroutine dynamics3
          collapse_region_coupling = .true.
          afssh = .false.
 
-         if (index(options," COUPLING_CUTOFF=").ne.0) then
+         ioption = index(options," COUPLING_CUTOFF=")
+         if (ioption.ne.0) then
             coupling_cutoff = reada(options,ioption+17)
          else                                                                                                                
             coupling_cutoff = 1.d-5
