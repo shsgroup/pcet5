@@ -18,8 +18,8 @@ program analyze_et2_trajectories
    use timers
    implicit none
 
-   integer, parameter :: number_of_bins_z1=50
-   integer, parameter :: number_of_bins_ze=50
+   integer, parameter :: number_of_bins_z1=100
+   integer, parameter :: number_of_bins_ze=100
    integer, parameter :: ndt=27
    integer, parameter :: ndt2 = (ndt-1)/2
 
@@ -39,6 +39,7 @@ program analyze_et2_trajectories
    real(kind=8) :: z1_min, z1_max
    real(kind=8) :: ze_min, ze_max
    real(kind=8) :: z1_curr, ze_curr
+   real(kind=8) :: vz1_curr, vze_curr
    real(kind=8) :: z1_0, ze_0, efe_curr, ekin_curr
    real(kind=8) :: time_start, time_end, total_time_start, total_time_end
 
@@ -53,8 +54,8 @@ program analyze_et2_trajectories
    real(kind=8), dimension(number_of_bins_ze) :: bin_center_ze
 
    real(kind=8), dimension(:,:),   allocatable :: time
-   real(kind=8), dimension(:,:),   allocatable :: z1
-   real(kind=8), dimension(:,:),   allocatable :: ze
+   real(kind=8), dimension(:,:),   allocatable :: z1, vz1
+   real(kind=8), dimension(:,:),   allocatable :: ze, vze
    real(kind=8), dimension(:,:),   allocatable :: ekin, efe
    real(kind=8), dimension(:,:),   allocatable :: w1, w2
    real(kind=8), dimension(:),     allocatable :: histogram_z1
@@ -62,6 +63,7 @@ program analyze_et2_trajectories
    real(kind=8), dimension(:,:),   allocatable :: state_histogram_z1
    real(kind=8), dimension(:,:),   allocatable :: state_histogram_ze
    real(kind=8), dimension(:),     allocatable :: z1_mean, ze_mean
+   real(kind=8), dimension(:),     allocatable :: vz1_mean, vze_mean
    real(kind=8), dimension(:),     allocatable :: z1_var, ze_var
    real(kind=8), dimension(:),     allocatable :: z11_tcf
    real(kind=8), dimension(:),     allocatable :: zee_tcf
@@ -71,8 +73,8 @@ program analyze_et2_trajectories
    real(kind=8), dimension(:,:),   allocatable :: pop_ad
 
    integer, dimension(:,:), allocatable :: istate
-   integer, dimension(:), allocatable :: all_states
-   integer, dimension(:), allocatable :: istate_occ
+   integer, dimension(:),   allocatable :: all_states
+   integer, dimension(:),   allocatable :: istate_occ
 
    character(len=20), dimension(100) :: carr
    integer,           dimension(100) :: iarr
@@ -85,10 +87,12 @@ program analyze_et2_trajectories
    real(kind=8) :: electronic_coupling
    real(kind=8) :: reorganization_energy
    real(kind=8) :: reaction_free_energy
-   real(kind=8) :: temperature, k_fit, rcorr
-   namelist /marcus_parameters/ electronic_coupling, reorganization_energy, reaction_free_energy, temperature
+   real(kind=8) :: eps_0, eps_inf, tau_2
+   real(kind=8) :: temperature, k_fit, rcorr, defect
+   namelist /marcus_parameters/ electronic_coupling, reorganization_energy, reaction_free_energy, &
+                              & eps_0, eps_inf, tau_2, temperature
 
-   real(kind=8), dimension(2) :: p_marcus, p_fit
+   real(kind=8), dimension(2) :: p_marcus, p_rips_jortner, p_zusman, p_fit0, p_fit
 
    !--------------------------------------------------------------------------------------
 
@@ -111,7 +115,7 @@ program analyze_et2_trajectories
    else
 
       marcus_flag = .true.
-      call set_marcus_parameters(electronic_coupling, reorganization_energy, reaction_free_energy, temperature)
+      call set_marcus_parameters(electronic_coupling, reorganization_energy, reaction_free_energy, eps_0, eps_inf, tau_2, temperature)
 
       !-- calculate Marcus nonadiabatic rate constant in ps^(-1)
       call calculate_marcus_rate_constant()
@@ -125,6 +129,23 @@ program analyze_et2_trajectories
       write(*,'( 1x,"ET reaction free energy:    ",f12.3," kcal/mol")') reaction_free_energy
       write(*,'( 1x,"ET activation free energy:  ",f12.3," kcal/mol")') (reorganization_energy+reaction_free_energy)**2.d0/(4.d0*reorganization_energy)
       write(*,'( 1x,"ET Marcus rate constant:    ",e16.9," ps^(-1)")')  k_marcus
+      write(*,'( 1x,"======================================================")')
+
+
+      !-- calculate Rips-Jortner and Zusman nonadiabatic rate constants in ps^(-1)
+
+      call calculate_rips_jortner_rate_constant()
+      call calculate_zusman_rate_constant()
+
+      write(*,'(/1x,"======================================================")')
+      write(*,'( 1x,"Dielectric relaxation parameters")')
+      write(*,'( 1x,"------------------------------------------------------")')
+      write(*,'( 1x,"Static dielectric constant:  ",f12.3)') eps_0
+      write(*,'( 1x,"Optical dielectric constant: ",f12.3)') eps_inf
+      write(*,'( 1x,"Longest longitudinal relaxation period: ",f12.3," ps")') eps_inf*tau_2/eps_0
+      write(*,'( 1x,"------------------------------------------------------")')
+      write(*,'( 1x,"Rips-Jortner rate constant: ",e16.9," ps^(-1)")')  k_rips_jortner
+      write(*,'( 1x,"Zusman rate constant:       ",e16.9," ps^(-1)")')  k_zusman
       write(*,'( 1x,"======================================================")')
 
    endif
@@ -170,6 +191,8 @@ program analyze_et2_trajectories
    allocate(time(number_of_traj,number_of_timesteps))
    allocate(z1(number_of_traj,number_of_timesteps))
    allocate(ze(number_of_traj,number_of_timesteps))
+   allocate(vz1(number_of_traj,number_of_timesteps))
+   allocate(vze(number_of_traj,number_of_timesteps))
    allocate(ekin(number_of_traj,number_of_timesteps))
    allocate(efe(number_of_traj,number_of_timesteps))
    allocate(istate(number_of_traj,number_of_timesteps))
@@ -215,7 +238,9 @@ program analyze_et2_trajectories
 
          time(itraj,nsteps) = rarr(1)
          z1(itraj,nsteps)   = rarr(2)
+         vz1(itraj,nsteps)  = rarr(3)
          ze(itraj,nsteps)   = rarr(4)
+         vze(itraj,nsteps)  = rarr(5)
          ekin(itraj,nsteps) = rarr(6)
          efe(itraj,nsteps)  = rarr(7)
 
@@ -476,6 +501,9 @@ program analyze_et2_trajectories
    open(21,file="z1_distribution_global.dat")    !,form="unformatted")
    open(22,file="ze_distribution_global.dat")    !,form="unformatted")
 
+   open(215,file="z1_initial_distribution.dat")
+   open(225,file="ze_initial_distribution.dat")
+
    do istep=1,number_of_timesteps
    
       histogram_z1 = 0.d0
@@ -518,6 +546,17 @@ program analyze_et2_trajectories
       enddo
       write(22,*)
    
+      if (istep.eq.1) then
+         do i1=1,number_of_bins_z1
+            write(215,'(2g15.6)') bin_center_z1(i1), histogram_z1(i1)
+         enddo
+         close(215)
+         do i1=1,number_of_bins_ze
+            write(225,'(2g15.6)') bin_center_ze(i1), histogram_ze(i1)
+         enddo
+         close(225)
+      endif
+      
    enddo
    
    close(21)
@@ -530,6 +569,7 @@ program analyze_et2_trajectories
 
    !---------------------------------------------------------------
    !--(2)-- Time-dependent averages of solvent coordinates
+   !        and corresponding velocities
    !---------------------------------------------------------------
 
    write(*,'(1x,"Building time-dependent averages... ",t64,"--> ",$)')
@@ -537,33 +577,57 @@ program analyze_et2_trajectories
 
    allocate (z1_mean(number_of_timesteps))
    allocate (ze_mean(number_of_timesteps))
+   allocate (vz1_mean(number_of_timesteps))
+   allocate (vze_mean(number_of_timesteps))
 
    do istep=1,number_of_timesteps
 
       z1_mean(istep) = 0.d0
       ze_mean(istep) = 0.d0
+      vz1_mean(istep) = 0.d0
+      vze_mean(istep) = 0.d0
 
       do itraj=1,number_of_traj
 
          z1_curr = z1(itraj,istep)
          ze_curr = ze(itraj,istep)
+         vz1_curr = vz1(itraj,istep)
+         vze_curr = vze(itraj,istep)
 
          z1_mean(istep) = z1_mean(istep) + z1_curr
          ze_mean(istep) = ze_mean(istep) + ze_curr
+         vz1_mean(istep) = vz1_mean(istep) + vz1_curr
+         vze_mean(istep) = vze_mean(istep) + vze_curr
 
       enddo
 
       z1_mean(istep) = z1_mean(istep)/number_of_traj
       ze_mean(istep) = ze_mean(istep)/number_of_traj
+      vz1_mean(istep) = vz1_mean(istep)/number_of_traj
+      vze_mean(istep) = vze_mean(istep)/number_of_traj
 
    enddo
 
-   !-- output to the external file for visualization
+   !-- output to the external files for visualization
 
    open(2,file="z_mean.dat")
    write(2,'("#",t10,"time(ps)",t30,"<z1>",t50,"<Ze>")')
    do istep=1,number_of_timesteps
        write(2,'(5g20.10)') time(1,istep), z1_mean(istep), ze_mean(istep)
+   enddo
+   close(2)
+
+   open(2,file="z1_phase_mean.dat")
+   write(2,'("#",t10,"time(ps)",t30,"<z1>",t50,"<vz1>")')
+   do istep=1,number_of_timesteps
+       write(2,'(5g20.10)') time(1,istep), z1_mean(istep), vz1_mean(istep)
+   enddo
+   close(2)
+
+   open(2,file="ze_phase_mean.dat")
+   write(2,'("#",t10,"time(ps)",t30,"<ze>",t50,"<vze>")')
+   do istep=1,number_of_timesteps
+       write(2,'(5g20.10)') time(1,istep), ze_mean(istep), vze_mean(istep)
    enddo
    close(2)
 
@@ -721,8 +785,9 @@ program analyze_et2_trajectories
    deallocate (z11_tcf)
    deallocate (zee_tcf)
 
-   deallocate (z1, ze)
+   deallocate (z1, ze, vz1, vze)
    deallocate (z1_mean, ze_mean)
+   deallocate (vz1_mean, vze_mean)
 
    time_end = secondi()
    write(*,'("Done in ",f10.3," sec")') time_end-time_start
@@ -852,9 +917,9 @@ program analyze_et2_trajectories
    deallocate (w1)
    deallocate (w2)
 
-   !---------------------------------------------------------------
-   !--(9)-- Time-dependent Marcus diabatic populations
-   !---------------------------------------------------------------
+   !-----------------------------------------------------------------------
+   !--(9)-- Time-dependent Marcus/Rips-Jortner/Zusman diabatic populations
+   !-----------------------------------------------------------------------
 
    if (marcus_flag) then
 
@@ -869,7 +934,7 @@ program analyze_et2_trajectories
       write(2,'("#",t10,"time",t30,"P(1)",t50,"P(2)")')
       write(2,'("#",80("-"))')
       do istep=1,number_of_timesteps
-         p_marcus = marcus_diabatic_populations(time(1,istep),k_marcus)
+         p_marcus = exp_diabatic_populations(time(1,istep),k_marcus,0.d0)
          write(2,'(3g20.10)') time(1,istep), p_marcus(1), p_marcus(2)
       enddo
       close(2)
@@ -877,22 +942,67 @@ program analyze_et2_trajectories
       time_end = secondi()
       write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
+
+      write(*,'(1x,"Writing out Rips-Jortner populations... ",t64,"--> ",$)')
+      time_start = secondi()
+
+      open(2,file="rips_jortner_diab_pop.dat")
+      write(2,'("#",80("-"))')
+      write(2,'("#   Rips-Jortner diabatic populations")')
+      write(2,'("#   Rips-Jortner nonadiabatic rate constant: ",g20.10," ps^(-1)")') k_rips_jortner
+      write(2,'("#",80("-"))')
+      write(2,'("#",t10,"time",t30,"P(1)",t50,"P(2)")')
+      write(2,'("#",80("-"))')
+      do istep=1,number_of_timesteps
+         p_rips_jortner = exp_diabatic_populations(time(1,istep),k_rips_jortner,0.d0)
+         write(2,'(3g20.10)') time(1,istep), p_rips_jortner(1), p_rips_jortner(2)
+      enddo
+      close(2)
+
+      time_end = secondi()
+      write(*,'("Done in ",f10.3," sec")') time_end-time_start
+
+
+
+      write(*,'(1x,"Writing out Zusman populations... ",t64,"--> ",$)')
+      time_start = secondi()
+
+      open(2,file="zusman_diab_pop.dat")
+      write(2,'("#",80("-"))')
+      write(2,'("#   Zusman diabatic populations")')
+      write(2,'("#   Zusman nonadiabatic rate constant: ",g20.10," ps^(-1)")') k_zusman
+      write(2,'("#",80("-"))')
+      write(2,'("#",t10,"time",t30,"P(1)",t50,"P(2)")')
+      write(2,'("#",80("-"))')
+      do istep=1,number_of_timesteps
+         p_zusman = exp_diabatic_populations(time(1,istep),k_zusman,0.d0)
+         write(2,'(3g20.10)') time(1,istep), p_zusman(1), p_zusman(2)
+      enddo
+      close(2)
+
+      time_end = secondi()
+      write(*,'("Done in ",f10.3," sec")') time_end-time_start
+
+
+
       write(*,'(1x,"Fitting the rate constant... ",t64,"--> ",$)')
       time_start = secondi()
 
-      call fit_rate_constant(number_of_timesteps,time(1,:),wh1_mean,k_fit,rcorr)
+      call fit_rate_constant(number_of_timesteps,time(1,:),wh1_mean,k_fit,rcorr,defect)
 
       open(2,file="fitted_diab_pop.dat")
       write(2,'("#",80("-"))')
       write(2,'("#   Fitted diabatic populations")')
       write(2,'("#   Fitted rate constant:    ",g20.10," ps^(-1)")') k_fit
       write(2,'("#   Correlation coefficient: ",g20.10)') rcorr
+      write(2,'("#   Vertical shift (defect): ",g20.10)') defect
       write(2,'("#",80("-"))')
-      write(2,'("#",t10,"time",t30,"Pfit(1)",t50,"Pfit(2)")')
+      write(2,'("#",t10,"time",t30,"Pfit(1)",t50,"Pfit(2)",t70,"Pfit0(1)",t90,"Pfit0(2)")')
       write(2,'("#",80("-"))')
       do istep=1,number_of_timesteps
-         p_fit = marcus_diabatic_populations(time(1,istep),k_fit)
-         write(2,'(3g20.10)') time(1,istep), p_fit(1), p_fit(2)
+         p_fit = exp_diabatic_populations(time(1,istep),k_fit,defect)
+         p_fit0 = exp_diabatic_populations(time(1,istep),k_fit,0.d0)
+         write(2,'(5g20.10)') time(1,istep), p_fit(1), p_fit(2), p_fit0(1), p_fit0(2)
       enddo
       close(2)
 
@@ -900,10 +1010,22 @@ program analyze_et2_trajectories
       write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
       write(*,'( 1x,"------------------------------------------------------")')
-      write(*,'( 1x,"ET Marcus rate constant: ",e16.9," ps^(-1)")') k_marcus
-      write(*,'( 1x,"Fitted    rate constant: ",e16.9," ps^(-1)")') k_fit
-      write(*,'( 1x,"(correlation coefficient: ",g20.9,")")') rcorr
+      write(*,'( 1x,"Electronic coupling:      ",e16.9," kcal/mol")') electronic_coupling
+      write(*,'( 1x,"ET reaction free energy:  ",e16.9," kcal/mol")') reaction_free_energy
+      write(*,'( 1x,"Reorganization energy:    ",e16.9," kcal/mol")') reorganization_energy
+      write(*,'( 1x,"Activation energy:        ",e16.9," kcal/mol")') (reorganization_energy+reaction_free_energy)**2.d0/(4.d0*reorganization_energy)
+      write(*,'( 1x,"ET Marcus rate constant:  ",e16.9," ps^(-1) ")') k_marcus
+      write(*,'( 1x,"ET R-J rate constant:     ",e16.9," ps^(-1) ")') k_rips_jortner
+      write(*,'( 1x,"ET Zusman rate constant:  ",e16.9," ps^(-1) ")') k_zusman
+      write(*,'( 1x,"Fitted    rate constant:  ",e16.9," ps^(-1) ")') k_fit
+      write(*,'( 1x,"*correlation coefficient: ",g20.9,")")') rcorr
+      write(*,'( 1x,"*vertical shift. defect:  ",g20.9,")")') defect
       write(*,'( 1x,"------------------------------------------------------")')
+
+      open(2,file="marcus_and_fitted_rates.dat")
+      write(2,'("#",t10,"V, kcal/mol",t30,"dG,kcal/mol",t50,"k_fit, 1/ps",t70,"k_marcus, 1/ps",t90,"k_rj",t110,"k_zusman")')
+      write(2,'(6g20.10)') electronic_coupling, reaction_free_energy, k_fit, k_marcus, k_rips_jortner, k_zusman
+      close(2)
 
    endif
 
