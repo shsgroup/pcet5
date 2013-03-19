@@ -165,6 +165,7 @@ module propagators_et2
    public :: print_populations_amp
    public :: print_coherences_den
    public :: print_coherences_amp
+   public :: print_couplings_and_splittings
 
 contains
 
@@ -200,6 +201,12 @@ contains
       write(*,*) "TDSE amplitudes: ",amplitude
       write(*,*)
    end subroutine print_propagators_et2
+
+   subroutine print_couplings_and_splittings(channel,t_)
+      integer, intent(in) :: channel
+      real(kind=8), intent(in) :: t_
+      write(channel,'(f12.6,2x,10g20.10)') t_, abs(coupz1(1,2)), coupz1(1,2), v_dot_d(1,2), fe(1), fe(2), fe(2)-fe(1)
+   end subroutine print_couplings_and_splittings
 
    subroutine print_populations_den(channel,t_)
       integer, intent(in) :: channel
