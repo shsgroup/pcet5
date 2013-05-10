@@ -31,16 +31,17 @@ program analyze_et2_trajectories
 
    integer :: number_of_traj, number_of_timesteps, number_of_states
    integer :: number_of_occ_states
-   integer :: itraj, istep, eof=0, ierr1, ierr2
+   integer :: itraj, istep, idstep, eof=0, ierr1, ierr2
    integer :: i, ilargest, ii, iocc, k, i1, iargc, nsteps
    integer :: ibin_1, ibin_e
    integer :: ichannel_z1, ichannel_ze
 
    real(kind=8) :: z1_min, z1_max
-   real(kind=8) :: ze_min, ze_max
-   real(kind=8) :: z1_curr, ze_curr
+   real(kind=8) :: ze_min, ze_max, z_divide, z_crossing
+   real(kind=8) :: z1_curr, ze_curr, ze_curr1, ze_curr2
    real(kind=8) :: vz1_curr, vze_curr
    real(kind=8) :: z1_0, ze_0, efe_curr, ekin_curr
+   real(kind=8) :: n_aver_r, n_aver_p
    real(kind=8) :: time_start, time_end, total_time_start, total_time_end
 
    real(kind=8) :: bin_width_z1, bin_width_ze
@@ -49,6 +50,9 @@ program analyze_et2_trajectories
    real(kind=8) :: zetav
 
    real(kind=8) :: w1tav, w2tav
+
+   real(kind=8) :: ze_cut, ze_crossing, ze_product, dze, time_mfpt
+   integer :: number_of_reactive_events
 
    real(kind=8), dimension(number_of_bins_z1) :: bin_center_z1
    real(kind=8), dimension(number_of_bins_ze) :: bin_center_ze
@@ -67,6 +71,7 @@ program analyze_et2_trajectories
    real(kind=8), dimension(:),     allocatable :: z1_var, ze_var
    real(kind=8), dimension(:),     allocatable :: z11_tcf
    real(kind=8), dimension(:),     allocatable :: zee_tcf
+   real(kind=8), dimension(:),     allocatable :: theta_corr
    real(kind=8), dimension(:),     allocatable :: efe_mean, ekin_mean
    real(kind=8), dimension(:),     allocatable :: w1_mean, w2_mean
    real(kind=8), dimension(:),     allocatable :: wh1_mean, wh2_mean
@@ -117,6 +122,19 @@ program analyze_et2_trajectories
       marcus_flag = .true.
       call set_marcus_parameters(electronic_coupling, reorganization_energy, reaction_free_energy, eps_0, eps_inf, tau_2, temperature)
 
+      !-- calculate equilibrium quantities
+      call calculate_equilibrium_quantities()
+
+      write(*,'(/1x,"======================================================")')
+      write(*,'( 1x,"Equilibrium quantities")')
+      write(*,'( 1x,"------------------------------------------------------")')
+      write(*,'( 1x,"Temperature:                     ",f12.3," K")')        temperature
+      write(*,'( 1x,"ET reaction free energy:         ",f12.3," kcal/mol")') reaction_free_energy
+      write(*,'( 1x,"Equilibrium constant:            ",g20.10)') k_equil
+      write(*,'( 1x,"Equilibrium reactant population: ",g12.6)')  n_equil_r
+      write(*,'( 1x,"Equilibrium product  population: ",g12.6)')  n_equil_p
+      write(*,'( 1x,"======================================================")')
+
       !-- calculate Marcus nonadiabatic rate constant in ps^(-1)
       call calculate_marcus_rate_constant()
 
@@ -129,6 +147,7 @@ program analyze_et2_trajectories
       write(*,'( 1x,"ET reaction free energy:    ",f12.3," kcal/mol")') reaction_free_energy
       write(*,'( 1x,"ET activation free energy:  ",f12.3," kcal/mol")') (reorganization_energy+reaction_free_energy)**2.d0/(4.d0*reorganization_energy)
       write(*,'( 1x,"ET Marcus rate constant:    ",e16.9," ps^(-1)")')  k_marcus
+      write(*,'( 1x,"R-J Adiabaticity parameter: ",e16.9)')             kappa_ad
       write(*,'( 1x,"======================================================")')
 
 
@@ -144,6 +163,7 @@ program analyze_et2_trajectories
       write(*,'( 1x,"Optical dielectric constant: ",f12.3)') eps_inf
       write(*,'( 1x,"Longest longitudinal relaxation period: ",f12.3," ps")') eps_inf*tau_2/eps_0
       write(*,'( 1x,"------------------------------------------------------")')
+      write(*,'( 1x,"R-J Adiabaticity parameter: ",e16.9)')             kappa_ad
       write(*,'( 1x,"Rips-Jortner rate constant: ",e16.9," ps^(-1)")')  k_rips_jortner
       write(*,'( 1x,"Zusman rate constant:       ",e16.9," ps^(-1)")')  k_zusman
       write(*,'( 1x,"======================================================")')
@@ -402,7 +422,7 @@ program analyze_et2_trajectories
 
    write(*,'(1x,"Building state-resolved histograms for solvent coordinates... ",t64,"--> ",$)')
    time_start = secondi()
-   
+
    allocate(state_histogram_z1(number_of_states,number_of_bins_z1))
    allocate(state_histogram_ze(number_of_states,number_of_bins_ze))
 
@@ -417,25 +437,25 @@ program analyze_et2_trajectories
    enddo
 
    do istep=1,number_of_timesteps
-   
+
       state_histogram_z1 = 0.d0
       state_histogram_ze = 0.d0
-   
+
       do itraj=1,number_of_traj
-   
+
          z1_curr = z1(itraj,istep)
          ze_curr = ze(itraj,istep)
-         
+
          iocc = istate(itraj,istep)
 
          ibin_1 = nint((z1_curr-z1_min)/bin_width_z1 + 0.5d0)
          state_histogram_z1(iocc,ibin_1) = state_histogram_z1(iocc,ibin_1) + 1.d0
-    
+
          ibin_e = nint((ze_curr-ze_min)/bin_width_ze + 0.5d0)
          state_histogram_ze(iocc,ibin_e) = state_histogram_ze(iocc,ibin_e) + 1.d0
-   
+
       enddo
-   
+
       !-- normalize distributions
    
       do i1=1,number_of_bins_z1
@@ -785,7 +805,6 @@ program analyze_et2_trajectories
    deallocate (z11_tcf)
    deallocate (zee_tcf)
 
-   deallocate (z1, ze, vz1, vze)
    deallocate (z1_mean, ze_mean)
    deallocate (vz1_mean, vze_mean)
 
@@ -984,7 +1003,6 @@ program analyze_et2_trajectories
       write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
 
-
       write(*,'(1x,"Fitting the rate constant... ",t64,"--> ",$)')
       time_start = secondi()
 
@@ -1015,15 +1033,22 @@ program analyze_et2_trajectories
       write(*,'( 1x,"Reorganization energy:    ",e16.9," kcal/mol")') reorganization_energy
       write(*,'( 1x,"Activation energy:        ",e16.9," kcal/mol")') (reorganization_energy+reaction_free_energy)**2.d0/(4.d0*reorganization_energy)
       write(*,'( 1x,"ET Marcus rate constant:  ",e16.9," ps^(-1) ")') k_marcus
+      write(*,'( 1x,"------------------------------------------------------")')
+      write(*,'( 1x,"Equilibrium constant:            ",g20.10)') k_equil
+      write(*,'( 1x,"Equilibrium reactant population: ",g12.6)')  n_equil_r
+      write(*,'( 1x,"Equilibrium product  population: ",g12.6)')  n_equil_p
+      write(*,'( 1x,"------------------------------------------------------")')
+      write(*,'( 1x,"Adiabaticity parameter:   ",e16.9)')             kappa_ad
       write(*,'( 1x,"ET R-J rate constant:     ",e16.9," ps^(-1) ")') k_rips_jortner
       write(*,'( 1x,"ET Zusman rate constant:  ",e16.9," ps^(-1) ")') k_zusman
+      write(*,'( 1x,"------------------------------------------------------")')
       write(*,'( 1x,"Fitted    rate constant:  ",e16.9," ps^(-1) ")') k_fit
       write(*,'( 1x,"*correlation coefficient: ",g20.9,")")') rcorr
       write(*,'( 1x,"*vertical shift. defect:  ",g20.9,")")') defect
       write(*,'( 1x,"------------------------------------------------------")')
 
       open(2,file="marcus_and_fitted_rates.dat")
-      write(2,'("#",t10,"V, kcal/mol",t30,"dG,kcal/mol",t50,"k_fit, 1/ps",t70,"k_marcus, 1/ps",t90,"k_rj",t110,"k_zusman")')
+      write(2,'("#",t5,"V, kcal/mol",t26,"dG,kcal/mol",t45,"k_fit, 1/ps",t65,"k_marcus, 1/ps",t85,"k_Rips-Jortner",t105,"k_Zusman")')
       write(2,'(6g20.10)') electronic_coupling, reaction_free_energy, k_fit, k_marcus, k_rips_jortner, k_zusman
       close(2)
 
@@ -1185,10 +1210,135 @@ program analyze_et2_trajectories
    enddo
    close(2)
 
-   deallocate (istate, pop_ad)
+   deallocate (pop_ad)
 
    time_end = secondi()
    write(*,'("Done in ",f10.3," sec")') time_end-time_start
+
+
+   !---------------------------------------------------------------
+   !--(11)-- Calculate Mean First Passage Time
+   !---------------------------------------------------------------
+
+   write(*,'(1x,"Calculating Mean First Passage Time... ",t64,"--> ",$)')
+   time_start = secondi()
+
+   ze_crossing = 0.d0
+   ze_product = -reorganization_energy + reaction_free_energy
+   dze = (ze_product - ze_crossing)/10.d0
+
+   open(2,file="mean_first_passage_time.dat")
+   write(2,'("#",60("-"))')
+   write(2,'("#   Mean First Passage Time (MFPT) and MFPT rate constant")')
+   write(2,'("#",60("-"))')
+   write(2,'("#",t5,"ze_cut(kcal/mol)",t23,"MFPT (ps)",t38,"k_MFPT (ps^-1)")')
+   write(2,'("#",40("-"))')
+
+   do ze_cut=ze_crossing,ze_product,dze
+
+      number_of_reactive_events = 0
+      time_mfpt = 0.d0
+
+      do itraj=1,number_of_traj
+         do istep=1,number_of_timesteps
+            if (ze(itraj,istep).lt.ze_cut.and.istate(itraj,istep).eq.1) then
+               time_mfpt = time_mfpt + time(itraj,istep)
+               number_of_reactive_events = number_of_reactive_events + 1
+               exit
+            endif
+         enddo
+      enddo
+
+      if (number_of_reactive_events.gt.0) then
+         time_mfpt = time_mfpt/number_of_reactive_events
+         write(2,'(3f15.6)') ze_cut, time_mfpt, 1.d0/time_mfpt
+      else
+         write(2,'("#",f14.6,"  -- no reactive events --")') ze_cut
+      endif
+
+   enddo
+
+   close(2)
+
+   time_end = secondi()
+   write(*,'("Done in ",f10.3," sec")') time_end-time_start
+
+
+   !---------------------------------------------------------------
+   !--(12)-- Calculate equilibrium correlation function of the
+   !         reactant Heaviside function with a dividing surface
+   !         ze* defined as ze* = ze(crossing) = 0
+   !---------------------------------------------------------------
+
+   write(*,'(/1x,"Calculating reactive flux correlation function... ")')
+   time_start = secondi()
+
+   z_divide = z_crossing
+
+   allocate (theta_corr(nsteps))
+
+   !-- calculate global averages (timesteps AND trajectories)
+   !   and compare it to equilibrium averages
+
+   n_aver_r = 0.d0
+   n_aver_p = 0.d0
+   do itraj=1,number_of_traj
+      do istep=1,number_of_timesteps
+         ze_curr = ze(itraj,istep)
+         n_aver_r = n_aver_r + reactant_heaviside(ze_curr,z_divide)
+         n_aver_p = n_aver_p + 1.d0 - reactant_heaviside(ze_curr,z_divide)
+      enddo
+   enddo
+   n_aver_r = n_aver_r/(number_of_timesteps*number_of_traj)
+   n_aver_p = n_aver_p/(number_of_timesteps*number_of_traj)
+
+   write(*,'( 1x,"Simulated equilibrium populations: ",2g12.6)')  n_aver_r, n_aver_p
+   write(*,'( 1x,"Exact     equilibrium populations: ",2g12.6)')  n_equil_r, n_equil_p
+
+   !-- calculate correlation function
+
+   !do i=1,m
+   !   c(i)=0.d0
+   !   do j=1,m+1-i
+   !      c(i)=c(i)+u(j)*v(i+j-1)
+   !   enddo
+   !enddo
+   !!--normalise the correlation function
+   !do i=1,m
+   !   u(i)=c(i)/dble(m+1-i)
+   !enddo
+
+   do idstep=1,number_of_timesteps
+      theta_corr(idstep) = 0.d0
+      do itraj=1,number_of_traj
+         do istep=1,number_of_timesteps+1-idstep
+            ze_curr1 = ze(itraj,idstep)
+            ze_curr2 = ze(itraj,idstep+istep-1)
+            theta_corr(idstep) = theta_corr(idstep) + reactant_heaviside(ze_curr1,z_divide)*reactant_heaviside(ze_curr2,z_divide)
+         enddo
+      enddo
+   enddo
+
+   open(2,file="theta_theta_tcf.dat")
+   write(2,'("#",60("-"))')
+   write(2,'("#   Equilibrium TCF of the reactant population")')
+   write(2,'("#   (its time derivative is the time-dependent rate constant)")')
+   write(2,'("#",60("-"))')
+   write(2,'("#",t10,"time(ps)",t30,"<d_theta[z(0)]*d_theta[z(t)]>/<theta>")')
+   write(2,'("#",60("-"))')
+
+   !-- normalise the correlation function by <theta>=n_equil_r and output the result
+   do idstep=1,number_of_timesteps
+      theta_corr(idstep) = theta_corr(idstep)/real(number_of_timesteps+1-idstep)/real(number_of_traj)
+      write(2,'(2g20.10)') time(1,idstep), (theta_corr(idstep) - n_aver_r*n_aver_r)/n_aver_r
+   enddo
+
+   time_end = secondi()
+   write(*,'("Done in ",f10.3," sec")') time_end-time_start
+
+   deallocate (istate)
+   deallocate (z1, ze, vz1, vze)
+   deallocate (theta_corr)
 
    total_time_end = secondi()
    write(*,'(/"===> All Done in ",f10.3," sec"/)') total_time_end-total_time_start
@@ -1216,6 +1366,7 @@ contains
       if (allocated(ze_var)) deallocate(ze_var)
       if (allocated(z11_tcf)) deallocate(z11_tcf)
       if (allocated(zee_tcf)) deallocate(zee_tcf)
+      if (allocated(theta_corr)) deallocate(theta_corr)
       if (allocated(ekin_mean)) deallocate(ekin_mean)
       if (allocated(efe_mean)) deallocate(efe_mean)
       if (allocated(w1_mean)) deallocate(w1_mean)
@@ -1224,5 +1375,20 @@ contains
       if (allocated(wh2_mean)) deallocate(wh2_mean)
       if (allocated(pop_ad)) deallocate(pop_ad)
    end subroutine deallocate_all_arrays
+
+
+   function reactant_heaviside(z_, z_divide_) result(out)
+      implicit none
+      real(kind=8), intent(in) :: z_, z_divide_
+      real(kind=8) :: out
+      real(kind=8) :: deltaz
+      deltaz = z_ - z_divide_
+      if (deltaz.lt.0.d0) then
+         out = 0.d0
+      else
+         out = 1.d0
+      endif
+   end function reactant_heaviside
+
 
 end program analyze_et2_trajectories

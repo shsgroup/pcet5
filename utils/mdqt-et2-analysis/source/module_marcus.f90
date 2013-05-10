@@ -30,13 +30,18 @@ MODULE marcus
    real(kind=8) :: beta           ! 1/kT in (kcal/mol)^(-1)
    real(kind=8) :: k_marcus       ! Marcus nonadiabatic rate constant in ps^(-1)
    real(kind=8) :: k_rips_jortner ! Rips-Jortner nonadiabatic rate constant in ps^(-1)
+   real(kind=8) :: kappa_ad       ! Rips-Jortner adiabaticity parameter, Eq.(3.35)
    real(kind=8) :: k_zusman       ! Zusman nonadiabatic rate constant in ps^(-1)
+   real(kind=8) :: k_equil        ! equilibrium constant
+   real(kind=8) :: n_equil_r      ! equilibrium reactant population
+   real(kind=8) :: n_equil_p      ! equilibrium product population
 
    !--------------------------------------------------------------------
    !! declaration of access rights for module subroutines and functions
 
-   public :: k_marcus, k_rips_jortner, k_zusman
+   public :: k_marcus, kappa_ad, k_rips_jortner, k_zusman, k_equil, n_equil_r, n_equil_p
    public :: set_marcus_parameters
+   public :: calculate_equilibrium_quantities
    public :: calculate_marcus_rate_constant
    public :: calculate_rips_jortner_rate_constant
    public :: calculate_zusman_rate_constant
@@ -58,7 +63,15 @@ CONTAINS
       v = v_
       beta=1.d0/(kb*temp_*au2kcal)
       taul = eps8_*tau2_/eps0_
+      kappa_ad = 4.d0*pi*(v*v*kcal2au*kcal2au)*taul*ps2au/(lambda*kcal2au)
    end subroutine set_marcus_parameters
+
+   subroutine calculate_equilibrium_quantities()
+      k_equil = exp(-beta*dg)
+      n_equil_r = 1.d0/(1.d0 + k_equil)
+      n_equil_p = k_equil/(1.d0 + k_equil)
+   end subroutine calculate_equilibrium_quantities
+
 
    subroutine calculate_marcus_rate_constant()
       real(kind=8) :: prefactor, dgact
@@ -73,7 +86,7 @@ CONTAINS
       prefactor1 = (2.d0*pi/au2ps)*(V*V*kcal2au*kcal2au)/sqrt(4.d0*pi*kcal2au*kcal2au*lambda/beta)
       prefactor2 = 1.d0 + 4.d0*pi*(V*V*kcal2au*kcal2au)*taul*ps2au/(lambda*kcal2au)
       dgact = (lambda+dG)*(lambda+dG)/(4.d0*lambda)
-      k_rips_jortner = prefactor1*prefactor2*exp(-beta*dgact)
+      k_rips_jortner = (prefactor1/prefactor2)*exp(-beta*dgact)
    end subroutine calculate_rips_jortner_rate_constant
 
 
@@ -82,7 +95,7 @@ CONTAINS
       prefactor1 = (2.d0*pi/au2ps)*(V*V*kcal2au*kcal2au)/sqrt(4.d0*pi*kcal2au*kcal2au*lambda/beta)
       prefactor2 = 1.d0 + 4.d0*pi*(V*V*kcal2au*kcal2au)*taul*ps2au/(lambda*kcal2au)*(1.d0 - dG*dG/(lambda*lambda))
       dgact = (lambda+dG)*(lambda+dG)/(4.d0*lambda)
-      k_zusman = prefactor1*prefactor2*exp(-beta*dgact)
+      k_zusman = (prefactor1/prefactor2)*exp(-beta*dgact)
    end subroutine calculate_zusman_rate_constant
 
 
