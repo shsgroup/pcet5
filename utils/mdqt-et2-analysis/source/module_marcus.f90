@@ -99,7 +99,7 @@ CONTAINS
 
       if (dG_sq.gt.lambda_sq) then
          factorz = 1.d0 - (2.d0*lambda + dG)*(2.d0*lambda + dG)/lambda_sq
-      elseif (dG_sq.lt.lambda_sq)
+      elseif (dG_sq.lt.lambda_sq) then
          factorz = 1.d0 - dG_sq/lambda_sq
       endif
 
