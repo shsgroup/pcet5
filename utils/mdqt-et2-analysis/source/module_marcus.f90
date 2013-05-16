@@ -91,11 +91,29 @@ CONTAINS
 
 
    subroutine calculate_zusman_rate_constant()
-      real(kind=8) :: prefactor1, prefactor2, dgact
-      prefactor1 = (2.d0*pi/au2ps)*(V*V*kcal2au*kcal2au)/sqrt(4.d0*pi*kcal2au*kcal2au*lambda/beta)
-      prefactor2 = 1.d0 + 4.d0*pi*(V*V*kcal2au*kcal2au)*taul*ps2au/(lambda*kcal2au)*(1.d0 - dG*dG/(lambda*lambda))
+
+      real(kind=8) :: prefactor1, prefactor2, factorz, dgact, dG_sq, lambda_sq
+
+      dG_sq = dG*dG
+      lambda_sq = lambda*lambda
+
+      if (dG_sq.gt.lambda_sq) then
+         factorz = 1.d0 - (2.d0*lambda + dG)*(2.d0*lambda + dG)/lambda_sq
+      elseif (dG_sq.lt.lambda_sq)
+         factorz = 1.d0 - dG_sq/lambda_sq
+      endif
+
+      if (abs(dG_sq-lambda_sq).gt.1.d-8) then
+         prefactor1 = (2.d0*pi/au2ps)*(V*V*kcal2au*kcal2au)/sqrt(4.d0*pi*kcal2au*kcal2au*lambda/beta)
+         prefactor2 = 1.d0 + 4.d0*pi*(V*V*kcal2au*kcal2au)*taul*ps2au/(lambda*kcal2au)/factorz
+      else
+         prefactor1 = (2.d0*pi/au2ps)*(V*V*kcal2au*kcal2au)
+         prefactor2 = sqrt(4.d0*pi*kcal2au*kcal2au*lambda/beta) + 2.d0*pi*(V*V*kcal2au*kcal2au)*taul*ps2au
+      endif
+
       dgact = (lambda+dG)*(lambda+dG)/(4.d0*lambda)
       k_zusman = (prefactor1/prefactor2)*exp(-beta*dgact)
+
    end subroutine calculate_zusman_rate_constant
 
 
