@@ -41,7 +41,7 @@ program analyze_et2_trajectories
    real(kind=8) :: z1_curr, ze_curr, ze_curr1, ze_curr2
    real(kind=8) :: vz1_curr, vze_curr
    real(kind=8) :: z1_0, ze_0, efe_curr, ekin_curr
-   real(kind=8) :: n_aver_r, n_aver_p
+   real(kind=8) :: n_aver_r, n_aver_p, wh1_mean_0, w1_mean_0
    real(kind=8) :: time_start, time_end, total_time_start, total_time_end
 
    real(kind=8) :: bin_width_z1, bin_width_ze
@@ -93,7 +93,7 @@ program analyze_et2_trajectories
    real(kind=8) :: reorganization_energy
    real(kind=8) :: reaction_free_energy
    real(kind=8) :: eps_0, eps_inf, tau_2
-   real(kind=8) :: temperature, k_fit, rcorr, defect
+   real(kind=8) :: temperature, k_fit_log, k_fit_odr, rcorr, shift, defect
    namelist /marcus_parameters/ electronic_coupling, reorganization_energy, reaction_free_energy, &
                               & eps_0, eps_inf, tau_2, temperature
 
@@ -930,6 +930,9 @@ program analyze_et2_trajectories
    enddo
    close(2)
 
+   wh1_mean_0 = wh1_mean(1)
+   w1_mean_0  = w1_mean(1)
+
    time_end = secondi()
    write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
@@ -953,7 +956,7 @@ program analyze_et2_trajectories
       write(2,'("#",t10,"time",t30,"P(1)",t50,"P(2)")')
       write(2,'("#",80("-"))')
       do istep=1,number_of_timesteps
-         p_marcus = exp_diabatic_populations(time(1,istep),k_marcus,0.d0)
+         p_marcus = exp_diabatic_populations(time(1,istep),k_marcus,1.d0,0.d0)
          write(2,'(3g20.10)') time(1,istep), p_marcus(1), p_marcus(2)
       enddo
       close(2)
@@ -973,15 +976,13 @@ program analyze_et2_trajectories
       write(2,'("#",t10,"time",t30,"P(1)",t50,"P(2)")')
       write(2,'("#",80("-"))')
       do istep=1,number_of_timesteps
-         p_rips_jortner = exp_diabatic_populations(time(1,istep),k_rips_jortner,0.d0)
+         p_rips_jortner = exp_diabatic_populations(time(1,istep),k_rips_jortner,1.d0,0.d0)
          write(2,'(3g20.10)') time(1,istep), p_rips_jortner(1), p_rips_jortner(2)
       enddo
       close(2)
 
       time_end = secondi()
       write(*,'("Done in ",f10.3," sec")') time_end-time_start
-
-
 
       write(*,'(1x,"Writing out Zusman populations... ",t64,"--> ",$)')
       time_start = secondi()
@@ -994,7 +995,7 @@ program analyze_et2_trajectories
       write(2,'("#",t10,"time",t30,"P(1)",t50,"P(2)")')
       write(2,'("#",80("-"))')
       do istep=1,number_of_timesteps
-         p_zusman = exp_diabatic_populations(time(1,istep),k_zusman,0.d0)
+         p_zusman = exp_diabatic_populations(time(1,istep),k_zusman,1.d0,0.d0)
          write(2,'(3g20.10)') time(1,istep), p_zusman(1), p_zusman(2)
       enddo
       close(2)
@@ -1002,30 +1003,6 @@ program analyze_et2_trajectories
       time_end = secondi()
       write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
-
-      write(*,'(1x,"Fitting the rate constant... ",t64,"--> ",$)')
-      time_start = secondi()
-
-      call fit_rate_constant(number_of_timesteps,time(1,:),wh1_mean,k_fit,rcorr,defect)
-
-      open(2,file="fitted_diab_pop.dat")
-      write(2,'("#",80("-"))')
-      write(2,'("#   Fitted diabatic populations")')
-      write(2,'("#   Fitted rate constant:    ",g20.10," ps^(-1)")') k_fit
-      write(2,'("#   Correlation coefficient: ",g20.10)') rcorr
-      write(2,'("#   Vertical shift (defect): ",g20.10)') defect
-      write(2,'("#",80("-"))')
-      write(2,'("#",t10,"time",t30,"Pfit(1)",t50,"Pfit(2)",t70,"Pfit0(1)",t90,"Pfit0(2)")')
-      write(2,'("#",80("-"))')
-      do istep=1,number_of_timesteps
-         p_fit = exp_diabatic_populations(time(1,istep),k_fit,defect)
-         p_fit0 = exp_diabatic_populations(time(1,istep),k_fit,0.d0)
-         write(2,'(5g20.10)') time(1,istep), p_fit(1), p_fit(2), p_fit0(1), p_fit0(2)
-      enddo
-      close(2)
-
-      time_end = secondi()
-      write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
       write(*,'( 1x,"------------------------------------------------------")')
       write(*,'( 1x,"Electronic coupling:      ",e16.9," kcal/mol")') electronic_coupling
@@ -1041,15 +1018,75 @@ program analyze_et2_trajectories
       write(*,'( 1x,"Adiabaticity parameter:   ",e16.9)')             kappa_ad
       write(*,'( 1x,"ET R-J rate constant:     ",e16.9," ps^(-1) ")') k_rips_jortner
       write(*,'( 1x,"ET Zusman rate constant:  ",e16.9," ps^(-1) ")') k_zusman
+
+
+      write(*,'(1x,"Fitting the rate constant (log regression)... ",t64,"--> ",$)')
+      time_start = secondi()
+
+      call fit_rate_constant_log(number_of_timesteps,time(1,:),wh1_mean,k_fit_log,rcorr,shift,defect)
+
+      open(2,file="fitlog_diab_pop.dat")
+      write(2,'("#",80("-"))')
+      write(2,'("#   Fitted diabatic populations (LOG linear regression)")')
+      write(2,'("#   Fitted rate constant:        ",g20.10," ps^(-1)")') k_fit_log
+      write(2,'("#   Correlation coefficient:     ",g20.10)') rcorr
+      write(2,'("#   Initial condition shift:     ",g20.10)') shift
+      write(2,'("#   Vertical shift (fit defect): ",g20.10)') defect
+      write(2,'("#",80("-"))')
+      write(2,'("#",t10,"time",t30,"Pfit(1)",t50,"Pfit(2)",t70,"Pfit0(1)",t90,"Pfit0(2)")')
+      write(2,'("#",80("-"))')
+      do istep=1,number_of_timesteps
+         p_fit = exp_diabatic_populations(time(1,istep),k_fit_log,wh1_mean_0,defect)
+         p_fit0 = exp_diabatic_populations(time(1,istep),k_fit_log,1.d0,0.d0)
+         write(2,'(5g20.10)') time(1,istep), p_fit(1), p_fit(2), p_fit0(1), p_fit0(2)
+      enddo
+      close(2)
+
+      time_end = secondi()
+      write(*,'("Done in ",f10.3," sec")') time_end-time_start
+
       write(*,'( 1x,"------------------------------------------------------")')
-      write(*,'( 1x,"Fitted    rate constant:  ",e16.9," ps^(-1) ")') k_fit
-      write(*,'( 1x,"*correlation coefficient: ",g20.9,")")') rcorr
-      write(*,'( 1x,"*vertical shift. defect:  ",g20.9,")")') defect
+      write(*,'( 1x,"Log fit -  rate constant:  ",e16.9," ps^(-1) ")') k_fit_log
+      write(*,'( 1x,"*correlation coefficient: ",g20.9)') rcorr
+      write(*,'( 1x,"*Initial condition shift: ",g20.9)') shift
+      write(*,'( 1x,"*vertical shift (defect): ",g20.9)') defect
+      write(*,'( 1x,"------------------------------------------------------")')
+
+
+
+      write(*,'(1x,"Fitting the rate constant (exponential ODR fit)... ",t64,"--> "/)')
+      time_start = secondi()
+
+      call fit_rate_constant_odr(number_of_timesteps,time(1,:),wh1_mean,k_fit_odr,rcorr,defect)
+
+      open(2,file="fitexp_diab_pop.dat")
+      write(2,'("#",80("-"))')
+      write(2,'("#   Fitted diabatic populations (ODR fit)")')
+      write(2,'("#   Fitted rate constant:        ",g20.10," ps^(-1)")') k_fit_odr
+      write(2,'("#   Error:                       ",g20.10)') rcorr
+      write(2,'("#   Vertical shift (fit defect): ",g20.10)') defect
+      write(2,'("#",80("-"))')
+      write(2,'("#",t10,"time",t30,"Pfit(1)",t50,"Pfit(2)",t70,"Pfit0(1)",t90,"Pfit0(2)")')
+      write(2,'("#",80("-"))')
+      do istep=1,number_of_timesteps
+         p_fit = exp_diabatic_populations(time(1,istep),k_fit_odr,wh1_mean_0,defect)
+         p_fit0 = exp_diabatic_populations(time(1,istep),k_fit_odr,1.d0,0.d0)
+         write(2,'(5g20.10)') time(1,istep), p_fit(1), p_fit(2), p_fit0(1), p_fit0(2)
+      enddo
+      close(2)
+
+      time_end = secondi()
+      write(*,'("Done in ",f10.3," sec")') time_end-time_start
+
+      write(*,'( 1x,"------------------------------------------------------")')
+      write(*,'( 1x,"ODR fit -  rate constant:  ",e16.9," ps^(-1) ")') k_fit_odr
+      write(*,'( 1x,"*error:                   ",g20.9)') rcorr
+      write(*,'( 1x,"*vertical shift (defect): ",g20.9)') defect
       write(*,'( 1x,"------------------------------------------------------")')
 
       open(2,file="marcus_and_fitted_rates.dat")
-      write(2,'("#",t5,"V, kcal/mol",t26,"dG,kcal/mol",t45,"k_fit, 1/ps",t65,"k_marcus, 1/ps",t85,"k_Rips-Jortner",t105,"k_Zusman")')
-      write(2,'(6g20.10)') electronic_coupling, reaction_free_energy, k_fit, k_marcus, k_rips_jortner, k_zusman
+      write(2,'("#",t5,"V, kcal/mol",t26,"dG,kcal/mol",t45,"k_fit_log, 1/ps",t65,"k_fit_odr, 1/ps",t85,"k_marcus, 1/ps",t105,"k_Rips-Jortner",t125,"k_Zusman")')
+      write(2,'(10g20.10)') electronic_coupling, reaction_free_energy, k_fit_log, k_fit_odr, k_marcus, k_rips_jortner, k_zusman
       close(2)
 
    endif
@@ -1308,7 +1345,7 @@ program analyze_et2_trajectories
    !   u(i)=c(i)/dble(m+1-i)
    !enddo
 
-   do idstep=1,number_of_timesteps
+   do idstep=1,number_of_timesteps/2
       theta_corr(idstep) = 0.d0
       do itraj=1,number_of_traj
          do istep=1,number_of_timesteps+1-idstep
