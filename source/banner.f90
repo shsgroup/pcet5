@@ -10,7 +10,7 @@ subroutine banner(version)
 !-------------------------------------------------------------------------------
 
    implicit none
-   real(4), intent(in) :: version
+   character(len=*), intent(in) :: version
 
    !-- Prints banner
 
@@ -20,7 +20,7 @@ subroutine banner(version)
    write(6,'(1x,"                        William Shakespear, Hamlet (Act 3, Scene 1)               ")')
    write(6,'(/)')
    write(6,'(/)')
-   write(6,'(1x,"___/\\\\\\\\\\\\\__________/\\\\\\\\\__/\\\\\\\\\\\\\\\__/\\\\\\\\\\\\\\\_ ",f4.1)') version
+   write(6,'(1x,"___/\\\\\\\\\\\\\__________/\\\\\\\\\__/\\\\\\\\\\\\\\\__/\\\\\\\\\\\\\\\_ ",a)') trim(version)
    write(6,'(1x," __\/\\\/////////\\\_____/\\\////////__\/\\\///////////__\///////\\\/////__       ")')
    write(6,'(1x,"  __\/\\\_______\/\\\___/\\\/___________\/\\\___________________\/\\\_______      ")')
    write(6,'(1x,"   __\/\\\\\\\\\\\\\/___/\\\_____________\/\\\\\\\\\\\___________\/\\\_______     ")')
@@ -30,12 +30,12 @@ subroutine banner(version)
    write(6,'(1x,"       __\/\\\________________\////\\\\\\\\\_\/\\\\\\\\\\\\\\\_______\/\\\_______ ")')
    write(6,'(1x,"__________\///____________________\/////////__\///////////////________\///________")')
    write(6,'(/)')
-   write(6,'(1x,"   Version ",f4.1)') version
+   write(6,'(1x,"   Version ",a)') trim(version)
    write(6,'(/)')
    write(6,'(1x,"   Hammes-Schiffer Group                                                          ")')
    write(6,'(1x,"   Department of Chemistry                                                        ")')
-   write(6,'(1x,"   The Pennsylvania State University                                              ")')
-   write(6,'(1x,"   University Park, PA 16802                                                      ")')
+   write(6,'(1x,"   University of Illinois at Urbana-Champaign                                     ")')
+   write(6,'(1x,"   Urbana, IL 61801                                                               ")')
    write(6,'(1x,"__________________________________________________________________________________")')
    write(6,'(/)')
    write(6,'(1x,"   The program calculates free energies, nonadiabatic rates and solvent dynamics  ")')

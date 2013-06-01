@@ -1143,7 +1143,7 @@ contains
 
       !-- Print banner
 
-      call banner(5.2)
+      call banner(trim(program_version))
 
       write(6,'(3x,"Title of the job:  ",a)') title (1:itit)
       write(6,'(22x,a)')                      title2(1:itit2)

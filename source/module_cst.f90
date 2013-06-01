@@ -3,6 +3,7 @@ module cst
 !===================================================================
 !     Constants and conversion factors
 !-------------------------------------------------------------------
+!  program_version - current version of PCET program
 !  HBAR   - Planck constant in atomic units
 !  KB     - Boltzmann constant in kcal/(mol*K)
 !  DALTON - Atomic Mass Unit (in electron mass units)
@@ -41,6 +42,8 @@ module cst
    implicit none
    public
    save
+
+   character(len=10), parameter :: program_version="5.3"
 
    real(8), parameter :: zero  = 0.0d0,&
                        & half  = 0.5d0,&
