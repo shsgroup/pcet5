@@ -23,6 +23,8 @@ program analyze_et2_trajectories
    integer, parameter :: ndt=27
    integer, parameter :: ndt2 = (ndt-1)/2
 
+   logical, parameter :: calculate_reactive_flux_rate = .false.
+
    character(len=60)  :: filename
    character(len=200) :: record
    character(len=3)   :: state_suffix
@@ -58,6 +60,7 @@ program analyze_et2_trajectories
    real(kind=8), dimension(number_of_bins_ze) :: bin_center_ze
 
    real(kind=8), dimension(:,:),   allocatable :: time
+   real(kind=8), dimension(:),     allocatable :: time1
    real(kind=8), dimension(:,:),   allocatable :: z1, vz1
    real(kind=8), dimension(:,:),   allocatable :: ze, vze
    real(kind=8), dimension(:,:),   allocatable :: ekin, efe
@@ -219,6 +222,8 @@ program analyze_et2_trajectories
    allocate(w1(number_of_traj,number_of_timesteps))
    allocate(w2(number_of_traj,number_of_timesteps))
 
+   call allocated_memory
+
    write(*,'(1x,"All data arrays allocated, now reading data files... ",t64,"--> ",$)')
    time_start = secondi()
 
@@ -273,6 +278,10 @@ program analyze_et2_trajectories
 
    enddo loop_over_trajectories
 
+   allocate (time1(nsteps))
+   time1(:) = time(1,:)
+   deallocate(time)
+
    time_end = secondi()
    write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
@@ -282,7 +291,7 @@ program analyze_et2_trajectories
 
    open(1,file="timesteps.dat",form="formatted")
    do i=1,number_of_timesteps
-      write(1,'(i10,2x,f20.6)') i, time(1,i)
+      write(1,'(i10,2x,f20.6)') i, time1(i)
    enddo
    close(1)
 
@@ -290,6 +299,8 @@ program analyze_et2_trajectories
    !-- Scan the occupied state array and determine the highest
    !   occupied state for the whole set of trajectories.
    !=============================================================
+
+   call allocated_memory
 
    write(*,*)
    write(*,'(1x,"Scanning MDQT trajectories to identify unique occupied states... ")')
@@ -480,13 +491,13 @@ program analyze_et2_trajectories
          ichannel_ze = 10 + 2*istate_occ(i)
 
          do i1=1,number_of_bins_z1
-            write(ichannel_z1,'(2f15.6,1x,g15.6)') time(1,istep), bin_center_z1(i1), state_histogram_z1(istate_occ(i),i1)
+            write(ichannel_z1,'(2f15.6,1x,g15.6)') time1(istep), bin_center_z1(i1), state_histogram_z1(istate_occ(i),i1)
             !write(ichannel_z1) bin_center_z1(i1), state_histogram_z1(istate_occ(i),i1)
          enddo
          write(ichannel_z1,*)
 
          do i1=1,number_of_bins_ze
-            write(ichannel_ze,'(2f15.6,1x,g15.6)') time(1,istep), bin_center_ze(i1), state_histogram_ze(istate_occ(i),i1)
+            write(ichannel_ze,'(2f15.6,1x,g15.6)') time1(istep), bin_center_ze(i1), state_histogram_ze(istate_occ(i),i1)
             !write(ichannel_ze) bin_center_ze(i1), state_histogram_ze(istate_occ(i),i1)
          enddo
          write(ichannel_ze,*)
@@ -494,14 +505,14 @@ program analyze_et2_trajectories
       enddo
 
    enddo
-   
+
    do i=1,number_of_occ_states
       ichannel_z1 = 10 + 2*istate_occ(i) - 1
       ichannel_ze = 10 + 2*istate_occ(i)
       close(ichannel_z1)
       close(ichannel_ze)
    enddo
-   
+
    deallocate (state_histogram_z1,state_histogram_ze)
    deallocate (istate_occ)
    time_end = secondi()
@@ -513,7 +524,7 @@ program analyze_et2_trajectories
 
    write(*,'(1x,"Building global histograms for solvent coordinates... ",t64,"--> ",$)')
    time_start = secondi()
-   
+
    !-- global distributions
    allocate(histogram_z1(number_of_bins_z1))
    allocate(histogram_ze(number_of_bins_ze))
@@ -555,13 +566,13 @@ program analyze_et2_trajectories
       !-- output to the external files for visualization
    
       do i1=1,number_of_bins_z1
-         write(21,'(3g15.6)') time(1,istep), bin_center_z1(i1), histogram_z1(i1)
+         write(21,'(3g15.6)') time1(istep), bin_center_z1(i1), histogram_z1(i1)
          !write(21) bin_center_z1(i1), histogram_z1(i1)
       enddo
       write(21,*)
    
       do i1=1,number_of_bins_ze
-         write(22,'(3g15.6)') time(1,istep), bin_center_ze(i1), histogram_ze(i1)
+         write(22,'(3g15.6)') time1(istep), bin_center_ze(i1), histogram_ze(i1)
          !write(22) bin_center_ze(i1), histogram_ze(i1)
       enddo
       write(22,*)
@@ -633,21 +644,21 @@ program analyze_et2_trajectories
    open(2,file="z_mean.dat")
    write(2,'("#",t10,"time(ps)",t30,"<z1>",t50,"<Ze>")')
    do istep=1,number_of_timesteps
-       write(2,'(5g20.10)') time(1,istep), z1_mean(istep), ze_mean(istep)
+       write(2,'(5g20.10)') time1(istep), z1_mean(istep), ze_mean(istep)
    enddo
    close(2)
 
    open(2,file="z1_phase_mean.dat")
    write(2,'("#",t10,"time(ps)",t30,"<z1>",t50,"<vz1>")')
    do istep=1,number_of_timesteps
-       write(2,'(5g20.10)') time(1,istep), z1_mean(istep), vz1_mean(istep)
+       write(2,'(5g20.10)') time1(istep), z1_mean(istep), vz1_mean(istep)
    enddo
    close(2)
 
    open(2,file="ze_phase_mean.dat")
    write(2,'("#",t10,"time(ps)",t30,"<ze>",t50,"<vze>")')
    do istep=1,number_of_timesteps
-       write(2,'(5g20.10)') time(1,istep), ze_mean(istep), vze_mean(istep)
+       write(2,'(5g20.10)') time1(istep), ze_mean(istep), vze_mean(istep)
    enddo
    close(2)
 
@@ -689,7 +700,7 @@ program analyze_et2_trajectories
    open(2,file="z_var.dat")
    write(2,'("#",t10,"time(ps)",t30,"sigma(z1)",t50,"sigma(Ze)")')
    do istep=1,number_of_timesteps
-       write(2,'(3g20.10)') time(1,istep), sqrt(z1_var(istep)), sqrt(ze_var(istep))
+       write(2,'(3g20.10)') time1(istep), sqrt(z1_var(istep)), sqrt(ze_var(istep))
    enddo
    close(2)
 
@@ -710,12 +721,12 @@ program analyze_et2_trajectories
 
    open(2,file="z_corr_tav.dat")
    write(2,'("#",t10,"time(ps)",t30,"<z1tav>",t50,"<zetav>")')
-   write(2,'(7g20.10)') time(1,1), z1tav, zetav
+   write(2,'(7g20.10)') time1(1), z1tav, zetav
 
    do istep=2,number_of_timesteps
       z1tav = z1tav + z1_mean(istep)
       zetav = zetav + ze_mean(istep)
-      write(2,'(7g20.10)') time(1,istep), z1tav/istep, zetav/istep
+      write(2,'(7g20.10)') time1(istep), z1tav/istep, zetav/istep
    enddo
 
    close(2)
@@ -734,7 +745,7 @@ program analyze_et2_trajectories
    !   must be an odd number
 
    open(2,file="z_corr_rtav.dat")
-   write(2,'("#--- Time interval for averaging (ps): ",f12.6)') (ndt-1)*(time(1,2)-time(1,1))
+   write(2,'("#--- Time interval for averaging (ps): ",f12.6)') (ndt-1)*(time1(2)-time1(1))
    write(2,'("#",t10,"time(ps)",t30,"<z1tav>",t50,"<zetav>")')
 
    do istep=1+ndt2,number_of_timesteps-ndt2
@@ -749,7 +760,7 @@ program analyze_et2_trajectories
 
       z1tav  = z1tav/ndt
       zetav  = zetav/ndt
-      write(2,'(7g20.10)') time(1,istep), z1tav, zetav
+      write(2,'(7g20.10)') time1(istep), z1tav, zetav
 
    enddo
 
@@ -798,15 +809,15 @@ program analyze_et2_trajectories
    open(2,file="z_tcf.dat")
    write(2,'("#",t10,"time(ps)",t25,"<z1(0)z1(t)>",t45,"<ze(0)ze(t)>")')
    do istep=1,number_of_timesteps
-       write(2,'(9g20.10)') time(1,istep), z11_tcf(istep), zee_tcf(istep)
+       write(2,'(9g20.10)') time1(istep), z11_tcf(istep), zee_tcf(istep)
    enddo
    close(2)
 
    deallocate (z11_tcf)
    deallocate (zee_tcf)
 
-   deallocate (z1_mean, ze_mean)
-   deallocate (vz1_mean, vze_mean)
+   deallocate (z1, z1_mean, ze_mean)
+   deallocate (vz1, vz1_mean, vze_mean)
 
    time_end = secondi()
    write(*,'("Done in ",f10.3," sec")') time_end-time_start
@@ -846,12 +857,12 @@ program analyze_et2_trajectories
    write(2,'("#",t10,"(ps)",t25,"(kcal/mol) ",t45,"  (kcal/mol)  ")')
    write(2,'("#",79("-"))')
    do istep=1,number_of_timesteps
-      write(2,'(5g20.10)') time(1,istep), efe_mean(istep), ekin_mean(istep)
+      write(2,'(5g20.10)') time1(istep), efe_mean(istep), ekin_mean(istep)
    enddo
    close(2)
 
-   deallocate (efe_mean)
-   deallocate (ekin_mean)
+   deallocate (efe, efe_mean)
+   deallocate (ekin, ekin_mean)
 
    time_end = secondi()
    write(*,'("Done in ",f10.3," sec")') time_end-time_start
@@ -915,7 +926,7 @@ program analyze_et2_trajectories
    write(2,'("#",t10,"time",t30,"<1>",t50,"<2>")')
    write(2,'("#",80("-"))')
    do istep=1,number_of_timesteps
-      write(2,'(3g20.10)') time(1,istep), w1_mean(istep), w2_mean(istep)
+      write(2,'(3g20.10)') time1(istep), w1_mean(istep), w2_mean(istep)
    enddo
    close(2)
 
@@ -926,7 +937,7 @@ program analyze_et2_trajectories
    write(2,'("#",t10,"time",t30,"<1>",t50,"<2>")')
    write(2,'("#",80("-"))')
    do istep=1,number_of_timesteps
-      write(2,'(3g20.10)') time(1,istep), wh1_mean(istep), wh2_mean(istep)
+      write(2,'(3g20.10)') time1(istep), wh1_mean(istep), wh2_mean(istep)
    enddo
    close(2)
 
@@ -956,8 +967,8 @@ program analyze_et2_trajectories
       write(2,'("#",t10,"time",t30,"P(1)",t50,"P(2)")')
       write(2,'("#",80("-"))')
       do istep=1,number_of_timesteps
-         p_marcus = exp_diabatic_populations(time(1,istep),k_marcus,1.d0,0.d0)
-         write(2,'(3g20.10)') time(1,istep), p_marcus(1), p_marcus(2)
+         p_marcus = exp_diabatic_populations(time1(istep),k_marcus,1.d0,0.d0)
+         write(2,'(3g20.10)') time1(istep), p_marcus(1), p_marcus(2)
       enddo
       close(2)
 
@@ -976,8 +987,8 @@ program analyze_et2_trajectories
       write(2,'("#",t10,"time",t30,"P(1)",t50,"P(2)")')
       write(2,'("#",80("-"))')
       do istep=1,number_of_timesteps
-         p_rips_jortner = exp_diabatic_populations(time(1,istep),k_rips_jortner,1.d0,0.d0)
-         write(2,'(3g20.10)') time(1,istep), p_rips_jortner(1), p_rips_jortner(2)
+         p_rips_jortner = exp_diabatic_populations(time1(istep),k_rips_jortner,1.d0,0.d0)
+         write(2,'(3g20.10)') time1(istep), p_rips_jortner(1), p_rips_jortner(2)
       enddo
       close(2)
 
@@ -995,14 +1006,15 @@ program analyze_et2_trajectories
       write(2,'("#",t10,"time",t30,"P(1)",t50,"P(2)")')
       write(2,'("#",80("-"))')
       do istep=1,number_of_timesteps
-         p_zusman = exp_diabatic_populations(time(1,istep),k_zusman,1.d0,0.d0)
-         write(2,'(3g20.10)') time(1,istep), p_zusman(1), p_zusman(2)
+         p_zusman = exp_diabatic_populations(time1(istep),k_zusman,1.d0,0.d0)
+         write(2,'(3g20.10)') time1(istep), p_zusman(1), p_zusman(2)
       enddo
       close(2)
 
       time_end = secondi()
       write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
+      call allocated_memory
 
       write(*,'( 1x,"------------------------------------------------------")')
       write(*,'( 1x,"Electronic coupling:      ",e16.9," kcal/mol")') electronic_coupling
@@ -1019,11 +1031,10 @@ program analyze_et2_trajectories
       write(*,'( 1x,"ET R-J rate constant:     ",e16.9," ps^(-1) ")') k_rips_jortner
       write(*,'( 1x,"ET Zusman rate constant:  ",e16.9," ps^(-1) ")') k_zusman
 
-
       write(*,'(1x,"Fitting the rate constant (log regression)... ",t64,"--> ",$)')
       time_start = secondi()
 
-      call fit_rate_constant_log(number_of_timesteps,time(1,:),wh1_mean,k_fit_log,rcorr,shift,defect)
+      call fit_rate_constant_log(number_of_timesteps,time1(:),wh1_mean,k_fit_log,rcorr,shift,defect)
 
       open(2,file="fitlog_diab_pop.dat")
       write(2,'("#",80("-"))')
@@ -1036,9 +1047,9 @@ program analyze_et2_trajectories
       write(2,'("#",t10,"time",t30,"Pfit(1)",t50,"Pfit(2)",t70,"Pfit0(1)",t90,"Pfit0(2)")')
       write(2,'("#",80("-"))')
       do istep=1,number_of_timesteps
-         p_fit = exp_diabatic_populations(time(1,istep),k_fit_log,wh1_mean_0,defect)
-         p_fit0 = exp_diabatic_populations(time(1,istep),k_fit_log,1.d0,0.d0)
-         write(2,'(5g20.10)') time(1,istep), p_fit(1), p_fit(2), p_fit0(1), p_fit0(2)
+         p_fit = exp_diabatic_populations(time1(istep),k_fit_log,wh1_mean_0,defect)
+         p_fit0 = exp_diabatic_populations(time1(istep),k_fit_log,1.d0,0.d0)
+         write(2,'(5g20.10)') time1(istep), p_fit(1), p_fit(2), p_fit0(1), p_fit0(2)
       enddo
       close(2)
 
@@ -1053,11 +1064,10 @@ program analyze_et2_trajectories
       write(*,'( 1x,"------------------------------------------------------")')
 
 
-
       write(*,'(1x,"Fitting the rate constant (exponential ODR fit)... ",t64,"--> "/)')
       time_start = secondi()
 
-      call fit_rate_constant_odr(number_of_timesteps,time(1,:),wh1_mean,k_fit_odr,rcorr,defect)
+      call fit_rate_constant_odr(number_of_timesteps,time1(:),wh1_mean,k_fit_odr,rcorr,defect)
 
       open(2,file="fitexp_diab_pop.dat")
       write(2,'("#",80("-"))')
@@ -1069,9 +1079,9 @@ program analyze_et2_trajectories
       write(2,'("#",t10,"time",t30,"Pfit(1)",t50,"Pfit(2)",t70,"Pfit0(1)",t90,"Pfit0(2)")')
       write(2,'("#",80("-"))')
       do istep=1,number_of_timesteps
-         p_fit = exp_diabatic_populations(time(1,istep),k_fit_odr,wh1_mean_0,defect)
-         p_fit0 = exp_diabatic_populations(time(1,istep),k_fit_odr,1.d0,0.d0)
-         write(2,'(5g20.10)') time(1,istep), p_fit(1), p_fit(2), p_fit0(1), p_fit0(2)
+         p_fit = exp_diabatic_populations(time1(istep),k_fit_odr,wh1_mean_0,defect)
+         p_fit0 = exp_diabatic_populations(time1(istep),k_fit_odr,1.d0,0.d0)
+         write(2,'(5g20.10)') time1(istep), p_fit(1), p_fit(2), p_fit0(1), p_fit0(2)
       enddo
       close(2)
 
@@ -1084,12 +1094,15 @@ program analyze_et2_trajectories
       write(*,'( 1x,"*vertical shift (defect): ",g20.9)') defect
       write(*,'( 1x,"------------------------------------------------------")')
 
+
       open(2,file="marcus_and_fitted_rates.dat")
       write(2,'("#",t5,"V, kcal/mol",t26,"dG,kcal/mol",t45,"k_fit_log, 1/ps",t65,"k_fit_odr, 1/ps",t85,"k_marcus, 1/ps",t105,"k_Rips-Jortner",t125,"k_Zusman")')
       write(2,'(10g20.10)') electronic_coupling, reaction_free_energy, k_fit_log, k_fit_odr, k_marcus, k_rips_jortner, k_zusman
       close(2)
 
    endif
+
+   call allocated_memory
 
    !------------------------------------------------------------------------------
    !--(10)-- Time-averaged EVB weights
@@ -1107,12 +1120,12 @@ program analyze_et2_trajectories
    write(2,'("#",80("-"))')
    write(2,'("#",t10,"time(ps)",t30,"<w1tav>",t50,"<w2tav>")')
    write(2,'("#",80("-"))')
-   write(2,'(11g20.10)') time(1,1), w1tav, w2tav
+   write(2,'(11g20.10)') time1(1), w1tav, w2tav
 
    do istep=2,number_of_timesteps
       w1tav = w1tav + w1_mean(istep)
       w2tav = w2tav + w2_mean(istep)
-      write(2,'(3g20.10)') time(1,istep), w1tav/istep, w2tav/istep
+      write(2,'(3g20.10)') time1(istep), w1tav/istep, w2tav/istep
    enddo
 
    close(2)
@@ -1124,12 +1137,12 @@ program analyze_et2_trajectories
 
    open(2,file="weights_assigned_corr_tav.dat")
    write(2,'("#",t10,"time(ps)",t30,"<w1tav>",t50,"<w2tav>")')
-   write(2,'(3g20.10)') time(1,1), w1tav, w2tav
+   write(2,'(3g20.10)') time1(1), w1tav, w2tav
 
    do istep=2,number_of_timesteps
       w1tav = w1tav + wh1_mean(istep)
       w2tav = w2tav + wh2_mean(istep)
-      write(2,'(3g20.10)') time(1,istep), w1tav/istep, w2tav/istep
+      write(2,'(3g20.10)') time1(istep), w1tav/istep, w2tav/istep
    enddo
 
    close(2)
@@ -1150,7 +1163,7 @@ program analyze_et2_trajectories
    open(2,file="weights_corr_rtav.dat")
    write(2,'("#",80("-"))')
    write(2,'("#    Running time averages of diabatic populations (expectation values)")')
-   write(2,'("#--- Time interval for averaging (ps): ",f12.6)') (ndt-1)*(time(1,2)-time(1,1))
+   write(2,'("#--- Time interval for averaging (ps): ",f12.6)') (ndt-1)*(time1(2)-time1(1))
    write(2,'("#",80("-"))')
    write(2,'("#",t10,"time(ps)",t30,"<w1tav>",t50,"<w2tav>")')
    write(2,'("#",80("-"))')
@@ -1168,7 +1181,7 @@ program analyze_et2_trajectories
       w1tav = w1tav/ndt
       w2tav = w2tav/ndt
 
-      write(2,'(3g20.10)') time(1,istep), w1tav, w2tav
+      write(2,'(3g20.10)') time1(istep), w1tav, w2tav
 
    enddo
 
@@ -1180,7 +1193,7 @@ program analyze_et2_trajectories
    open(2,file="weights_assigned_corr_rtav.dat")
    write(2,'("#",80("-"))')
    write(2,'("#    Running time averages of diabatic populations (by assignment)")')
-   write(2,'("#--- Time interval for averaging (ps): ",f12.6)') (ndt-1)*(time(1,2)-time(1,1))
+   write(2,'("#--- Time interval for averaging (ps): ",f12.6)') (ndt-1)*(time1(2)-time1(1))
    write(2,'("#",80("-"))')
    write(2,'("#",t10,"time(ps)",t30,"<w1tav>",t50,"<w2tav>")')
    write(2,'("#",80("-"))')
@@ -1198,7 +1211,7 @@ program analyze_et2_trajectories
       w1tav = w1tav/ndt
       w2tav = w2tav/ndt
 
-      write(2,'(3g20.10)') time(1,istep), w1tav, w2tav
+      write(2,'(3g20.10)') time1(istep), w1tav, w2tav
 
    enddo
 
@@ -1243,7 +1256,7 @@ program analyze_et2_trajectories
    write(2,'("#",t5,"time(ps)",t19,"<1>",t31,"<2>")')
    write(2,'("#",40("-"))')
    do istep=1,number_of_timesteps
-      write(2,'(101f12.6)') time(1,istep), (pop_ad(k,istep),k=1,number_of_states)
+      write(2,'(101f12.6)') time1(istep), (pop_ad(k,istep),k=1,number_of_states)
    enddo
    close(2)
 
@@ -1252,6 +1265,7 @@ program analyze_et2_trajectories
    time_end = secondi()
    write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
+   call allocated_memory
 
    !---------------------------------------------------------------
    !--(11)-- Calculate Mean First Passage Time
@@ -1279,7 +1293,7 @@ program analyze_et2_trajectories
       do itraj=1,number_of_traj
          do istep=1,number_of_timesteps
             if (ze(itraj,istep).lt.ze_cut.and.istate(itraj,istep).eq.1) then
-               time_mfpt = time_mfpt + time(itraj,istep)
+               time_mfpt = time_mfpt + time1(istep)
                number_of_reactive_events = number_of_reactive_events + 1
                exit
             endif
@@ -1297,6 +1311,8 @@ program analyze_et2_trajectories
 
    close(2)
 
+   deallocate (istate)
+
    time_end = secondi()
    write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
@@ -1307,75 +1323,71 @@ program analyze_et2_trajectories
    !         ze* defined as ze* = ze(crossing) = 0
    !---------------------------------------------------------------
 
-   write(*,'(/1x,"Calculating reactive flux correlation function... ")')
-   time_start = secondi()
+   if (calculate_reactive_flux_rate) then
 
-   z_divide = z_crossing
+      call allocated_memory
 
-   allocate (theta_corr(nsteps))
+      write(*,'(/1x,"Calculating reactive flux correlation function... ")')
+      time_start = secondi()
 
-   !-- calculate global averages (timesteps AND trajectories)
-   !   and compare it to equilibrium averages
+      z_divide = z_crossing
 
-   n_aver_r = 0.d0
-   n_aver_p = 0.d0
-   do itraj=1,number_of_traj
-      do istep=1,number_of_timesteps
-         ze_curr = ze(itraj,istep)
-         n_aver_r = n_aver_r + reactant_heaviside(ze_curr,z_divide)
-         n_aver_p = n_aver_p + 1.d0 - reactant_heaviside(ze_curr,z_divide)
-      enddo
-   enddo
-   n_aver_r = n_aver_r/(number_of_timesteps*number_of_traj)
-   n_aver_p = n_aver_p/(number_of_timesteps*number_of_traj)
+      allocate (theta_corr(number_of_timesteps))
 
-   write(*,'( 1x,"Simulated equilibrium populations: ",2g12.6)')  n_aver_r, n_aver_p
-   write(*,'( 1x,"Exact     equilibrium populations: ",2g12.6)')  n_equil_r, n_equil_p
+      !-- calculate global averages (timesteps AND trajectories)
+      !   and compare it to equilibrium averages
 
-   !-- calculate correlation function
-
-   !do i=1,m
-   !   c(i)=0.d0
-   !   do j=1,m+1-i
-   !      c(i)=c(i)+u(j)*v(i+j-1)
-   !   enddo
-   !enddo
-   !!--normalise the correlation function
-   !do i=1,m
-   !   u(i)=c(i)/dble(m+1-i)
-   !enddo
-
-   do idstep=1,number_of_timesteps/2
-      theta_corr(idstep) = 0.d0
+      n_aver_r = 0.d0
+      n_aver_p = 0.d0
       do itraj=1,number_of_traj
-         do istep=1,number_of_timesteps+1-idstep
-            ze_curr1 = ze(itraj,idstep)
-            ze_curr2 = ze(itraj,idstep+istep-1)
-            theta_corr(idstep) = theta_corr(idstep) + reactant_heaviside(ze_curr1,z_divide)*reactant_heaviside(ze_curr2,z_divide)
+         do istep=1,number_of_timesteps
+            ze_curr = ze(itraj,istep)
+            n_aver_r = n_aver_r + reactant_heaviside(ze_curr,z_divide)
+            n_aver_p = n_aver_p + 1.d0 - reactant_heaviside(ze_curr,z_divide)
          enddo
       enddo
-   enddo
+      n_aver_r = n_aver_r/(number_of_timesteps*number_of_traj)
+      n_aver_p = n_aver_p/(number_of_timesteps*number_of_traj)
 
-   open(2,file="theta_theta_tcf.dat")
-   write(2,'("#",60("-"))')
-   write(2,'("#   Equilibrium TCF of the reactant population")')
-   write(2,'("#   (its time derivative is the time-dependent rate constant)")')
-   write(2,'("#",60("-"))')
-   write(2,'("#",t10,"time(ps)",t30,"<d_theta[z(0)]*d_theta[z(t)]>/<theta>")')
-   write(2,'("#",60("-"))')
+      write(*,'( 1x,"Simulated equilibrium populations: ",2g12.6)')  n_aver_r, n_aver_p
+      write(*,'( 1x,"Exact     equilibrium populations: ",2g12.6)')  n_equil_r, n_equil_p
 
-   !-- normalise the correlation function by <theta>=n_equil_r and output the result
-   do idstep=1,number_of_timesteps
-      theta_corr(idstep) = theta_corr(idstep)/real(number_of_timesteps+1-idstep)/real(number_of_traj)
-      write(2,'(2g20.10)') time(1,idstep), (theta_corr(idstep) - n_aver_r*n_aver_r)/n_aver_r
-   enddo
+      !-- calculate correlation function
 
-   time_end = secondi()
-   write(*,'("Done in ",f10.3," sec")') time_end-time_start
+      do idstep=1,number_of_timesteps/2
+         theta_corr(idstep) = 0.d0
+         do itraj=1,number_of_traj
+            do istep=1,number_of_timesteps+1-idstep
+               ze_curr1 = ze(itraj,idstep)
+               ze_curr2 = ze(itraj,idstep+istep-1)
+               theta_corr(idstep) = theta_corr(idstep) + reactant_heaviside(ze_curr1,z_divide)*reactant_heaviside(ze_curr2,z_divide)
+            enddo
+         enddo
+      enddo
 
-   deallocate (istate)
-   deallocate (z1, ze, vz1, vze)
-   deallocate (theta_corr)
+      open(2,file="theta_theta_tcf.dat")
+      write(2,'("#",60("-"))')
+      write(2,'("#   Equilibrium TCF of the reactant population")')
+      write(2,'("#   (its time derivative is the time-dependent rate constant)")')
+      write(2,'("#",60("-"))')
+      write(2,'("#",t10,"time(ps)",t30,"<d_theta[z(0)]*d_theta[z(t)]>/<theta>")')
+      write(2,'("#",60("-"))')
+
+      !-- normalise the correlation function by <theta>=n_equil_r and output the result
+      do idstep=1,number_of_timesteps
+         theta_corr(idstep) = theta_corr(idstep)/real(number_of_timesteps+1-idstep)/real(number_of_traj)
+         write(2,'(2g20.10)') time1(idstep), (theta_corr(idstep) - n_aver_r*n_aver_r)/n_aver_r
+      enddo
+
+      deallocate (theta_corr)
+
+      time_end = secondi()
+      write(*,'("Done in ",f10.3," sec")') time_end-time_start
+
+   endif
+
+   call deallocate_all_arrays
+   call allocated_memory
 
    total_time_end = secondi()
    write(*,'(/"===> All Done in ",f10.3," sec"/)') total_time_end-total_time_start
@@ -1384,6 +1396,7 @@ contains
 
    subroutine deallocate_all_arrays
       if (allocated(time)) deallocate(time)
+      if (allocated(time1)) deallocate(time1)
       if (allocated(z1)) deallocate(z1)
       if (allocated(ze)) deallocate(ze)
       if (allocated(ekin)) deallocate(ekin)
@@ -1412,6 +1425,57 @@ contains
       if (allocated(wh2_mean)) deallocate(wh2_mean)
       if (allocated(pop_ad)) deallocate(pop_ad)
    end subroutine deallocate_all_arrays
+
+
+   subroutine allocated_memory
+
+      real(kind=8) :: memory, memory_mb, memory_gb
+
+      memory = 0.d0
+
+      if (allocated(istate))             memory = memory + number_of_traj*number_of_timesteps*4.d0
+      if (allocated(all_states))         memory = memory + number_of_traj*number_of_timesteps*4.d0
+      if (allocated(istate_occ))         memory = memory + number_of_states*4.d0
+
+      if (allocated(time))               memory = memory + number_of_traj*number_of_timesteps*8.d0
+      if (allocated(z1))                 memory = memory + number_of_traj*number_of_timesteps*8.d0
+      if (allocated(vz1))                memory = memory + number_of_traj*number_of_timesteps*8.d0
+      if (allocated(ze))                 memory = memory + number_of_traj*number_of_timesteps*8.d0
+      if (allocated(vze))                memory = memory + number_of_traj*number_of_timesteps*8.d0
+      if (allocated(ekin))               memory = memory + number_of_traj*number_of_timesteps*8.d0
+      if (allocated(efe))                memory = memory + number_of_traj*number_of_timesteps*8.d0
+      if (allocated(w1))                 memory = memory + number_of_traj*number_of_timesteps*8.d0
+      if (allocated(w2))                 memory = memory + number_of_traj*number_of_timesteps*8.d0
+
+      if (allocated(pop_ad))             memory = memory + number_of_states*number_of_timesteps*8.d0
+      if (allocated(state_histogram_z1)) memory = memory + number_of_bins_z1*number_of_timesteps*8.d0
+      if (allocated(state_histogram_ze)) memory = memory + number_of_bins_ze*number_of_timesteps*8.d0
+
+      if (allocated(histogram_z1))       memory = memory + number_of_bins_z1*8.d0
+      if (allocated(histogram_ze))       memory = memory + number_of_bins_ze*8.d0
+
+      if (allocated(z1_mean))            memory = memory + number_of_timesteps*8.d0
+      if (allocated(ze_mean))            memory = memory + number_of_timesteps*8.d0
+      if (allocated(vz1_mean))           memory = memory + number_of_timesteps*8.d0
+      if (allocated(vze_mean))           memory = memory + number_of_timesteps*8.d0
+      if (allocated(z1_var))             memory = memory + number_of_timesteps*8.d0
+      if (allocated(ze_var))             memory = memory + number_of_timesteps*8.d0
+      if (allocated(z11_tcf))            memory = memory + number_of_timesteps*8.d0
+      if (allocated(zee_tcf))            memory = memory + number_of_timesteps*8.d0
+      if (allocated(efe_mean))           memory = memory + number_of_timesteps*8.d0
+      if (allocated(ekin_mean))          memory = memory + number_of_timesteps*8.d0
+      if (allocated(w1_mean))            memory = memory + number_of_timesteps*8.d0
+      if (allocated(wh1_mean))           memory = memory + number_of_timesteps*8.d0
+      if (allocated(w2_mean))            memory = memory + number_of_timesteps*8.d0
+      if (allocated(wh2_mean))           memory = memory + number_of_timesteps*8.d0
+      if (allocated(theta_corr))         memory = memory + number_of_timesteps*8.d0
+
+      memory_mb = memory/1024.d0/1024.d0
+      memory_gb = memory/1024.d0/1024.d0/1024.d0
+
+      write(*,'(/1x,"Current memory allocation: ",f20.3," MB = ",f8.3," GB"/)') memory_mb, memory_gb
+
+   end subroutine allocated_memory
 
 
    function reactant_heaviside(z_, z_divide_) result(out)
