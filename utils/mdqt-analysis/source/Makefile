@@ -7,7 +7,7 @@
 # Set the F90 Compiler
 
 F90 = ifort
-F90FLAGS = -c -fast -ftz -zero
+F90FLAGS = -c -O3 -xHOST -ipo -zero -static -prec-div -fstack-security-check -fstack-protector -fp-model strict
 #F90FLAGS = -c -g -check
 
 # Set the F90 Loader
