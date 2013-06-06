@@ -39,7 +39,7 @@ contains
       real(8) :: sec
       integer :: count, count_rate, count_max
       call system_clock(count, count_rate, count_max)
-      sec = real(count,8)/real(count_rate,8)
+      sec = real(count,kind=8)/real(count_rate,kind=8)
    end function secondi
 
 end module timers

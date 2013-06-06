@@ -1375,7 +1375,7 @@ program analyze_et2_trajectories
 
       !-- normalise the correlation function by <theta>=n_equil_r and output the result
       do idstep=1,number_of_timesteps
-         theta_corr(idstep) = theta_corr(idstep)/real(number_of_timesteps+1-idstep)/real(number_of_traj)
+         theta_corr(idstep) = theta_corr(idstep)/real(number_of_timesteps+1-idstep,kind=8)/real(number_of_traj,kind=8)
          write(2,'(2g20.10)') time1(idstep), (theta_corr(idstep) - n_aver_r*n_aver_r)/n_aver_r
       enddo
 

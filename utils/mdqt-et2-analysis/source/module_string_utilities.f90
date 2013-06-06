@@ -159,7 +159,7 @@ CONTAINS
 
          do j=0,9
             if (n(j).eq.word(lst:lst)) then
-               rvalue = ten*rvalue+one*real(j)
+               rvalue = ten*rvalue+one*real(j,kind=8)
                flag=.true.
                start=.true.
             endif
