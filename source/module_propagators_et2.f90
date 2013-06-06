@@ -212,14 +212,14 @@ contains
       integer, intent(in) :: channel
       real(kind=8), intent(in) :: t_
       integer :: k
-      write(channel,'(f12.6,1x,100g15.6)') t_, (real(density_matrix(k,k)),k=1,nstates)
+      write(channel,'(f12.6,1x,100g15.6)') t_, (real(density_matrix(k,k),kind=8),k=1,nstates)
    end subroutine print_populations_den
 
    subroutine print_populations_amp(channel,t_)
       integer, intent(in) :: channel
       real(kind=8), intent(in) :: t_
       integer :: k
-      write(channel,'(f12.6,1x,100g15.6)') t_, (real(amplitude(k)*conjg(amplitude(k))),k=1,nstates)
+      write(channel,'(f12.6,1x,100g15.6)') t_, (real(amplitude(k)*conjg(amplitude(k)),kind=8),k=1,nstates)
    end subroutine print_populations_amp
 
    subroutine print_coherences_den(channel,t_,istate_)
@@ -307,10 +307,10 @@ contains
       allocate (a0_vdotd(nstates,nstates))
       allocate (a1_vdotd(nstates,nstates))
       allocate (a2_vdotd(nstates,nstates))
-      amplitude = 0.d0
-      amplitude_copy = 0.d0
-      density_matrix = 0.d0
-      density_matrix_copy = 0.d0
+      amplitude = cmplx(0.d0,0.d0,kind=8)
+      amplitude_copy = cmplx(0.d0,0.d0,kind=8)
+      density_matrix = cmplx(0.d0,0.d0,kind=8)
+      density_matrix_copy = cmplx(0.d0,0.d0,kind=8)
       switch_prob = 0.d0
       b_prob = 0.d0
       v_dot_d = 0.d0
@@ -336,10 +336,10 @@ contains
       allocate (a0_fmatz1(nstates,nstates))
       allocate (a1_fmatz1(nstates,nstates))
       allocate (a2_fmatz1(nstates,nstates))
-      zmom1 = 0.d0
-      pzmom1 = 0.d0
-      zmom1_copy = 0.d0
-      pzmom1_copy = 0.d0
+      zmom1 = cmplx(0.d0,0.d0,kind=8)
+      pzmom1 = cmplx(0.d0,0.d0,kind=8)
+      zmom1_copy = cmplx(0.d0,0.d0,kind=8)
+      pzmom1_copy = cmplx(0.d0,0.d0,kind=8)
       fmatz1_prev = 0.d0
       fmatz1 = 0.d0
       a0_fmatz1 = 0.d0
@@ -409,8 +409,8 @@ contains
    !--------------------------------------------------------------------
    subroutine set_initial_amplitudes_pure(istate)
       integer, intent(in) :: istate
-      amplitude = 0.d0
-      amplitude(istate) = cmplx(1.d0,0.d0)
+      amplitude = cmplx(0.d0,0.d0,kind=8)
+      amplitude(istate) = cmplx(1.d0,0.d0,kind=8)
    end subroutine set_initial_amplitudes_pure
 
 
@@ -422,11 +422,11 @@ contains
       integer, intent(in) :: dstate_
       integer :: i
       real(kind=8) :: w, wfnorm
-      amplitude = 0.d0
+      amplitude = cmplx(0.d0,0.d0,kind=8)
       wfnorm = 0.d0
       do i=1,nstates
          w = z(dstate_,i)
-         amplitude(i) = cmplx(w,0.d0)
+         amplitude(i) = cmplx(w,0.d0,kind=8)
          wfnorm = wfnorm + w*w
       enddo
       amplitude = amplitude/sqrt(wfnorm)
@@ -448,19 +448,19 @@ contains
 
       pnorm = 0.d0
       do i=1,nstates
-         reamp = real(amplitude(i))
+         reamp = real(amplitude(i),kind=8)
          pnorm = pnorm + reamp*reamp
       enddo
 
       do n=1,nstates/10
          write(ichannel,'(/1x,10i13)') (i,i=(n-1)*10+1,n*10)
-         write(ichannel,'(1x,10f13.6)') (real(amplitude(i)),i=(n-1)*10+1,n*10)
+         write(ichannel,'(1x,10f13.6)') (real(amplitude(i),kind=8),i=(n-1)*10+1,n*10)
       enddo
 
       n = mod(nstates,10)
       if (n.gt.0) then
          write(ichannel,'(/1x,10i13)') (i,i=nstates-n+1,nstates)
-         write(ichannel,'(1x,10f13.6)') (real(amplitude(i)),i=nstates-n+1,nstates)
+         write(ichannel,'(1x,10f13.6)') (real(amplitude(i),kind=8),i=nstates-n+1,nstates)
       endif
       write(6,'(/)')
 
@@ -519,8 +519,8 @@ contains
    !---------------------------------------------------------------------
    subroutine set_initial_density_pure(istate)
       integer, intent(in) :: istate
-      density_matrix = 0.d0
-      density_matrix(istate,istate) = cmplx(1.d0,0.d0)
+      density_matrix = cmplx(0.d0,0.d0,kind=8)
+      density_matrix(istate,istate) = cmplx(1.d0,0.d0,kind=8)
    end subroutine set_initial_density_pure
 
    !-----------------------------------------------------------------------
@@ -535,8 +535,8 @@ contains
       do i=1,nstates
          do j=i,nstates
             r = z(dstate_,i)*z(dstate_,j)
-            density_matrix(i,j) = cmplx(r,0.d0)
-            if (i.ne.j) density_matrix(j,i) = cmplx(r,0.d0)
+            density_matrix(i,j) = cmplx(r,0.d0,kind=8)
+            if (i.ne.j) density_matrix(j,i) = cmplx(r,0.d0,kind=8)
          enddo
       enddo
    end subroutine set_initial_density_mixture
@@ -700,7 +700,7 @@ contains
    function calculate_population(istate_) result(pop)
       integer, intent(in) :: istate_
       real(kind=8) :: pop
-      pop = real(amplitude(istate_)*conjg(amplitude(istate_)))
+      pop = real(amplitude(istate_)*conjg(amplitude(istate_)),kind=8)
    end function calculate_population
 
    !--------------------------------------------------------------------
@@ -709,7 +709,7 @@ contains
    function calculate_population_den(istate_) result(pop)
       integer, intent(in) :: istate_
       real(kind=8) :: pop
-      pop = real(density_matrix(istate_,istate_))
+      pop = real(density_matrix(istate_,istate_),kind=8)
    end function calculate_population_den
 
    !--------------------------------------------------------------------
@@ -733,9 +733,9 @@ contains
       integer :: i
       ctrace = 0.d0
       do i=1,nstates
-      	ctrace = ctrace + density_matrix(i,i)
+         ctrace = ctrace + density_matrix(i,i)
       enddo
-      trace = real(ctrace)
+      trace = real(ctrace,kind=8)
    end function density_trace
 
    !--------------------------------------------------------------------
@@ -749,7 +749,7 @@ contains
       do i=1,nstates
       	ctrace = ctrace + zmom1(i,i)
       enddo
-      trace = real(ctrace)
+      trace = real(ctrace,kind=8)
    end function zmom1_trace
 
    !--------------------------------------------------------------------
@@ -763,7 +763,7 @@ contains
       do i=1,nstates
       	ctrace = ctrace + pzmom1(i,i)
       enddo
-      trace = real(ctrace)
+      trace = real(ctrace,kind=8)
    end function pzmom1_trace
 
    !--------------------------------------------------------------------
@@ -789,7 +789,7 @@ contains
       integer :: j
       do j=1,nstates
          vdji = a0_vdotd(j,istate_) + a1_vdotd(j,istate_)*t_ + a2_vdotd(j,istate_)*t_*t_
-         b_prob(j) = -2.d0*Real(amplitude(j)*conjg(amplitude(istate_))*vdji)
+         b_prob(j) = -2.d0*real(amplitude(j)*conjg(amplitude(istate_))*vdji,kind=8)
       enddo
    end subroutine calculate_bprob_amp
 
@@ -804,7 +804,7 @@ contains
       integer :: j
       do j=1,nstates
          vdji = a0_vdotd(j,istate_) + a1_vdotd(j,istate_)*t_ + a2_vdotd(j,istate_)*t_*t_
-         b_prob(j) = -2.d0*Real(density_matrix(j,istate_)*vdji)
+         b_prob(j) = -2.d0*real(density_matrix(j,istate_)*vdji,kind=8)
       enddo
    end subroutine calculate_bprob_den
 
@@ -1506,7 +1506,7 @@ contains
                do k=1,nstates
                   !-- interpolate the nonadiabatic coupling term
                   vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t_ + a2_vdotd(i,k)*t_*t_
-                  droij = droij - 2.d0*real(ro(i,k))*vdik
+                  droij = droij - 2.d0*real(ro(i,k),kind=8)*vdik
                enddo
 
             else
@@ -1558,7 +1558,7 @@ contains
                do k=1,nstates
                   !-- interpolate the nonadiabatic coupling term
                   vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t_ + a2_vdotd(i,k)*t_*t_
-                  droij = droij - 2.d0*real(ro(k,i))*vdik
+                  droij = droij - 2.d0*real(ro(k,i),kind=8)*vdik
                enddo
 
             else
@@ -1617,9 +1617,9 @@ contains
 
       real(kind=8), dimension(nstates) :: tiiz1, tiipz1
 
-      drodt     = cmplx(0.d0,0.d0)
-      dzmom1dt  = cmplx(0.d0,0.d0)
-      dpzmom1dt = cmplx(0.d0,0.d0)
+      drodt     = cmplx(0.d0,0.d0,kind=8)
+      dzmom1dt  = cmplx(0.d0,0.d0,kind=8)
+      dpzmom1dt = cmplx(0.d0,0.d0,kind=8)
 
       !-- calculate diagonal elements of the derivatives
 
@@ -1628,27 +1628,27 @@ contains
 
       do i=1,nstates
 
-         droii = cmplx(0.d0,0.d0)
-         tiiz1(i)  = real(pzmom1_(i,i))/effmass1
+         droii = cmplx(0.d0,0.d0,kind=8)
+         tiiz1(i)  = real(pzmom1_(i,i),kind=8)/effmass1
          tiipz1(i) = 0.d0
 
          do k=1,nstates
             vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t_ + a2_vdotd(i,k)*t_*t_
             f1ik = a0_fmatz1(i,k) + a1_fmatz1(i,k)*t_ + a2_fmatz1(i,k)*t_*t_
-            tiiz1(i)  = tiiz1(i) - 2.d0*vdik*real(zmom1_(i,k))
-            tiipz1(i) = tiipz1(i) + (f1ik-f1sh)*real(ro_(i,k)) - 2.d0*vdik*real(pzmom1_(i,k))
-            droii = droii - 2.d0*vdik*real(ro_(i,k))
+            tiiz1(i)  = tiiz1(i) - 2.d0*vdik*real(zmom1_(i,k),kind=8)
+            tiipz1(i) = tiipz1(i) + (f1ik-f1sh)*real(ro_(i,k),kind=8) - 2.d0*vdik*real(pzmom1_(i,k),kind=8)
+            droii = droii - 2.d0*vdik*real(ro_(i,k),kind=8)
          enddo
 
-         dzmom1dt(i,i)  = cmplx(tiiz1(i),0.d0)
-         dpzmom1dt(i,i) = cmplx(tiipz1(i),0.d0)
+         dzmom1dt(i,i)  = cmplx(tiiz1(i),0.d0,kind=8)
+         dpzmom1dt(i,i) = cmplx(tiipz1(i),0.d0,kind=8)
          drodt(i,i) = droii
 
       enddo
 
       do i=1,nstates
-         dzmom1dt(i,i)  = dzmom1dt(i,i)  - cmplx(tiiz1(istate_),0.d0)
-         dpzmom1dt(i,i) = dpzmom1dt(i,i) - cmplx(tiipz1(istate_),0.d0)
+         dzmom1dt(i,i)  = dzmom1dt(i,i)  - cmplx(tiiz1(istate_),0.d0,kind=8)
+         dpzmom1dt(i,i) = dpzmom1dt(i,i) - cmplx(tiipz1(istate_),0.d0,kind=8)
       enddo
 
 
@@ -1657,7 +1657,7 @@ contains
       if (.not.decouple) then
 
          do i=1,nstates
-            droii = cmplx(0.d0,0.d0)
+            droii = cmplx(0.d0,0.d0,kind=8)
             do k=1,nstates
                !-- interpolate the F-matrices
                f1ik = a0_fmatz1(i,k) + a1_fmatz1(i,k)*t_ + a2_fmatz1(i,k)*t_*t_
@@ -1676,7 +1676,7 @@ contains
       do i=1,nstates-1
          do j=i+1,nstates
 
-            droij = cmplx(0.d0,0.d0)
+            droij = cmplx(0.d0,0.d0,kind=8)
 
             !-- interpolate adiabatic energies
             ei = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_
@@ -1752,9 +1752,9 @@ contains
 
       real(kind=8), dimension(nstates) :: tiiz1, tiipz1
 
-      dampdt    = cmplx(0.d0,0.d0)
-      dzmom1dt  = cmplx(0.d0,0.d0)
-      dpzmom1dt = cmplx(0.d0,0.d0)
+      dampdt    = cmplx(0.d0,0.d0,kind=8)
+      dzmom1dt  = cmplx(0.d0,0.d0,kind=8)
+      dpzmom1dt = cmplx(0.d0,0.d0,kind=8)
 
       !-- calculate diagonal elements of the derivatives
 
@@ -1772,27 +1772,27 @@ contains
 
          dampi = -ii*amp_(i)*de/hbarps
 
-         tiiz1(i)  = real(pzmom1_(i,i))/effmass1
+         tiiz1(i)  = real(pzmom1_(i,i),kind=8)/effmass1
          tiipz1(i) = 0.d0
 
          do k=1,nstates
             vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t_ + a2_vdotd(i,k)*t_*t_
             f1ik = a0_fmatz1(i,k) + a1_fmatz1(i,k)*t_ + a2_fmatz1(i,k)*t_*t_
-            tiiz1(i)  = tiiz1(i) - 2.d0*vdik*real(zmom1_(i,k))
-            tiipz1(i) = tiipz1(i) + (f1ik-f1sh)*(real(amp_(i))*real(amp_(k))+imag(amp_(i))*imag(amp_(k)))&
-                                & - 2.d0*vdik*real(pzmom1_(i,k))
+            tiiz1(i)  = tiiz1(i) - 2.d0*vdik*real(zmom1_(i,k),kind=8)
+            tiipz1(i) = tiipz1(i) + (f1ik-f1sh)*(real(amp_(i),kind=8)*real(amp_(k),kind=8)+imag(amp_(i))*imag(amp_(k)))&
+                                & - 2.d0*vdik*real(pzmom1_(i,k),kind=8)
             dampi = dampi - amp_(k)*vdik
          enddo
 
-         dzmom1dt(i,i)  = cmplx(tiiz1(i),0.d0)
-         dpzmom1dt(i,i) = cmplx(tiipz1(i),0.d0)
+         dzmom1dt(i,i)  = cmplx(tiiz1(i),0.d0,kind=8)
+         dpzmom1dt(i,i) = cmplx(tiipz1(i),0.d0,kind=8)
          dampdt(i) = dampi
 
       enddo
 
       do i=1,nstates
-         dzmom1dt(i,i)  = dzmom1dt(i,i)  - cmplx(tiiz1(istate_),0.d0)
-         dpzmom1dt(i,i) = dpzmom1dt(i,i) - cmplx(tiipz1(istate_),0.d0)
+         dzmom1dt(i,i)  = dzmom1dt(i,i)  - cmplx(tiiz1(istate_),0.d0,kind=8)
+         dpzmom1dt(i,i) = dpzmom1dt(i,i) - cmplx(tiipz1(istate_),0.d0,kind=8)
       enddo
 
 
@@ -1862,9 +1862,9 @@ contains
 
       real(kind=8), dimension(nstates) :: tiiz1, tiipz1
 
-      dampdt    = cmplx(0.d0,0.d0)
-      dzmom1dt  = cmplx(0.d0,0.d0)
-      dpzmom1dt = cmplx(0.d0,0.d0)
+      dampdt    = cmplx(0.d0,0.d0,kind=8)
+      dzmom1dt  = cmplx(0.d0,0.d0,kind=8)
+      dpzmom1dt = cmplx(0.d0,0.d0,kind=8)
 
       !-- calculate diagonal elements of the derivatives
 
@@ -1896,27 +1896,27 @@ contains
 
          dampi = -ii*amp_(i)*hii/hbarps
 
-         tiiz1(i)  = real(pzmom1_(i,i))/effmass1
+         tiiz1(i)  = real(pzmom1_(i,i),kind=8)/effmass1
          tiipz1(i) = 0.d0
 
          do k=1,nstates
             vdik = a0_vdotd(i,k) + a1_vdotd(i,k)*t_ + a2_vdotd(i,k)*t_*t_
             f1ik = a0_fmatz1(i,k) + a1_fmatz1(i,k)*t_ + a2_fmatz1(i,k)*t_*t_
-            tiiz1(i)  = tiiz1(i) - 2.d0*vdik*real(zmom1_(i,k))
-            tiipz1(i) = tiipz1(i) + (f1ik-f1sh)*(real(amp_(i))*real(amp_(k))+imag(amp_(i))*imag(amp_(k)))&
-                                & - 2.d0*vdik*real(pzmom1_(i,k))
+            tiiz1(i)  = tiiz1(i) - 2.d0*vdik*real(zmom1_(i,k),kind=8)
+            tiipz1(i) = tiipz1(i) + (f1ik-f1sh)*(real(amp_(i),kind=8)*real(amp_(k),kind=8)+imag(amp_(i))*imag(amp_(k)))&
+                                & - 2.d0*vdik*real(pzmom1_(i,k),kind=8)
             dampi = dampi - amp_(k)*vdik
          enddo
 
-         dzmom1dt(i,i)  = cmplx(tiiz1(i),0.d0)
-         dpzmom1dt(i,i) = cmplx(tiipz1(i),0.d0)
+         dzmom1dt(i,i)  = cmplx(tiiz1(i),0.d0,kind=8)
+         dpzmom1dt(i,i) = cmplx(tiipz1(i),0.d0,kind=8)
          dampdt(i) = dampi
 
       enddo
 
       do i=1,nstates
-         dzmom1dt(i,i)  = dzmom1dt(i,i)  - cmplx(tiiz1(istate_),0.d0)
-         dpzmom1dt(i,i) = dpzmom1dt(i,i) - cmplx(tiipz1(istate_),0.d0)
+         dzmom1dt(i,i)  = dzmom1dt(i,i)  - cmplx(tiiz1(istate_),0.d0,kind=8)
+         dpzmom1dt(i,i) = dpzmom1dt(i,i) - cmplx(tiipz1(istate_),0.d0,kind=8)
       enddo
 
 
@@ -2362,7 +2362,7 @@ contains
          f1ii = fmatz1(istate_,istate_)
          f1nn = fmatz1(n_,n_)
          f1in = fmatz1(istate_,n_)
-         zmom1nn = real(zmom1(n_,n_))
+         zmom1nn = real(zmom1(n_,n_),kind=8)
 
          rate = (f1nn - f1ii)*zmom1nn - 4.d0*abs(f1in*zmom1nn)*dzeta_
          rate = 0.5d0*rate/hbarps
@@ -2393,7 +2393,7 @@ contains
          f1ii = fmatz1(istate_,istate_)
          f1nn = fmatz1(n_,n_)
 
-         zmom1nn = real(zmom1(n_,n_))
+         zmom1nn = real(zmom1(n_,n_),kind=8)
 
          rate = (f1nn - f1ii)*zmom1nn
          rate = -0.5d0*rate/hbarps
@@ -2579,7 +2579,7 @@ contains
 
          do k=1,nstates
 
-            rokk = real(density_matrix(k,k))
+            rokk = real(density_matrix(k,k),kind=8)
 
             if (rokk.gt.1.d-8) then
 
@@ -2601,7 +2601,7 @@ contains
                      eta_k = root2
                   endif
 
-                  pzmom1(k,k) = cmplx(eta_k*usc_z1,0.d0)
+                  pzmom1(k,k) = cmplx(eta_k*usc_z1,0.d0,kind=8)
 
                   !=== DEBUG ===================================================================
                   !write(*,'("Moments of momenta readjusted for state ",i2,": ",2g15.6)') k,eta_k*usc_z1
@@ -2707,7 +2707,7 @@ contains
 
          do k=1,nstates
 
-            rokk = real(density_matrix(k,k))
+            rokk = real(density_matrix(k,k),kind=8)
 
             if (rokk.gt.1.d-8) then
 
@@ -2729,7 +2729,7 @@ contains
                      eta_k = root2
                   endif
 
-                  pzmom1(k,k) = cmplx(eta_k*u_z1,0.d0)
+                  pzmom1(k,k) = cmplx(eta_k*u_z1,0.d0,kind=8)
 
                   !=== DEBUG ===================================================================
                   !write(*,'("Moments of momenta readjusted for state ",i2,": ",2g15.6)') k,eta_k*u_z1
@@ -2796,7 +2796,7 @@ contains
 
             !-- renormalizing the density matrix elemenmts
 
-            roii = real(density_matrix(i,i))
+            roii = real(density_matrix(i,i),kind=8)
 
             do k=1,nstates
                do l=k,nstates
@@ -2805,8 +2805,8 @@ contains
                enddo
             enddo
 
-            density_matrix(i,:) = cmplx(0.d0,0.d0)
-            density_matrix(:,i) = cmplx(0.d0,0.d0)
+            density_matrix(i,:) = cmplx(0.d0,0.d0,kind=8)
+            density_matrix(:,i) = cmplx(0.d0,0.d0,kind=8)
 
             !=== start DEBUG printout ===
             !write(*,'("***Collapsing event for state ",i2,": gamma_collapse = ",g15.6)') i, gamma_collapse
@@ -2822,10 +2822,10 @@ contains
             states_reset(iir) = i
 
             do k=1,nstates
-               zmom1 (i,k) = cmplx(0.d0,0.d0)
-               pzmom1(i,k) = cmplx(0.d0,0.d0)
-               zmom1 (k,i) = cmplx(0.d0,0.d0)
-               pzmom1(k,i) = cmplx(0.d0,0.d0)
+               zmom1 (i,k) = cmplx(0.d0,0.d0,kind=8)
+               pzmom1(i,k) = cmplx(0.d0,0.d0,kind=8)
+               zmom1 (k,i) = cmplx(0.d0,0.d0,kind=8)
+               pzmom1(k,i) = cmplx(0.d0,0.d0,kind=8)
             enddo
 
          endif
@@ -2858,7 +2858,7 @@ contains
 
       !-- (to match notation in L-S paper)
       i = istate_
-      rhoii = real(density_matrix(i,i))
+      rhoii = real(density_matrix(i,i),kind=8)
 
       !-- loop over states to determine the probabilities of collapsing the wavefunction
       !   and resetting the moments
@@ -2889,13 +2889,13 @@ contains
             iic = iic + 1
             states_collapsed(iic) = n
 
-            rhonn = real(amplitude(n)*conjg(amplitude(n)))
-            rhoii = real(amplitude(i)*conjg(amplitude(i)))
+            rhonn = real(amplitude(n)*conjg(amplitude(n)),kind=8)
+            rhoii = real(amplitude(i)*conjg(amplitude(i)),kind=8)
             renormi = sqrt((rhoii + rhonn)/rhoii)
 
             !-- renormalize the amplitudes
 
-            amplitude(n) = cmplx(0.d0,0.d0)
+            amplitude(n) = cmplx(0.d0,0.d0,kind=8)
             amplitude(i) = amplitude(i)*renormi
 
             !=== start DEBUG printout ===
@@ -2914,10 +2914,10 @@ contains
 
             !-- zero out the moments
             do j=1,nstates
-               zmom1 (n,j) = cmplx(0.d0,0.d0)
-               pzmom1(n,j) = cmplx(0.d0,0.d0)
-               zmom1 (j,n) = cmplx(0.d0,0.d0)
-               pzmom1(j,n) = cmplx(0.d0,0.d0)
+               zmom1 (n,j) = cmplx(0.d0,0.d0,kind=8)
+               pzmom1(n,j) = cmplx(0.d0,0.d0,kind=8)
+               zmom1 (j,n) = cmplx(0.d0,0.d0,kind=8)
+               pzmom1(j,n) = cmplx(0.d0,0.d0,kind=8)
             enddo
 
          endif
@@ -2960,10 +2960,9 @@ contains
    !-------------------------------------------------------------------------------------
    subroutine collapse_wavefunction(istate_)
       integer, intent(in) :: istate_
-      amplitude = cmplx(0.d0,0.d0)
-      amplitude(istate_) = cmplx(1.d0,0.d0)
+      amplitude = cmplx(0.d0,0.d0,kind=8)
+      amplitude(istate_) = cmplx(1.d0,0.d0,kind=8)
    end subroutine collapse_wavefunction
-
 
 !===============================================================================
 end module propagators_et2

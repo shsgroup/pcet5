@@ -1092,7 +1092,7 @@ subroutine dynamicset2
          itmp = 100
          write(6,'(1x,"Number of TDSE steps per classical step in MDQT (default value): ",i10/)') itmp
       endif
-      write(6,'(1x,"Timestep for TDSE: ",g15.6," ps"/)') tstep/real(itmp)
+      write(6,'(1x,"Timestep for TDSE: ",g15.6," ps"/)') tstep/real(itmp,kind=8)
 
       ioption = index(options," MAXNQSTEPS=")
       if (ioption.ne.0) then
@@ -1102,7 +1102,7 @@ subroutine dynamicset2
          itmp1 = 10000
          write(6,'(1x,"Maximum number of TDSE steps per classical step in MDQT (default value): ",i10/)') itmp1
       endif
-      write(6,'(1x,"Minimum timestep for TDSE: ",g15.6," ps"/)') tstep/real(itmp1)
+      write(6,'(1x,"Minimum timestep for TDSE: ",g15.6," ps"/)') tstep/real(itmp1,kind=8)
 
       call set_tdse_timestep(itmp,itmp1,tstep)
 
@@ -1750,8 +1750,8 @@ subroutine dynamicset2
 
          switch = .false.
 
-         zeit_prev = real(istep-1)*tstep
-         zeit = real(istep)*tstep
+         zeit_prev = real(istep-1,kind=8)*tstep
+         zeit = real(istep,kind=8)*tstep
 
          !-- MDQT: store couplings, electronic energies, and velocities
          !         from the previous step (for interpolation)
@@ -2001,9 +2001,8 @@ subroutine dynamicset2
             !-----------------------------------------------------------------
 
             !--(DEBUG)--start
-            !
-            !-- print out the populations and coherences (channels 777 and 778)
 
+            !-- print out the populations and coherences (channels 777 and 778)
             if (ndump777.ne.0.and.mod(istep,ndump777).eq.0) then
                if (afssh) then
                   call print_populations_den(777,zeit)
@@ -2013,10 +2012,19 @@ subroutine dynamicset2
                   call print_coherences_amp(778,zeit,istate)
                endif
             endif
+
             !-- print out couplings (channel 888)
             if (ndump888.ne.0.and.mod(istep,ndump888).eq.0) then
                call print_couplings_and_splittings(888,zeit)
             endif
+
+            !-- hook for the debugger (for setting up a breakpoint)
+            !if (istep.eq.16777216) then
+            !   write(*,*)
+            !   write(*,*) "===========BREAKPOINT: Step number: ",istep
+            !   write(*,*)
+            !endif
+
             !--(DEBUG)--end
 
 
@@ -2027,8 +2035,7 @@ subroutine dynamicset2
 
             !-- construct the full density matrix (do we really need it?)
             !------------------------------------------------------------
-            !call calculate_density_matrix
-
+            call calculate_density_matrix
 
             !-- decision time: should we make a hop?
             !-------------------------------------------

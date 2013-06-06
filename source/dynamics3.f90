@@ -985,7 +985,7 @@ subroutine dynamics3
          itmp = 100
          write(6,'(1x,"Number of TDSE steps per classical step in MDQT (default value): ",i10/)') itmp
       endif
-      write(6,'(1x,"Timestep for TDSE: ",g15.6," ps"/)') tstep/real(itmp)
+      write(6,'(1x,"Timestep for TDSE: ",g15.6," ps"/)') tstep/real(itmp,kind=8)
 
       ioption = index(options," MAXNQSTEPS=")
       if (ioption.ne.0) then
@@ -995,7 +995,7 @@ subroutine dynamics3
          itmp1 = 10000
          write(6,'(1x,"Maximum number of TDSE steps per classical step in MDQT (default value): ",i10/)') itmp1
       endif
-      write(6,'(1x,"Minimum timestep for TDSE: ",g15.6," ps"/)') tstep/real(itmp1)
+      write(6,'(1x,"Minimum timestep for TDSE: ",g15.6," ps"/)') tstep/real(itmp1,kind=8)
 
       call set_tdse_timestep(itmp,itmp1,tstep)
 
@@ -1915,8 +1915,8 @@ subroutine dynamics3
 
          switch = .false.
 
-         zeit_prev = real(istep-1)*tstep
-         zeit = real(istep)*tstep
+         zeit_prev = real(istep-1,kind=8)*tstep
+         zeit = real(istep,kind=8)*tstep
 
          !-- MDQT: store couplings, vibronic energies, and velocities
          !         from the previous step (for iterpolation)

@@ -1054,7 +1054,7 @@ contains
             zsq = z(mu+nprst,istate)*z(mu+nprst,istate)
             gradzp = gradzp + zsq
          enddo
-         gradze = real(iset-1)
+         gradze = real(iset-1,kind=8)
          return
 
       elseif (mode.eq.'ADIAB') then
@@ -1156,7 +1156,7 @@ contains
                enddo
                coupzp(istate,jstate) = dvdzp/(fe(jstate)-fe(istate))
                coupzp(jstate,istate) = -coupzp(istate,jstate)
-               coupze(istate,jstate) = real(iset-1)/(fe(jstate)-fe(istate))
+               coupze(istate,jstate) = real(iset-1,kind=8)/(fe(jstate)-fe(istate))
                coupze(jstate,istate) = -coupze(istate,jstate)
             enddo
          enddo

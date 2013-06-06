@@ -62,7 +62,7 @@ contains
       real(8), intent(in) :: tstep_
       nqsteps = nqsteps_
       maxnqsteps = maxnqsteps_
-      qtstep = tstep_/real(nqsteps_)
+      qtstep = tstep_/real(nqsteps_,kind=8)
    end subroutine set_tdse_timestep
 
 end module control_dynamics
