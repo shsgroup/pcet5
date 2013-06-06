@@ -13,8 +13,8 @@ FC = ifort
 MODFLAG = -module 
 BACKSLASH = -assume nobscc
 NOBACKSLASH = -assume bscc
-F90FLAGS = -g -check
-F77FLAGS = -g -check
+F90FLAGS = -g -check -fstack-security-check -fstack-protector -fp-model strict -prec-div
+F77FLAGS = -g -check -fstack-security-check -fstack-protector -fp-model strict -prec-div
 
 # sequential mkl libraries
 LDFLAGS = -L/opt/intel/Compiler/11.1/075/mkl/lib/em64t -lmkl_intel_lp64 -lmkl_core -lmkl_sequential -lpthread -lm
