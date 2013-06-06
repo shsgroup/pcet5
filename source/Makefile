@@ -21,6 +21,10 @@ else
    MODDIR  = ./mod
 endif
 
+ifeq ($(FC),openf90)
+   MODDIR = .
+endif
+
 MODOPT  = $(MODFLAG)$(MODDIR)
 OBJDIR  = ./obj
 EXEDIR  = ../bin
