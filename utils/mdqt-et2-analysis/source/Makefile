@@ -7,13 +7,13 @@
 # Set the F90 Compiler
 
 F90 = ifort
-F90FLAGS = -c -xHOST -O3 -ipo -no-prec-div -ftz -zero
+F90FLAGS = -c -O3 -xHOST -ipo -zero -static -prec-div -fstack-security-check -fstack-protector -fp-model strict
 #F90FLAGS = -c -g -check
 
 # Set the F90 Loader
 LD = $(F90) -o
-LDFLAGS = -xHOST -O3 -ipo -no-prec-div -ftz -zero
-#LDFLAGS = -fast -ftz -zero -L/opt/intel/Compiler/11.1/075/mkl/lib/em64t -Wl,--start-group /opt/intel/Compiler/11.1/075/mkl/lib/em64t/libmkl_intel_lp64.a /opt/intel/Compiler/11.1/075/mkl/lib/em64t/libmkl_core.a /opt/intel/Compiler/11.1/075/mkl/lib/em64t/libmkl_sequential.a -Wl,--end-group -lpthread -lm
+LDFLAGS = -O3 -xHOST -ipo -zero -static -prec-div -fstack-security-check -fstack-protector -fp-model strict
+#LDFLAGS = -L/opt/intel/Compiler/11.1/075/mkl/lib/em64t -Wl,--start-group /opt/intel/Compiler/11.1/075/mkl/lib/em64t/libmkl_intel_lp64.a /opt/intel/Compiler/11.1/075/mkl/lib/em64t/libmkl_core.a /opt/intel/Compiler/11.1/075/mkl/lib/em64t/libmkl_sequential.a -Wl,--end-group -lpthread -lm
 
 #LDFLAGS = -g -check
 
