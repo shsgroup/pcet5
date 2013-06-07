@@ -8,12 +8,14 @@ if [ x$1 == x ]; then
     echo $0 "<list of compilers>"
     echo "---------------------------------------------------------------------------------"
     echo "Compilers:"
-    echo "intel       (Intel Fortran90 compiler 2011_sp1.7.256 with sequential MKL libraries)"
-    echo "intel.omp   (Intel Fortran90 compiler 2011_sp1.7.256 with multi-threaded MKL libraries)"
-    echo "intel.debug (Intel Fortran90 compiler 2011_sp1.7.256 with debug options enabled)"
-    echo "pgf90       (PGI Fortran90 compiler 9.0.2)"
-    echo "pgf90.debug (PGI Fortran90 compiler 9.0.2 with debug options enabled)"
-    echo "gfortran    (GNU Fortran90 compiler, gcc 4.1.2"
+    echo "intel        (Intel Fortran90 compiler 2011_sp1.7.256 with sequential MKL libraries)"
+    echo "intel.omp    (Intel Fortran90 compiler 2011_sp1.7.256 with multi-threaded MKL libraries)"
+    echo "intel.debug  (Intel Fortran90 compiler 2011_sp1.7.256 with debug options enabled)"
+    echo "pgf90        (PGI Fortran90 compiler 9.0.2)"
+    echo "pgf90.debug  (PGI Fortran90 compiler 9.0.2 with debug options enabled)"
+    echo "gfortran     (GNU Fortran90 compiler, gcc)"
+    echo "open64       (AMD Fortran90 compiler, openf90)"
+    echo "open64.debug (AMD Fortran90 compiler, openf90 with debuggong options -g -C)"
     echo "================================================================================="
     exit 0
 fi
@@ -42,9 +44,9 @@ do
       echo `date '+%a %D at %r'` ": building with " ${compiler} " is done!" >> Rebuild.log
       echo
       EXE=pcet_${VERSION}_${ARCH}.x
-      echo "=== copying " ${EXE} " to shscluster2 ..."
-      echo
-      cp --remove-destination -p ../bin/${EXE} /homecluster/souda/PCET/pcet5/bin/${EXE}
+#      echo "=== copying " ${EXE} " to shscluster2 ..."
+#      echo
+#      cp --remove-destination -p ../bin/${EXE} /homecluster/souda/PCET/pcet5/bin/${EXE}
    fi
 done
 
@@ -64,5 +66,5 @@ echo -e "\a"
 #cp -f ../bin/*.x /homecluster/souda/PCET/pcet5/bin
 #echo -e "Done \a"
 
-echo "Executables were copied to /homecluster/souda/PCET/pcet5/bin" >> Rebuild.log
-echo -e "\a"
+#echo "Executables were copied to /homecluster/souda/PCET/pcet5/bin" >> Rebuild.log
+#echo -e "\a"
