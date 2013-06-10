@@ -13,7 +13,7 @@ HERE=`pwd`
 BINDIR=/home/souda/PCET/pcet5/bin
 
 #-- defaults
-SGEQUEUE="single.q"
+SGEQUEUE="sing*.q"
 WALLTIME="720:00:00"
 COMP="intel"
 SCRBASE="local"
@@ -28,12 +28,12 @@ if [ x$1 == x ]; then
     echo $0 "<options> <input_file_name>"
     echo "---------------------------------------------------------------------------------"
     echo "Options:"
-    echo "-q | --queue         : SGE queue (default batch)"
-    echo "-w | --walltime      : wall time (default 240 hours)"
-    echo "-s | --scratch-base  : global/local - base scratch directory (default local)"
-    echo "-c | --compiler      : intel/pgi - build compiler (default intel)"
-    echo "-t | --threads       : number of OpenMP threads used by diagonalization routines"
-    echo "-j | --jobs          : number of jobs to submit (default 1)"
+    echo "-q | --queue         :  SGE queue (default batch)"
+    echo "-w | --walltime      :  wall time (default 240 hours)"
+    echo "-s | --scratch-base  :  global/local - base scratch directory (default local)"
+    echo "-c | --compiler      :  intel/pgi - build compiler (default intel)"
+    echo "-t | --threads       :  number of OpenMP threads used by diagonalization routines"
+    echo "-j | --jobs          :  number of jobs to submit (default 1)"
     echo "================================================================================="
     exit 0
 fi
@@ -54,7 +54,7 @@ done
 
 inputlist=$*
 
-if [ x$inputlist == x ]; then
+if [ "x$inputlist" == "x" ]; then
     echo "you MUST specify at least one <input_file_name> "
     exit 1
 fi
@@ -133,7 +133,7 @@ cat << EnD > $JOBNAME.sge
 #$ -j yes
 #$ -cwd
 #$ -V
-######## -pe pe_slots $THREADS
+#$ -pe mpi1 $THREADS
 
 module load intel/intel-11
 module load openmpi/intel-11
@@ -208,8 +208,14 @@ echo "Date: " \`date\`
 echo "==========================================================================="
 
 # deliver the output directory
-tar cvzf $JOBNAME.tar.gz *
-cp $JOBNAME.tar.gz \$SGE_O_WORKDIR
+tar cvjf $JOBNAME.tar.bz2 *
+cp $JOBNAME.tar.bz2 \$SGE_O_WORKDIR
+
+echo "Removing SGE scripts..."
+rm -f \$SGE_O_WORKDIR/*.sge
+
+echo "Removing *po files..."
+rm -f \$SGE_O_WORKDIR/*.po*
 
 echo "Removing scratch directories..."
 rm -rf \$SCRDIR
@@ -225,7 +231,6 @@ done
 
 echo
 echo `date` : ${NJOBS} jobs has been submitted to ${SGEQUEUE} queue
-
 
 done
 
