@@ -117,10 +117,20 @@ contains
    subroutine set_random_seed_pbsid(pbsvar)
 
       character(len=*), intent(in) :: pbsvar
-      character(len=240) :: varstring
-      integer :: ierr, getenvqq, intvar, idot
+
+      character(len=240) :: varstring, varstring_clean
+      character(len=10), parameter :: digits="1234567890"
+      character(len=1) :: tmp
+      logical :: numeric
+      integer :: ierr, getenvqq, intvar, idot, i, j
 
       ierr = getenvqq(pbsvar,varstring)
+
+      !--DEBUG---
+      write(*,*)
+      write(*,*) "From queueing environment: ",trim(pbsvar)," = ",trim(varstring)
+      write(*,*)
+      !--DEBUG---
 
       if (ierr.lt.0) then
          write(*,'(1x," *** Error code while getting the value of the environment variable ",a," : ",i4)') trim(pbsvar), ierr
@@ -131,8 +141,24 @@ contains
       endif
 
       !-- extract actual ID by cutting off the hostname
-      idot = index(varstring,".")
-      varstring = varstring(1:idot-1)
+      !   For PBS: always necessary
+      !   For SGE: never necessary
+      !   So, we are going simply remove all characters that are not numeric...
+
+      varstring_clean = ""
+      outer: do i=1,len(trim(varstring))
+         tmp = varstring(i:i)
+         numeric = .false.
+         inner: do j=1,10
+            if (tmp.eq.digits(j:j)) then
+               numeric = .true.
+               exit inner
+            endif
+         enddo inner
+         if (numeric) varstring_clean = trim(varstring_clean)//tmp
+      enddo outer
+
+      varstring = trim(varstring_clean)
 
       !-- convert to integer
       read(varstring,'(i)') intvar
