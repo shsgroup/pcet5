@@ -1681,28 +1681,28 @@ subroutine dynamicset2
 
       if (weights) then
          call get_evb_weights
-         write(itraj_channel,'("#",111("="))')
+         write(itraj_channel,'("#",131("="))')
       else
-         write(itraj_channel,'("#",111("="))')
+         write(itraj_channel,'("#",131("="))')
       endif
       write(itraj_channel,'("#   Data for the trajectory #",i6.6)') itraj
       if (weights) then
-         write(itraj_channel,'("#",111("-"))')
-         write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"VZe",t68,"Ekin",t80,"Efe",t89,"occ.",t95,"EVB weights (1,2)")')
-         write(itraj_channel,'("#",111("-"))')
+         write(itraj_channel,'("#",131("-"))')
+         write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"VZe",t68,"Ekin",t80,"Efe",t89,"occ.",t100,"EVB weights (1,2)")')
+         write(itraj_channel,'("#",131("-"))')
       else
-         write(itraj_channel,'("#",111("-"))')
+         write(itraj_channel,'("#",131("-"))')
          write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"vze",t68,"Ekin",t80,"Efe",t89,"occ.")')
-         write(itraj_channel,'("#",111("-"))')
+         write(itraj_channel,'("#",131("-"))')
       endif
 
       write(6,'(/1x,"===> Trajectory ",i5," starts on the electronic state ",i3)') itraj, istate
       write(6,'( 1x,"===> Initial solvent coordinate (z1), (kcal/mol)^(1/2): ",f13.6)') z1
 
       write(6,*)
-      write(6,'(111("-"))')
+      write(6,'(131("-"))')
       write(6,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"vze",t68,"Ekin",t80,"Efe",t89,"occ.")')
-      write(6,'(111("-"))')
+      write(6,'(131("-"))')
 
       !write(6,'(137x,$)')
 
@@ -1955,9 +1955,9 @@ subroutine dynamicset2
                   number_of_failed_trajectories = number_of_failed_trajectories + 1
 
                   if (weights) then
-                     write(itraj_channel,'("#",111("-"))')
+                     write(itraj_channel,'("#",131("-"))')
                   else
-                     write(itraj_channel,'("#",111("-"))')
+                     write(itraj_channel,'("#",131("-"))')
                   endif
 
                   write(itraj_channel,'("# Amplitudes are not normalized after timestep ",i6)') istep
@@ -1965,9 +1965,9 @@ subroutine dynamicset2
                   write(itraj_channel,'("# This trajectory has failed... Even after several tries with smaller TDSE timesteps.")')
 
                   if (weights) then
-                     write(itraj_channel,'("#",111("-"))')
+                     write(itraj_channel,'("#",131("-"))')
                   else
-                     write(itraj_channel,'("#",111("-"))')
+                     write(itraj_channel,'("#",131("-"))')
                   endif
 
                   close(itraj_channel)
@@ -2112,7 +2112,7 @@ subroutine dynamicset2
 
          if (mod(istep,ndump).eq.0) then
             if (weights) then
-               write(itraj_channel,'(f13.6,6f12.5,i5,4f10.3)') &
+               write(itraj_channel,'(f13.6,6f12.5,i5,4f15.9)') &
                & zeit, z1, vz1, ze, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn)
             else
                write(itraj_channel,'(f13.6,6f12.5,i5)') &
@@ -2131,16 +2131,16 @@ subroutine dynamicset2
       traj_time_end = second()
 
       if (weights) then
-         write(itraj_channel,'("#",111("-"))')
+         write(itraj_channel,'("#",131("-"))')
       else
-         write(itraj_channel,'("#",111("-"))')
+         write(itraj_channel,'("#",131("-"))')
       endif
       write(itraj_channel,'("# Number of allowed  switches: ",i5)') number_of_switches
       write(itraj_channel,'("# Number of rejected switches: ",i5)') number_of_rejected
       if (weights) then
-         write(itraj_channel,'("#",111("-"))')
+         write(itraj_channel,'("#",131("-"))')
       else
-         write(itraj_channel,'("#",111("-"))')
+         write(itraj_channel,'("#",131("-"))')
       endif
       close(itraj_channel)
 
@@ -2154,11 +2154,11 @@ subroutine dynamicset2
       !--(DEBUG)--end
 
       write(6,*)
-      write(6,'(111("-"))')
+      write(6,'(131("-"))')
       write(6,'("# Total number of allowed  switches: ",i5)') number_of_switches
       write(6,'("# Total number of rejected switches: ",i5)') number_of_rejected
       write(6,'("# CPU time elapsed (sec):            ",f12.3)') traj_time_end - traj_time_start
-      write(6,'(111("-"))')
+      write(6,'(131("-"))')
       write(6,*)
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
