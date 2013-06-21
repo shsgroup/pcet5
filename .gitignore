@@ -1,0 +1,14 @@
+#    things not to be saved into the repository
+#    files given without path names are never uploaded,
+#    no matter where they occur in the file tree.
+#
+
+source/Makefile.machine
+source/Rebuild.err
+source/Rebuild.log
+
+*.x
+*.bin
+*.o
+*.mod
+
