@@ -1731,7 +1731,7 @@ subroutine dynamicset2
       ekin = ekin1
 
       if (weights) then
-          write(itraj_channel,'(f13.6,6f12.5,i5,4f10.3)') &
+          write(itraj_channel,'(f13.6,6f12.5,i5,4f15.9)') &
           & 0.d0, z1, vz1, ze, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn)
       else
           write(itraj_channel,'(f13.6,6f12.5,i5)') &
