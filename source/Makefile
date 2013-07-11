@@ -137,10 +137,12 @@ MODOBJ  = $(OBJDIR)/module_control.o     \
           $(OBJDIR)/module_geosol.o      \
           $(OBJDIR)/module_keys.o        \
           $(OBJDIR)/module_laser.o       \
+          $(OBJDIR)/module_minima_1d.o       \
           $(OBJDIR)/module_monte_carlo.o \
           $(OBJDIR)/module_msevb_water.o \
           $(OBJDIR)/module_pardim.o      \
           $(OBJDIR)/module_parsol.o      \
+          $(OBJDIR)/module_polyroots.o   \
           $(OBJDIR)/module_potential.o   \
           $(OBJDIR)/module_propagators_3d.o \
           $(OBJDIR)/module_propagators_et2.o \
@@ -148,6 +150,7 @@ MODOBJ  = $(OBJDIR)/module_control.o     \
           $(OBJDIR)/module_quantum.o     \
           $(OBJDIR)/module_random_generators.o \
           $(OBJDIR)/module_rate_flux.o   \
+          $(OBJDIR)/module_rates_et2.o   \
           $(OBJDIR)/module_solmat.o      \
           $(OBJDIR)/module_sorting.o      \
           $(OBJDIR)/module_ssplib.o      \
@@ -176,17 +179,20 @@ MODMOD  = $(MODDIR)/control.mod     \
           $(MODDIR)/geosol.mod      \
           $(MODDIR)/keys.mod        \
           $(MODDIR)/laser.mod       \
+          $(MODDIR)/minima_1d.mod \
           $(MODDIR)/monte_carlo.mod \
           $(MODDIR)/msevb_water.mod \
           $(MODDIR)/pardim.mod      \
           $(MODDIR)/parsol.mod      \
           $(MODDIR)/potential.mod   \
+          $(MODDIR)/polyroots.mod   \
           $(MODDIR)/propagators_3d.mod \
           $(MODDIR)/propagators_et2.mod \
           $(MODDIR)/rk_parameters.mod \
           $(MODDIR)/quantum.mod     \
           $(MODDIR)/random_generators.mod \
           $(MODDIR)/rate_flux.mod   \
+          $(MODDIR)/rates_et2.mod \
           $(MODDIR)/solmat.mod      \
           $(MODDIR)/ssplib.mod      \
           $(MODDIR)/strings.mod     \
@@ -213,17 +219,20 @@ MODSRC  = module_control.f90     \
           module_geosol.f90      \
           module_keys.f90        \
           module_laser.f90       \
+          module_minima_1d.f90 \
           module_monte_carlo.f90 \
           module_msevb_water.f90 \
           module_pardim.f90      \
           module_parsol.f90      \
           module_potential.f90   \
+          module_polyroots.f90   \
           module_propagators_3d.f90 \
           module_propagators_et2.f90 \
           module_rk_parameters.f90 \
           module_quantum.f90     \
           module_random_generators.f90 \
           module_rate_flux.f90   \
+          module_rates_et2.f90   \
           module_solmat.f90      \
           module_sorting.f90      \
           module_ssplib.f90      \
@@ -266,4 +275,4 @@ clean:
 # source files dependencies
 #############################
 
-include Makefile.dep
+include Makefile.dependencies
