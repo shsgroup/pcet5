@@ -16,7 +16,8 @@ subroutine setjob
 !  Now using a separate set of dielectric constant for solvent dynamics.
 !
 !  Revision 5.5  2011/01/04 19:59:14  souda
-!  added: now the custom delta and kappa FRCM parameters can be specified even if the solvent name is explicitly given.
+!  added: now the custom delta and kappa FRCM parameters can be
+!         specified even if the solvent name is explicitly given.
 !
 !  Revision 5.4  2010/12/15 21:24:56  souda
 !  various fixes (non-critical)
