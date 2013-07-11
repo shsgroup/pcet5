@@ -26,6 +26,9 @@ module data_et2
 !
 !=======================================================================
 
+   use parsol, only: f0
+   use minima_1d
+
    implicit none
    public
    save
@@ -51,6 +54,20 @@ contains
       z_shifted = ze + t2r(1,2)
       sw = z_shifted*z_shifted/lambda/4.d0
    end function selfen_et2
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   !  Calculates the derivative of self-energy of the inertial
+   !  polarization with respect to energy gap coordinate
+   !  (summation over linearly independent solvent variables)
+   !   ZE - the ET medium coordinate (energy gap) (kcal/mole);
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   function selfen_et2_der(ze) result(sw_der)
+      real(kind=8), intent(in) :: ze
+      real(kind=8)             :: sw_der
+      real(kind=8)             :: z_shifted
+      z_shifted = ze + t2r(1,2)
+      sw_der = z_shifted/lambda/2.d0
+   end function selfen_et2_der
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Transformation from (Z) to (z) - coordinate
@@ -184,6 +201,155 @@ contains
       endif
 
    end subroutine fes_et2
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Extremum points and its characteristics on the ground state
+   ! adiabatic free energy surface for a two-state ET model.
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   subroutine adiabatic_fes_et2_parameters(double_well,fr,fb,eb)
+
+      logical, intent(out) :: double_well
+      real(kind=8), intent(out) :: fr, fb, eb
+
+      integer :: n_extrema, k
+      real(kind=8), parameter :: tol=1.d-9
+      real(kind=8) :: x, xr, xc, xp, x_right, x_left, dx, x_prev
+      real(kind=8) :: xminr, xmaxb, fes_der, fes_der_prev, dg, vet
+      real(kind=8), dimension(10) :: extremum
+
+      fr = 0.d0
+      fb = 0.d0
+      eb = 0.d0
+      extremum = 0.d0
+
+      !-- Total reaction free energy
+      dg = (hg2(2,2) + 0.5d0*t2inf(2,2) + gsolv_2) - (hg2(1,1) + 0.5d0*t2inf(1,1) + gsolv_1)
+
+      !-- electronic coupling
+      vet = hg2(1,2)
+
+      !-- minima and the crossing point for reactant and product diabatic FES
+      xr = 0.d0
+      xp = -sqrt(2.d0*lambda/f0)
+      xc = -(lambda + dg)/sqrt(2.d0*lambda*f0)
+
+      !-- check if we are in the normal region (double-well character)
+      if (xc.gt.xr.or.xc.lt.xp) then
+         double_well = .false.
+         return
+      endif
+
+      !-- Start backward scanning of the adiabatic ground state FES
+      !   to identify approximate locations of the extrema
+
+      x_right = xr + abs(xp)/2.d0
+      x_left = xp - abs(xp)/2.d0
+      dx = (x_left - x_right)/100.d0
+      x_prev = x_right + abs(dx)
+
+      n_extrema = 0
+
+      do x=x_right,x_left,dx
+
+         fes_der_prev = (2*f0*x_prev + sqrt(2.d0)*sqrt(f0*lambda))/2.d0 &
+                 & - (sqrt(f0*lambda)*(dg + lambda + sqrt(2.d0)*x_prev*sqrt(f0*lambda)))/ &
+                 &   (sqrt(2.d0)*sqrt(4.d0*vet*vet + (dg + lambda + sqrt(2.d0)*x_prev*sqrt(f0*lambda))**2))
+
+         fes_der = (2*f0*x + sqrt(2.d0)*sqrt(f0*lambda))/2.d0 &
+                 & - (sqrt(f0*lambda)*(dg + lambda + sqrt(2.d0)*x*sqrt(f0*lambda)))/ &
+                 &   (sqrt(2.d0)*sqrt(4.d0*vet*vet + (dg + lambda + sqrt(2.d0)*x*sqrt(f0*lambda))**2))
+
+         if (fes_der*fes_der_prev.lt.0.d0) then
+            n_extrema = n_extrema + 1
+            if (fes_der.lt.0) then
+               extremum(n_extrema) = funmin(fesx,x,x_prev,tol)
+            else
+               extremum(n_extrema) = funmin(fesx_neg,x,x_prev,tol)
+            endif
+         endif
+
+         if (n_extrema.ge.3) exit
+         x_prev = x
+
+      enddo
+
+      !-- analyze extremum points
+
+      if (n_extrema.lt.3) then
+         double_well = .false.
+         return
+      else
+         double_well = .true.
+      endif
+
+      !-- calculate second derivatives at the extremum points
+
+      xminr = extremum(1)
+      fr = f0*(1.d0 - (4.d0*lambda*vet*vet)/(4.d0*vet*vet + 2.d0*f0*lambda*xminr*xminr & 
+                  & + (dg + lambda)*(dg + lambda + 2.d0*sqrt(2.d0*f0*lambda)*xminr))**1.5d0)
+
+      xmaxb = extremum(2)
+      fb = -f0*(1.d0 - (4.d0*lambda*vet*vet)/(4.d0*vet*vet + 2.d0*f0*lambda*xmaxb*xmaxb & 
+                  & + (dg + lambda)*(dg + lambda + 2.d0*sqrt(2.d0*f0*lambda)*xmaxb))**1.5d0)
+
+      !-- barrier height
+      eb = fesx(xmaxb) - fesx(xminr)
+
+      write(*,*)
+      write(*,'(1x,"===================================================================")')
+      write(*,'(1x,"         Adiabatic ground state FES characteristics                ")')
+      write(*,'(1x,"-------------------------------------------------------------------")')
+      write(*,'(1x,"Reactant minimum at x(scaled) = ",f12.6," sqrt(kcal/mol)")') xminr
+      write(*,'(1x,"Transition state at x(scaled) = ",f12.6," sqrt(kcal/mol)")') xmaxb
+      write(*,'(1x,"Force constant at the reactant minimum: ",f12.6)') fr
+      write(*,'(1x,"Force constant at the transition state: ",f12.6)') fb
+      write(*,'(1x,"Activation free energy (kcal/mol):      ",f12.6)') eb
+      write(*,'(1x,"-------------------------------------------------------------------")')
+
+   end subroutine adiabatic_fes_et2_parameters
+
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Ground state adiabatic free energy (wrapper)
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   function fesx(x) result(ground_state_energy)
+
+      implicit none
+      real(kind=8) :: x
+      real(kind=8) :: ground_state_energy
+      real(kind=8), dimension(2) :: fes
+      real(kind=8) :: egap
+
+      !-- transform x to energy gap coordinate
+      call z1_to_ze(x,egap)
+
+      !-- calculate adiabatic free energy
+      call fes_et2("ADIAB",egap,free_energy=fes)
+
+      ground_state_energy = fes(1)
+
+   end function fesx
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Negative ground state adiabatic free energy (wrapper)
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   function fesx_neg(x) result(ground_state_energy)
+
+      implicit none
+      real(kind=8) :: x
+      real(kind=8) :: ground_state_energy
+      real(kind=8), dimension(2) :: fes
+      real(kind=8) :: egap
+
+      !-- transform x to energy gap coordinate
+      call z1_to_ze(x,egap)
+
+      !-- calculate adiabatic free energy
+      call fes_et2("ADIAB",egap,free_energy=fes)
+
+      ground_state_energy = -fes(1)
+
+   end function fesx_neg
 
 end module data_et2
 

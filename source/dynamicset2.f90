@@ -133,6 +133,7 @@ subroutine dynamicset2
    use control_dynamics
    use random_generators
    use data_et2
+   use rates_et2
    use geogas, only: iptgas, xyzgas
    use parsol
    use propagators_et2
@@ -161,6 +162,7 @@ subroutine dynamicset2
 
    logical :: interaction_region_prev=.false.
    logical :: interaction_region=.false.
+   logical :: double_well=.false.
 
    integer :: nstates_dyn, nzdim_dyn, ielst_dyn, iseed_inp, iset_dyn
    integer :: initial_state=-1, iground=1
@@ -191,6 +193,9 @@ subroutine dynamicset2
 
    real(kind=8) :: hreac, hprod, vet, zi, zi_scaled
    real(kind=8) :: dg_reaction, dg_activation, et_marcus_rate
+   real(kind=8) :: kappa_ad, prefactor1, prefactor2
+   real(kind=8) :: et_rips_jortner_rate, adiabatic_rate
+   real(kind=8) :: fr, fb, eb
    real(kind=8), dimension(4,4) :: h0k
    real(kind=8), dimension(4,4) :: tk, tinfk, trk, trinfk
    real(kind=8), dimension(2)   :: fe_diab, fe_adiab
@@ -359,7 +364,7 @@ subroutine dynamicset2
       write(6,'(1x,"Inverse Pekar factor f_0                ",f15.6)') f0
       write(6,'(1x,"First  relaxation time TAU1 (ps):       ",f15.6)') tau1
       write(6,'(1x,"Second relaxation time TAU2 (ps):       ",f15.6)') tau2
-      write(6,'(1x,"Longitudianl relaxation time TAUL (ps): ",f15.6)') taul
+      write(6,'(1x,"Longitudianl relaxation time TAUL2(ps): ",f15.6)') taul
       write(6,'(1x,"Effective mass of the solvent (ps^2):   ",f15.6)') effmass1
 
    elseif (solvent_model.eq."ONODERA") then
@@ -413,14 +418,23 @@ subroutine dynamicset2
       endif
 
       call set_onodera_model_parameters()
-      write(6,'(1x,"Static dielectric constant EPS0:         ",f15.6)') eps0_dyn
-      write(6,'(1x,"Optical dielectric constant EPS_inf:     ",f15.6)') eps8_dyn
-      write(6,'(1x,"Inverse Pekar factor f_0:                ",f15.6)') f0
-      write(6,'(1x,"Debye   relaxation time TAUD (ps):       ",f15.6)') taud
-      write(6,'(1x,"Onodera relaxation time TAU0 (ps):       ",f15.6)') tau0
-      write(6,'(1x,"Longitudinal relaxation time TAUL  (ps): ",f15.6)') taul
-      write(6,'(1x,"Longitudinal relaxation time TAU0L (ps): ",f15.6)') tau0l
-      write(6,'(1x,"Effective mass of the solvent (ps^2):    ",f15.6)') effmass1
+      write(6,'(/1x,"Dielectric function parameters")')
+      write(6,'( 1x,"------------------------------------------------------------")')
+      write(6,'( 1x,"Static dielectric constant EPS0:         ",f15.6)') eps0_dyn
+      write(6,'( 1x,"Optical dielectric constant EPS_inf:     ",f15.6)') eps8_dyn
+      write(6,'( 1x,"Inverse Pekar factor f_0:                ",f15.6)') f0
+      write(6,'( 1x,"Debye   relaxation time TAUD (ps):       ",f15.6)') taud
+      write(6,'( 1x,"Onodera inertial   time TAU0 (ps):       ",f15.6)') tau0
+      write(6,'( 1x,"Longitudinal relaxation time TAUL  (ps): ",f15.6)') taul
+      write(6,'( 1x,"Longitudinal relaxation time TAU0L (ps): ",f15.6)') tau0l
+      write(6,'( 1x,"Longitudinal relaxation time TAUL~ (ps): ",f15.6)') taul_tilde
+
+      write(6,'(/1x,"Langevin equation parameters")')
+      write(6,'(/1x,"mu*dv/dt + eta*v = F_x(t) + R(t)")')
+      write(6,'( 1x,"------------------------------------------------------------")')
+      write(6,'( 1x,"Effective mass of the solvent (ps^2):    ",f15.6)') effmass1
+      write(6,'( 1x,"Friction parameter eta (ps):             ",f15.6)') f0*taul_tilde
+      write(6,'( 1x,"Friction coefficient g=eta/mass (1/ps):  ",f15.6)') (tau0+taud)/tau0/taud
 
    !-- Onodera model with two relaxation periods
    elseif (solvent_model.eq."ONODERA2") then
@@ -492,14 +506,27 @@ subroutine dynamicset2
          endif
 
          call set_onodera2_model_parameters()
-         write(6,'(1x,"Static dielectric constant EPS0        ",f15.6)') eps0_dyn
-         write(6,'(1x,"Optical dielectric constant EPS_inf    ",f15.6)') eps8_dyn
-         write(6,'(1x,"Inverse Pekar factor f_0               ",f15.6)') f0
-         write(6,'(1x,"Additional dielectric constant EPS1    ",f15.6)') eps1_dyn
-         write(6,'(1x,"Onodera relaxation time TAU0 (ps)      ",f15.6)') tau0
-         write(6,'(1x,"First relaxation time TAU1 (ps)        ",f15.6)') tau1
-         write(6,'(1x,"Second relaxation time TAU1 (ps)       ",f15.6)') tau2
-         write(6,'(1x,"Effective mass of the solvent (ps^2)   ",f15.6)') effmass1
+         write(6,'(/1x,"Dielectric function parameters")')
+         write(6,'( 1x,"------------------------------------------------------------")')
+         write(6,'( 1x,"Static dielectric constant EPS0        ",f15.6)') eps0_dyn
+         write(6,'( 1x,"Optical dielectric constant EPS_inf    ",f15.6)') eps8_dyn
+         write(6,'( 1x,"Inverse Pekar factor f_0               ",f15.6)') f0
+         write(6,'( 1x,"Additional dielectric constant EPS1    ",f15.6)') eps1_dyn
+         write(6,'( 1x,"Onodera relaxation time TAU0 (ps)      ",f15.6)') tau0
+         write(6,'( 1x,"First   relaxation time TAU1 (ps)      ",f15.6)') tau1
+         write(6,'( 1x,"Second  relaxation time TAU2 (ps)      ",f15.6)') tau2
+         write(6,'( 1x,"Longitudinal relaxation time TAUL2 (ps)",f15.6)') eps8_dyn*tau2/eps0_dyn
+
+         write(6,'(/1x,"Generalized Langevin equation parameters")')
+         write(6,'(/1x,"mu*dv/dt + eta*v + int[gamma*exp[-(t-tau)/tau_alpha)]*v(tau)*dtau = F_x(t) + R(t)")')
+         write(6,'( 1x,"----------------------------------------------------------------------------------")')
+         write(6,'( 1x,"Effective mass of the solvent (ps^2)    ",f15.6)') effmass1
+         write(6,'( 1x,"Friction parameter eta (ps):            ",f15.6)') etax
+         write(6,'( 1x,"Friction coefficient eta/mass (1/ps):   ",f15.6)') etax/effmass1
+         write(6,'( 1x,"Friction parameter eta_y (ps):          ",f15.6)') etay
+         write(6,'( 1x,"Memory function parameter gamma:        ",f15.6)') gamma
+         write(6,'( 1x,"Memory function timescale tau_a (ps):   ",f15.6)') taualpha
+
 
       elseif (index(options,' GLEPARS').ne.0) then
 
@@ -539,14 +566,21 @@ subroutine dynamicset2
             call clean_exit
          endif
 
-         write(6,'(1x,"Static dielectric constant EPS0        ",f15.6)') eps0_dyn
-         write(6,'(1x,"Optical dielectric constant EPS_inf    ",f15.6)') eps8_dyn
-         write(6,'(1x,"Inverse Pekar factor f_0               ",f15.6)') f0
-         write(6,'(1x,"Friction coefficient ETA_X (ps)        ",f15.6)') etax
-         write(6,'(1x,"Friction coefficient ETA_Y (ps)        ",f15.6)') etay
-         write(6,'(1x,"Parameter GAMMA                        ",f15.6)') gamma
-         write(6,'(1x,"Friction kernel time scale TAU_A (ps)  ",f15.6)') taualpha
-         write(6,'(1x,"Effective mass of the solvent (ps^2)   ",f15.6)') effmass1
+         write(6,'(/1x,"Dielectric function parameters")')
+         write(6,'( 1x,"------------------------------------------------------------")')
+         write(6,'( 1x,"Static dielectric constant EPS0        ",f15.6)') eps0_dyn
+         write(6,'( 1x,"Optical dielectric constant EPS_inf    ",f15.6)') eps8_dyn
+         write(6,'( 1x,"Inverse Pekar factor f_0               ",f15.6)') f0
+
+         write(6,'(/1x,"Generalized Langevin equation parameters")')
+         write(6,'(/1x,"mu*dv/dt + eta*v + int[gamma*exp[-(t-tau)/tau_alpha)]*v(tau)*dtau = F_x(t) + R(t)")')
+         write(6,'( 1x,"----------------------------------------------------------------------------------")')
+         write(6,'( 1x,"Effective mass of the solvent (ps^2)    ",f15.6)') effmass1
+         write(6,'( 1x,"Friction parameter eta (ps):            ",f15.6)') etax
+         write(6,'( 1x,"Friction coefficient eta/mass (1/ps):   ",f15.6)') etax/effmass1
+         write(6,'( 1x,"Friction parameter eta_y (ps):          ",f15.6)') etay
+         write(6,'( 1x,"Memory function parameter gamma:        ",f15.6)') gamma
+         write(6,'( 1x,"Memory function timescale tau_a (ps):   ",f15.6)') taualpha
 
       else
 
@@ -988,18 +1022,71 @@ subroutine dynamicset2
    scale_factor = sqrt(2.d0*f0*lambda)
    delta_shift  = t2r(1,2)/scale_factor
 
+   !-- Calculate Marcus nonadiabatic rate constant
+
    dg_reaction    = (hg2(2,2) + 0.5*t2inf(2,2) + gsolv_2) - (hg2(1,1) + 0.5*t2inf(1,1) + gsolv_1)
    dg_activation  = (dg_reaction + lambda)**2/(4.d0*lambda)
    et_marcus_rate = 1.d12*(sqrt(pi/(kb*temp))/hbarps)*vet*vet*exp(-dg_activation/(kb*temp))/dsqrt(lambda)
 
-   write(*,'(/1x,"======================================================")')
-   write(*,'( 1x,"Marcus model parameters")')
-   write(*,'( 1x,"------------------------------------------------------")')
+   write(*,'(/1x,"========================================================")')
+   write(*,'( 1x,"Marcus model parameters and nonadiabatic rates")')
+   write(*,'( 1x,"--------------------------------------------------------")')
    write(*,'( 1x,"Reorganization free energy: ",f12.3," kcal/mol")') lambda
    write(*,'( 1x,"ET reaction free energy:    ",f12.3," kcal/mol")') dg_reaction
    write(*,'( 1x,"ET activation free energy:  ",f12.3," kcal/mol")') dg_activation
    write(*,'( 1x,"ET Marcus rate constant:    ",e16.9," sec^-1")')   et_marcus_rate
-   write(*,'( 1x,"------------------------------------------------------")')
+
+
+   !-- Calculate Rips-Jortner nonadiabatic rate constant (solvent control)
+
+   if (solvent_model.eq."ONODERA2".and.index(options,' GLEPARS').ne.0) then
+
+      et_rips_jortner_rate = 0.d0
+      kappa_ad = 0.d0
+      write(*,'( 1x,"--------------------------------------------------------")')
+      write(*,'( 1x,"Longitudinal relaxation time is not defined")')
+
+   else
+
+      kappa_ad = 4.d0*pi*(vet*vet*cal2au*cal2au)*taul*ps2au/(lambda*cal2au)
+      prefactor1 = (2.d0*pi/au2ps)*(vet*vet*cal2au*cal2au)/sqrt(4.d0*pi*cal2au*cal2au*lambda*kb*temp)
+      prefactor2 = 1.d0 + 4.d0*pi*(vet*vet*cal2au*cal2au)*taul*ps2au/(lambda*cal2au)
+      et_rips_jortner_rate = 1.d12*(prefactor1/prefactor2)*exp(-dg_activation/(kb*temp))
+      write(*,'( 1x,"--------------------------------------------------------")')
+      write(*,'( 1x,"Rips-Jortner adiabaticity:  ",f12.3," kcal/mol")') kappa_ad
+      write(*,'( 1x,"Rips-Jortner rate constant: ",e16.9," sec^-1")')   et_rips_jortner_rate
+
+   endif
+
+   write(*,'(1x,"========================================================")')
+
+   !-- Calculate Kramers (For Debye-1, Onodera-1) or
+   !   Kramers-Grote-Hynes (For Debye-2, Onodera-2)
+   !   adiabatic rate constant
+
+   call adiabatic_fes_et2_parameters(double_well,fr,fb,eb)
+
+   if (double_well) then
+
+      if (solvent_model.eq."DEBYE") then
+         adiabatic_rate = kgh_rate_debye1(temp,fr,fb,eb)
+      elseif (solvent_model.eq."ONODERA") then
+         adiabatic_rate = kgh_rate_onodera1(temp,fr,fb,eb)
+      elseif (solvent_model.eq."DEBYE2") then
+         adiabatic_rate = kgh_rate_debye2(temp,fr,fb,eb)
+      elseif (solvent_model.eq."ONODERA2") then
+         adiabatic_rate = kgh_rate_onodera2(temp,fr,fb,eb)
+      endif
+
+      write(*,'( 1x,"Adiabatic rate constant:    ",e16.9," sec^-1")')   adiabatic_rate
+
+   else
+
+      write(*,'( 1x,"Single-well adiabatic FES: adiabatic rate is not defined")')
+
+   endif
+
+   write(*,'(1x,"========================================================")')
 
    !-- print out the free energy profiles to the external file
 
@@ -1017,17 +1104,27 @@ subroutine dynamicset2
    write(ifes_channel,'("#   Gap at the product  minimum:",f12.3," kcal/mol")') z_2
    write(ifes_channel,'("#   ET Marcus rate constant:    ",e20.9," 1/sec")') et_marcus_rate
    write(ifes_channel,'("#",74("-"))')
+
+   if (solvent_model.ne."ONODERA2".or.index(options,' GLEPARS').eq.0) then
+      write(ifes_channel,'("#   Rips-Jortner adiabaticity:  ",e20.9," 1/sec")') kappa_ad
+      write(ifes_channel,'("#   Rips-Jortner rate constant: ",e20.9," 1/sec")') et_rips_jortner_rate
+      write(ifes_channel,'("#",74("-"))')
+   endif
+
+   if (double_well) then
+      write(ifes_channel,'("#   Adiabatic activation energy:  ",e20.9,"kcal/mol")') eb
+      write(ifes_channel,'("#   Adiabatic rate constant:      ",e20.9," 1/sec")') adiabatic_rate
+      write(ifes_channel,'("#",74("-"))')
+   endif
+
    write(ifes_channel,'("#",t7,"Z(gap)",t19,"z(scaled)",t30,"U1(diab)",t42,"U2(diab)",t54,"U1(adiab)",t66,"U2(adiab)")')
    write(ifes_channel,'("#",74("-"))')
 
    do zi=3.d0*lambda,-3.d0*lambda,-6.d0*lambda/101.d0
-
       call ze_to_z1(zi,zi_scaled)
       call fes_et2(mode="DIAB4",energy_gap=zi,free_energy=fe_diab)
       call fes_et2(mode="ADIAB",energy_gap=zi,free_energy=fe_adiab)
-
       write(ifes_channel,'(f13.6,5f12.5)') zi, zi_scaled, fe_diab(1), fe_diab(2), fe_adiab(1), fe_adiab(2)
-
    enddo
 
    write(ifes_channel,'("#",74("="))')

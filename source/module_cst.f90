@@ -55,7 +55,7 @@ module cst
 
    real(8) :: pi, kb, hbar, hbarps, dalton, hmass, dmass
    real(8) :: bohr2a, a2bohr, au2cal, cal2au, ev2cm, cm2ev, au2cm, cm2au
-   real(8) :: au2ev, ev2au, hz2cm, cm2hz, e2, ev2cal, cal2ev, pico
+   real(8) :: au2ps, ps2au, au2ev, ev2au, hz2cm, cm2hz, e2, ev2cal, cal2ev, pico
    real(8) :: debye2au, au2debye
 
    public :: init_cst
@@ -105,7 +105,9 @@ module cst
       cal2ev =   one/ev2cal
       cm2au  =   cm2ev*ev2au
       au2cm  =   au2ev*ev2cm
-      pico   =    1.d12
+      pico   =   1.d12
+      au2ps  =   2.418884326505d-5
+      ps2au  =   one/au2ps
       debye2au = 0.3934303d0
       au2debye = one/debye2au
 

@@ -66,7 +66,7 @@ module parsol
    logical :: symt, reddens, sympt, symet, nosymd
    real(8) :: eps0, eps8, kappa, delta, a, b, r, l0
 
-   real(8) :: eps0_dyn, eps8_dyn, f0, taud, taul, tau0, tau0l, effmass1, effmass2
+   real(8) :: eps0_dyn, eps8_dyn, f0, taud, taul, tau0, tau0l, taul_tilde, effmass1, effmass2
    real(8) :: eps1_dyn, tau1, tau2
    real(8) :: taualpha, gamma, etax, etay
 
@@ -86,6 +86,7 @@ contains
       real(8) :: alpha, alpha2, alpha3, gamma1
 
       f0 = four*pi*eps0_dyn*eps8_dyn/(eps0_dyn - eps8_dyn)
+      taul  = eps8_dyn*tau2/eps0_dyn
 
       alpha = (eps1_dyn - eps8_dyn)*tau1 + (eps0_dyn - eps1_dyn)*tau2
       alpha2 = alpha*alpha
@@ -108,6 +109,7 @@ contains
    subroutine set_onodera_model_parameters()
       taul  = eps8_dyn*taud/eps0_dyn
       tau0l = eps8_dyn*tau0/eps0_dyn
+      taul_tilde = eps8_dyn*(tau0+taud)/eps0_dyn
       f0 = four*pi*eps0_dyn*eps8_dyn/(eps0_dyn - eps8_dyn)
       if (tau0.gt.0) then
          effmass1 = f0*tau0*taul
@@ -121,6 +123,7 @@ contains
       real(8) :: eta_up, alpha, alpha2, alpha3, gamma1, gamma2
 
       f0 = four*pi*eps0_dyn*eps8_dyn/(eps0_dyn - eps8_dyn)
+      taul  = eps8_dyn*tau2/eps0_dyn
 
       alpha = (eps1_dyn - eps8_dyn)*tau1 + (eps0_dyn - eps1_dyn)*tau2                                                                            
       alpha2 = alpha*alpha                                                                                                   
