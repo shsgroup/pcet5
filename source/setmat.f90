@@ -21,7 +21,8 @@ subroutine setmat
 !  (3) addition of the module timers: module_timers.f90 (changes in Makefile!)
 !
 !  Revision 5.6  2011/01/04 20:58:14  souda
-!  added: option TRDIPOLE() for reading the transition dipole moment matrix in the adiabatic basis from disk - NOT FULLY IMPLEMENTED YET!
+!  added: option TRDIPOLE() for reading the transition dipole moment matrix
+!         in the adiabatic basis from disk - NOT FULLY IMPLEMENTED YET!
 !
 !  Revision 5.5  2010/11/10 21:14:21  souda
 !  Last addition/changes. IMPORTANT: Solvation keyword is back to SOLV( for compatibility reasons
