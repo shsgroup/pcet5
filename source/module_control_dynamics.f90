@@ -10,7 +10,9 @@ module control_dynamics
 !  $Revision: 5.4 $
 !  $Log: not supported by cvs2svn $
 !  Revision 5.3  2011/03/01 23:54:03  souda
-!  Variable timestep for quantum propagation implemented (thanks to Sharon) - that fixes the problems with the conservation of the norm of the time-dependent wavefunction.
+!  Variable timestep for quantum propagation implemented (thanks to Sharon)
+!  - that fixes the problems with the conservation of the norm
+!  of the time-dependent wavefunction.
 !
 !  Revision 5.2  2010/11/04 22:43:08  souda
 !  Next iteration... and two additional Makefiles for building the code with debug options.
