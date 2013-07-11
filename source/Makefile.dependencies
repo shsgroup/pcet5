@@ -1,0 +1,216 @@
+$(OBJDIR)/deinitmat.o: $(OBJDIR)/module_feszz_3d.o $(OBJDIR)/module_gasmat.o \
+	$(OBJDIR)/module_geogas.o $(OBJDIR)/module_geosol.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_quantum.o \
+	$(OBJDIR)/module_solmat.o
+
+$(OBJDIR)/dynamics3.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_control_dynamics.o \
+	$(OBJDIR)/module_cst.o $(OBJDIR)/module_feszz_3d.o \
+	$(OBJDIR)/module_geogas.o $(OBJDIR)/module_keys.o \
+	$(OBJDIR)/module_laser.o $(OBJDIR)/module_pardim.o \
+	$(OBJDIR)/module_parsol.o $(OBJDIR)/module_propagators_3d.o \
+	$(OBJDIR)/module_quantum.o $(OBJDIR)/module_random_generators.o \
+	$(OBJDIR)/module_solmat.o $(OBJDIR)/module_strings.o \
+	$(OBJDIR)/module_timers.o
+
+$(OBJDIR)/dynamicset2.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_control_dynamics.o \
+	$(OBJDIR)/module_cst.o $(OBJDIR)/module_data_et2.o \
+	$(OBJDIR)/module_elcm.o $(OBJDIR)/module_frcm.o \
+	$(OBJDIR)/module_geogas.o $(OBJDIR)/module_keys.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_parsol.o \
+	$(OBJDIR)/module_potential.o $(OBJDIR)/module_propagators_et2.o \
+	$(OBJDIR)/module_random_generators.o $(OBJDIR)/module_rates_et2.o \
+	$(OBJDIR)/module_strings.o $(OBJDIR)/module_timers.o
+
+$(OBJDIR)/et2.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_elcm.o $(OBJDIR)/module_frcm.o \
+	$(OBJDIR)/module_geogas.o $(OBJDIR)/module_geosol.o \
+	$(OBJDIR)/module_keys.o $(OBJDIR)/module_msevb_water.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_potential.o \
+	$(OBJDIR)/module_strings.o
+
+$(OBJDIR)/initmat.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_gasmat.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_quantum.o \
+	$(OBJDIR)/module_solmat.o
+
+$(OBJDIR)/minima2.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_fesmin_2d.o $(OBJDIR)/module_keys.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_strings.o
+
+$(OBJDIR)/minima3.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_fesmin_3d.o $(OBJDIR)/module_keys.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_quantum.o \
+	$(OBJDIR)/module_solmat.o $(OBJDIR)/module_strings.o
+
+$(OBJDIR)/module_data_et2.o: $(OBJDIR)/module_minima_1d.o $(OBJDIR)/module_parsol.o
+
+$(OBJDIR)/module_dielectric_functions.o: $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_parsol.o
+
+$(OBJDIR)/module_elcm.o: $(OBJDIR)/module_cst.o $(OBJDIR)/module_geosol.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_parsol.o
+
+$(OBJDIR)/module_fesmin_2d.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_eispack.o $(OBJDIR)/module_feszz_2d.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_quantum.o
+
+$(OBJDIR)/module_fesmin_3d.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_eispack.o $(OBJDIR)/module_feszz_3d.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_quantum.o
+
+$(OBJDIR)/module_feszz_2d.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_eispack.o $(OBJDIR)/module_gasmat.o \
+	$(OBJDIR)/module_lapack_wrappers.o $(OBJDIR)/module_pardim.o \
+	$(OBJDIR)/module_quantum.o $(OBJDIR)/module_solmat.o \
+	$(OBJDIR)/module_timers.o $(OBJDIR)/module_turbomole_wrappers.o
+
+$(OBJDIR)/module_feszz_3d.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_eispack.o $(OBJDIR)/module_gasmat.o \
+	$(OBJDIR)/module_lapack_wrappers.o $(OBJDIR)/module_pardim.o \
+	$(OBJDIR)/module_quantum.o $(OBJDIR)/module_solmat.o \
+	$(OBJDIR)/module_timers.o $(OBJDIR)/module_turbomole_wrappers.o
+
+$(OBJDIR)/module_geogas.o: $(OBJDIR)/module_pardim.o
+
+$(OBJDIR)/module_geometry.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_elmnts.o $(OBJDIR)/module_keys.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_strings.o
+
+$(OBJDIR)/module_geosol.o: $(OBJDIR)/module_pardim.o
+
+$(OBJDIR)/module_laser.o: $(OBJDIR)/module_cst.o $(OBJDIR)/module_solmat.o
+
+$(OBJDIR)/module_monte_carlo.o: $(OBJDIR)/module_cst.o
+
+$(OBJDIR)/module_msevb_water.o: $(OBJDIR)/module_elmnts.o $(OBJDIR)/module_geogas.o \
+	$(OBJDIR)/module_pardim.o
+
+$(OBJDIR)/module_parsol.o: $(OBJDIR)/module_cst.o
+
+$(OBJDIR)/module_potential.o: $(OBJDIR)/module_cst.o $(OBJDIR)/module_geogas.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_quantum.o \
+	$(OBJDIR)/module_strings.o
+
+$(OBJDIR)/module_propagators_3d.o: $(OBJDIR)/module_control_dynamics.o \
+	$(OBJDIR)/module_cst.o $(OBJDIR)/module_feszz_3d.o \
+	$(OBJDIR)/module_laser.o $(OBJDIR)/module_parsol.o \
+	$(OBJDIR)/module_quantum.o $(OBJDIR)/module_random_generators.o \
+	$(OBJDIR)/module_rk_parameters.o $(OBJDIR)/module_solmat.o
+
+$(OBJDIR)/module_propagators_et2.o: $(OBJDIR)/module_control_dynamics.o \
+	$(OBJDIR)/module_cst.o $(OBJDIR)/module_data_et2.o \
+	$(OBJDIR)/module_parsol.o $(OBJDIR)/module_random_generators.o \
+	$(OBJDIR)/module_rk_parameters.o
+
+$(OBJDIR)/module_quantum.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_eispack.o $(OBJDIR)/module_lapack_wrappers.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_turbomole_wrappers.o
+
+$(OBJDIR)/module_rate_flux.o: $(OBJDIR)/module_cst.o $(OBJDIR)/module_monte_carlo.o \
+	$(OBJDIR)/module_ssplib.o
+
+$(OBJDIR)/module_rates_et2.o: $(OBJDIR)/module_cst.o $(OBJDIR)/module_parsol.o \
+	$(OBJDIR)/module_polyroots.o
+
+$(OBJDIR)/module_turbomole_wrappers.o: $(OBJDIR)/module_sorting.o
+
+$(OBJDIR)/path2.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_feszz_2d.o $(OBJDIR)/module_keys.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_quantum.o \
+	$(OBJDIR)/module_strings.o $(OBJDIR)/module_timers.o
+
+$(OBJDIR)/path3.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_feszz_3d.o $(OBJDIR)/module_keys.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_quantum.o \
+	$(OBJDIR)/module_strings.o $(OBJDIR)/module_timers.o
+
+$(OBJDIR)/pcet.o: $(OBJDIR)/module_cst.o $(OBJDIR)/module_geometry.o \
+	$(OBJDIR)/module_keys.o $(OBJDIR)/module_pardim.o \
+	$(OBJDIR)/module_strings.o $(OBJDIR)/module_timers.o
+
+$(OBJDIR)/prngas.o: $(OBJDIR)/module_cst.o $(OBJDIR)/module_keys.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_quantum.o \
+	$(OBJDIR)/module_strings.o
+
+$(OBJDIR)/prnsol.o: $(OBJDIR)/module_cst.o $(OBJDIR)/module_keys.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_quantum.o \
+	$(OBJDIR)/module_strings.o
+
+$(OBJDIR)/rate2.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_fesmin_2d.o $(OBJDIR)/module_feszz_2d.o \
+	$(OBJDIR)/module_gasmat.o $(OBJDIR)/module_keys.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_quantum.o \
+	$(OBJDIR)/module_solmat.o $(OBJDIR)/module_strings.o
+
+$(OBJDIR)/rate3.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_fesmin_3d.o $(OBJDIR)/module_feszz_3d.o \
+	$(OBJDIR)/module_gasmat.o $(OBJDIR)/module_geogas.o \
+	$(OBJDIR)/module_keys.o $(OBJDIR)/module_pardim.o \
+	$(OBJDIR)/module_quantum.o $(OBJDIR)/module_solmat.o \
+	$(OBJDIR)/module_strings.o
+
+$(OBJDIR)/rateb.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_fesmin_3d.o $(OBJDIR)/module_feszz_3d.o \
+	$(OBJDIR)/module_gasmat.o $(OBJDIR)/module_geogas.o \
+	$(OBJDIR)/module_keys.o $(OBJDIR)/module_pardim.o \
+	$(OBJDIR)/module_quantum.o $(OBJDIR)/module_rate_flux.o \
+	$(OBJDIR)/module_solmat.o $(OBJDIR)/module_strings.o
+
+$(OBJDIR)/setjob.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_frcm.o $(OBJDIR)/module_geogas.o \
+	$(OBJDIR)/module_geometry.o $(OBJDIR)/module_geosol.o \
+	$(OBJDIR)/module_keys.o $(OBJDIR)/module_msevb_water.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_parsol.o \
+	$(OBJDIR)/module_potential.o $(OBJDIR)/module_quantum.o \
+	$(OBJDIR)/module_strings.o
+
+$(OBJDIR)/setmat.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_elcm.o $(OBJDIR)/module_frcm.o \
+	$(OBJDIR)/module_gasmat.o $(OBJDIR)/module_geogas.o \
+	$(OBJDIR)/module_geosol.o $(OBJDIR)/module_keys.o \
+	$(OBJDIR)/module_msevb_water.o $(OBJDIR)/module_pardim.o \
+	$(OBJDIR)/module_parsol.o $(OBJDIR)/module_potential.o \
+	$(OBJDIR)/module_quantum.o $(OBJDIR)/module_solmat.o \
+	$(OBJDIR)/module_strings.o
+
+$(OBJDIR)/surface2.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_feszz_2d.o $(OBJDIR)/module_keys.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_quantum.o \
+	$(OBJDIR)/module_solmat.o $(OBJDIR)/module_strings.o \
+	$(OBJDIR)/module_timers.o
+
+$(OBJDIR)/surface3.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_feszz_3d.o $(OBJDIR)/module_geogas.o \
+	$(OBJDIR)/module_keys.o $(OBJDIR)/module_pardim.o \
+	$(OBJDIR)/module_quantum.o $(OBJDIR)/module_solmat.o \
+	$(OBJDIR)/module_strings.o $(OBJDIR)/module_timers.o
+
+$(OBJDIR)/ugas.o: $(OBJDIR)/module_eispack.o $(OBJDIR)/module_gasmat.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_solmat.o
+
+$(OBJDIR)/usol.o: $(OBJDIR)/module_eispack.o $(OBJDIR)/module_gasmat.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_solmat.o
+
+$(OBJDIR)/wavef2.o: $(OBJDIR)/module_keys.o $(OBJDIR)/module_pardim.o \
+	$(OBJDIR)/module_strings.o
+
+$(OBJDIR)/wavef3.o: $(OBJDIR)/module_keys.o $(OBJDIR)/module_pardim.o \
+	$(OBJDIR)/module_quantum.o $(OBJDIR)/module_strings.o
+
+$(OBJDIR)/weight2.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_feszz_2d.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_quantum.o \
+	$(OBJDIR)/module_sorting.o
+
+$(OBJDIR)/weight3.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_feszz_3d.o $(OBJDIR)/module_pardim.o \
+	$(OBJDIR)/module_quantum.o $(OBJDIR)/module_sorting.o
+
+$(OBJDIR)/wfn2prt.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_feszz_2d.o $(OBJDIR)/module_feszz_3d.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_quantum.o
+
+$(OBJDIR)/wfn3prt.o: $(OBJDIR)/module_cst.o $(OBJDIR)/module_feszz_3d.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_quantum.o
+
+$(OBJDIR)/module_frcm.o: $(OBJDIR)/module_elmnts.o $(OBJDIR)/module_pardim.o \
+	$(OBJDIR)/module_parsol.o $(OBJDIR)/module_strings.o \
+	$(OBJDIR)/module_timers.o
