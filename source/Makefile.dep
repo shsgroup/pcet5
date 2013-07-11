@@ -1,3 +1,5 @@
+#-- subroutines
+
 $(OBJDIR)/banner.o : banner.f90 
 
 $(OBJDIR)/deinitmat.o : deinitmat.f90 \
@@ -28,6 +30,7 @@ $(OBJDIR)/dynamicset2.o : dynamicset2.f90 \
 $(OBJDIR)/module_pardim.o \
 $(OBJDIR)/module_parsol.o \
 $(OBJDIR)/module_data_et2.o \
+$(OBJDIR)/module_rates_et2.o \
 $(OBJDIR)/module_random_generators.o \
 $(OBJDIR)/module_control_dynamics.o \
 $(OBJDIR)/module_propagators_et2.o \
@@ -83,6 +86,8 @@ $(OBJDIR)/module_cst.o \
 $(OBJDIR)/module_keys.o \
 $(OBJDIR)/module_strings.o \
 $(OBJDIR)/module_pardim.o
+
+#-- Modules
 
 $(OBJDIR)/module_control_dynamics.o : module_control_dynamics.f90 
 
@@ -216,6 +221,17 @@ $(OBJDIR)/module_data_et2.o \
 $(OBJDIR)/module_parsol.o \
 $(OBJDIR)/module_rk_parameters.o \
 $(OBJDIR)/module_cst.o
+
+$(OBJDIR)/module_data_et2.o : module_data_et2.f90 \
+$(OBJDIR)/module_parsol.o \
+$(OBJDIR)/module_minima_1d.o
+
+$(OBJDIR)/module_minima_1d.o : module_minima_1d.f90
+
+$(OBJDIR)/module_rates_et2.o : module_rates_et2.f90 \
+$(OBJDIR)/module_cst.o \
+$(OBJDIR)/module_parsol.o \
+$(OBJDIR)/module_polyroots.o
 
 $(OBJDIR)/module_laser.o : module_laser.f90 \
 $(OBJDIR)/module_solmat.o \
