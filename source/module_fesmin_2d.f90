@@ -19,7 +19,7 @@ module fesmin_2d
    use eispack
    use control
    use quantum
-   
+
    implicit none
    private
 
@@ -41,7 +41,7 @@ module fesmin_2d
 
    public :: fes2min
 
-   contains
+contains
 
    !=======================================================================
    subroutine fes2min(mode_,iset_,istate_,zp0,zps,ze0,zes,&
@@ -79,7 +79,7 @@ module fesmin_2d
       character(5), intent(in) :: mode_
       integer,      intent(in) :: iset_, istate_
       real*8,       intent(in) :: zp0, zps, ze0, zes
-      
+
       integer, intent(out) :: ierr
       real*8,  intent(out) :: zpmin, zemin, femin
       real*8,  intent(out) :: dzpmin, dzemin, d2zpmin, d2zemin, d2zpzemin
@@ -128,7 +128,7 @@ module fesmin_2d
          d2zemin = zes*zes*f(2,2)
          d2zpzemin = zps*zes*f(1,2)
 
-      elseif (iminim.eq.1) then
+      elseif (iminim.eq.2) then
 
          call d2fes2(n,x,xs,f)
          d2zpmin   = f(1,1)
@@ -150,19 +150,19 @@ module fesmin_2d
          if(iminim.eq.1) write(6,'(1x,"zes  = ",f10.3)') zes
 
          if (iminim.eq.1) then
-	    write(6,'(1x,"slim = ",g20.10)') slim
+            write(6,'(1x,"slim = ",g20.10)') slim
             write(6,'(1x,"acc  = ",g20.10)') acc
          elseif (iminim.eq.2) then
-	    write(6,'(1x,"factr = ",g20.10)') factr
+            write(6,'(1x,"factr = ",g20.10)') factr
             write(6,'(1x,"pgtol = ",g20.10)') pgtol
-	 endif
+         endif
 
          write(6,'(1x,10("-"),"output",10("-"))')
          write(6,'(1x,"ierr = ",i2)') ierr
 
          if (iminim.eq.2) then
             !-- error information from LBFGS routine
-	 endif
+         endif
 
          write(6,'(1x,"iter = ",i3)') iter
          write(6,'(1x,"nf   = ",i3)') nf
@@ -191,7 +191,7 @@ module fesmin_2d
       real*8,  intent(out)                 :: fx
       real*8,  intent(out), dimension(n)   :: x, g, s, w, ev
       real*8,  intent(out), dimension(n,n) :: f, d
-      
+
       logical :: conv
       integer :: ierr, i, j
       real*8  :: ss, sg, gnorm
@@ -348,7 +348,7 @@ module fesmin_2d
          write(*,*)
          write(*,*) 'Number of corrections used in the limited memory matrix (parameter m)'
          write(*,*) 'is outside of the recommended range (3 <= m <= 20). Optimization aborted...'
-	 return
+         return
       endif
  
       !-- no bounds
@@ -364,18 +364,18 @@ module fesmin_2d
       do i=1,n
          x(i) = x0(i)
       enddo
- 
+
       !-- start the iteration by initializing task
- 
+
       task = 'START'
 
       !------- the beginning of the loop ----------
- 
+
       optimization_loop: do
 
          !-- This is the call to the L-BFGS-B code.
          call setulb(n,m,x,l,u,nbd,f,g,factr,pgtol,wa,iwa,task,iprint,csave,lsave,isave,dsave)
- 
+
          if (task(1:2).eq.'FG') then
 
             !-- the minimization routine has returned to request the
@@ -443,11 +443,11 @@ module fesmin_2d
          write (*,'((1x,6(1x,f15.6)))') (x(i),i = 1,n)
 
       elseif (task(1:4) .eq. 'CONV') then
- 
+
          istat = 0
 
       elseif (task(1:4) .eq. 'ABNO') then
- 
+
          istat = -1
          write (*,*) 'Abnormal termination: termination conditions not satisfied'
          write (*,*) 'Final X='
@@ -456,7 +456,7 @@ module fesmin_2d
          write (*,*) 'Final gradient:',g
 
       elseif (task(1:4) .eq. 'ERROR') then
- 
+
          istat = -2
          write (*,*) 'Error termination: check input parameters'
          write (*,*) 'current X='
@@ -555,7 +555,7 @@ module fesmin_2d
       real*8, parameter :: xinc = 1.d-4
       integer :: i
       real*8, dimension(n) :: xt
-      
+
       real*8 :: ep2, ep1
 
       xt = x
@@ -585,7 +585,7 @@ module fesmin_2d
       integer :: i, j
 
       call d1fes2(n,x,xs,grad)
-      
+
       xt = x
 
       do i=1,n

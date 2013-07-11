@@ -158,12 +158,12 @@ module fesmin_3d
             !-- Newton-Raphson optimization
             call newton3(n,kg,x0,x,xs,g,f,d,ev,w,s,fx,slim,acc,maxit,ierr,iter,nf,ng,nfc)
 
-	 elseif (iminim.eq.2) then
+         elseif (iminim.eq.2) then
 
             !-- LBFGS optimization
             call lbfgs3(n,kg,mcorr,x0,x,xs,g,fx,iprint,factr,pgtol,maxit,ierr,iter,nf)
 
-	 endif
+         endif
 
          if (ierr.ne.0) then
             write(6,'(/1x,''warning: minimization failed...'')')
@@ -259,9 +259,9 @@ module fesmin_3d
          call d1fes3(n,kgmin+1,x,xs,gleft)
          call d1fes3(n,kgmin-1,x,xs,gright)
          hess(1,3) = half*(gright(1) - gleft(1))/ginc
-	 hess(3,1) = hess(1,3)
+         hess(3,1) = hess(1,3)
          hess(2,3) = half*(gright(2) - gleft(2))/ginc
-	 hess(3,2) = hess(2,3)
+         hess(3,2) = hess(2,3)
       endif
  
       return
@@ -358,7 +358,7 @@ module fesmin_3d
          d2zpmin   = f(1,1)
          d2zemin   = f(2,2)
          d2zpzemin = f(1,2)
-                                                                                                                                                      
+
       endif
 
 
@@ -380,7 +380,7 @@ module fesmin_3d
          elseif (iminim.eq.2) then
             write(6,'(1x,"factr = ",g20.10)') factr
             write(6,'(1x,"pgtol = ",g20.10)') pgtol
-	 endif
+         endif
 
          write(6,'(1x,10(''-''),''output'',10(''-''))')
          write(6,'(1x,''ierr = '',i2)') ierr
@@ -415,7 +415,7 @@ module fesmin_3d
       integer, intent(out) :: iter, nf, ng, nfc, istat
       real*8,  intent(out) :: fx
       real*8,  intent(out) :: x(n), g(n), f(n,n), s(n), d(n,n), w(n), ev(n)
-      
+
       logical :: conv
       integer :: ierr, i, j
       real*8  :: ss, sg, gnorm
