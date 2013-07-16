@@ -1112,7 +1112,7 @@ subroutine dynamicset2
    endif
 
    if (double_well) then
-      write(ifes_channel,'("#   Adiabatic activation energy:  ",e20.9,"kcal/mol")') eb
+      write(ifes_channel,'("#   Adiabatic activation energy:  ",e20.9," kcal/mol")') eb
       write(ifes_channel,'("#   Adiabatic rate constant:      ",e20.9," 1/sec")') adiabatic_rate
       write(ifes_channel,'("#",74("-"))')
    endif
