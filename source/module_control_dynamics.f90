@@ -38,7 +38,10 @@ module control_dynamics
                                                 ! (collapse leaving a region defined by the coupling magnitude)
 
    logical :: collapse_region_min=.false.       ! flag for MDQT dynamics with simple decoherence algorithm
-                                                ! (collapse passing the minimum mving away from coupling region)
+                                                ! (collapse passing the minimum moving away from coupling region)
+
+   logical :: ids=.false.           ! flag for MDQT dynamics with instantaneous decoherence algorithm (succesful hops)
+   logical :: ida=.false.           ! flag for MDQT dynamics with instantaneous decoherence algorithm (any hops)
 
    logical :: decouple=.true.       ! flag for decoupling of TDSE in AFSSH algorithm
    logical :: along_moments=.false. ! flag for the direction of velocity adjustments (A-FSSH-0)

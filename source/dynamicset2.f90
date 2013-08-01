@@ -116,6 +116,10 @@ subroutine dynamicset2
 !  ADJUST_ALONG_MOMENTS - adjust velocities along the difference of vectors of moments in decoherence algorithm,
 !           Augmented Fewest Switches Surface Hopping (AFSSH-0) [N. Shenvi, J. E. Subotnik, 2011]
 !
+!  IDS - "Instantaneous Decoherence fror Succesful Hops" decoherence algorithm
+!
+!  IDA - "Instantaneous Decoherence fror Any Hops" decoherence algorithm
+!
 !-------------------------------------------------------------------
 !
 !  $Author$
@@ -165,7 +169,7 @@ subroutine dynamicset2
    logical :: double_well=.false.
 
    integer :: nstates_dyn, nzdim_dyn, ielst_dyn, iseed_inp, iset_dyn
-   integer :: initial_state=-1, iground=1
+   integer :: initial_state=-1, iground=1, idecoherence=0
    integer :: istate, new_state, ndump6, ndump777, ndump888
    integer :: number_of_skipped_trajectories=0
    integer :: number_of_failed_trajectories=0
@@ -617,18 +621,22 @@ subroutine dynamicset2
 
       !-- decoherence options
 
-      if (index(options,' AFSSH').ne.0.or.&
-         &index(options,' COLLAPSE_REGION_COUPLING').ne.0) then
+      idecoherence = 0
+      if (index(options,' AFSSH').ne.0) idecoherence = idecoherence + 1
+      if (index(options,' COLLAPSE_REGION_COUPLING').ne.0) idecoherence = idecoherence + 1
+      if (index(options,' IDS').ne.0) idecoherence = idecoherence + 1
+      if (index(options,' IDA').ne.0) idecoherence = idecoherence + 1
+
+
+      if (idecoherence.gt.0) then
 
          !-- make sure that only one decoherence option has been chosen
-         if (index(options,' AFSSH').ne.0.and.&
-            &index(options,' COLLAPSE_REGION_COUPLING').ne.0) then
-
+         if (idecoherence.gt.1) then
             write(6,'(/1x,"Only one decoherence option can be specified.")')
-            write(6,'( 1x,"Your input contains both AFSSH and COLLAPSE_REGION_COUPLING options in DYNAMICS2 keyword.")')
+            write(6,'( 1x,"Your input contains more then one decoherence option in DYNAMICS2 keyword.")')
+            write(6,'( 1x,"Choose one of: AFSSH, COLLAPSE_REGION_COUPLING, IDS, or IDA. ")')
             write(6,'( 1x,"Check your input and make up your mind!!! Aborting...")')
             call clean_exit
-
          endif
 
          decoherence = .true.
@@ -642,6 +650,8 @@ subroutine dynamicset2
 
             afssh = .true.
             collapse_region_coupling = .false.
+            ids = .false.
+            ida = .false.
 
             ioption = index(options," DZETA=")
             if (ioption.ne.0) then
@@ -682,6 +692,8 @@ subroutine dynamicset2
 
          collapse_region_coupling = .true.
          afssh = .false.
+         ids = .false.
+         ida = .false.
 
          ioption = index(options," COUPLING_CUTOFF=")
          if (ioption.ne.0) then
@@ -693,7 +705,26 @@ subroutine dynamicset2
          write(6,'( 1x,"The interaction region is defined as region where the largest nonadiabatic coupling")')
          write(6,'( 1x,"is smaller in magnitude than the cutoff value of ",g15.6," (kcal/mol)^{-1/2}"/)') coupling_cutoff
 
+
+      elseif (index(options,' IDS').ne.0) then
+
+         ids = .true.
+         collapse_region_coupling = .false.
+         afssh = .false.
+         ida = .false.
+         write(6,'(/1x,"Instantaneous decoherence algorithm with collapsing events occuring upon succesful hops (IDS)")')
+
+
+      elseif (index(options,' IDA').ne.0) then
+
+         ida = .true.
+         collapse_region_coupling = .false.
+         afssh = .false.
+         ids = .false.
+         write(6,'(/1x,"Instantaneous decoherence algorithm with collapsing events occuring upon any hop (IDA)")')
+
       endif
+
 
    else
 
@@ -859,7 +890,7 @@ subroutine dynamicset2
       write(6,'( 1x,''(It is assumed that electronic reorganization energies are zero...)'')')
 
       !-- Read reorganization energy
-   
+
       ikey = index(solvoptions,' ER=')
       if (ikey.ne.0) then
          lambda = reada(solvoptions,ikey+4)
@@ -980,7 +1011,7 @@ subroutine dynamicset2
       t2rinf(1,2) = trinfk(ireac,iprod)
       t2rinf(2,1) = trinfk(iprod,ireac)
       t2rinf(2,2) = trinfk(iprod,iprod)
-        
+
       t2(1,1) = tk(ireac,ireac)
       t2(1,2) = tk(ireac,iprod)
       t2(2,1) = tk(iprod,ireac)
@@ -1140,7 +1171,7 @@ subroutine dynamicset2
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    ioption = index(options," NTRAJ=")
-   
+
    if (ioption.ne.0) then
       ntraj = reada(options,ioption+7)
    else
@@ -1166,7 +1197,7 @@ subroutine dynamicset2
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    ioption = index(options," NSTEPS=")
-   
+
    if (ioption.ne.0) then
       nsteps = reada(options,ioption+8)
       write(6,'(1x,"Number of steps in each trajectory: ",i10/)') nsteps
@@ -1244,7 +1275,7 @@ subroutine dynamicset2
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    ioption = index(options," NDUMP=")
-   
+
    if (ioption.ne.0) then
       ndump = reada(options,ioption+7)
       write(6,'(1x,"Dump trajectory data every ",i10," steps"/)') ndump
@@ -1258,7 +1289,7 @@ subroutine dynamicset2
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    ioption = index(options," NDUMP6=")
-   
+
    if (ioption.ne.0) then
       ndump6 = reada(options,ioption+8)
       write(6,'(1x,"Dump trajectory data to screen every ",i10," steps"/)') ndump6
@@ -1271,7 +1302,7 @@ subroutine dynamicset2
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    ioption = index(options," NDUMP777=")
-   
+
    if (ioption.ne.0) then
       ndump777 = reada(options,ioption+10)
       write(6,'(1x,"Dump populations and coherences every ",i10," steps"/)') ndump777
@@ -1284,7 +1315,7 @@ subroutine dynamicset2
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    ioption = index(options," NDUMP888=")
-   
+
    if (ioption.ne.0) then
       ndump888 = reada(options,ioption+10)
       write(6,'(1x,"Dump couplings every ",i10," steps"/)') ndump888
@@ -1343,7 +1374,7 @@ subroutine dynamicset2
    if (ioption.ne.0) then
 
       if (options(ioption2:ioption2+4).eq."CLOCK") then
-      
+
          !-- set seeds using current time
          call set_duni_random_seeds()
          write(6,'(/1x,"Random seeds for DUNI generated from the clock:")')
@@ -1823,7 +1854,7 @@ subroutine dynamicset2
       !-- initial free energy (PMF)
       efes = get_free_energy(istate)
 
-      !-- initial kinetic energy                                                                                                                           
+      !-- initial kinetic energy
       ekin1 = half*f0*tau0*taul*vz1*vz1
       ekin = ekin1
 
@@ -2163,6 +2194,12 @@ subroutine dynamicset2
                   istate = new_state
                   number_of_switches = number_of_switches + 1
 
+                  !-- Instantaneous decoherence algorithms (IDS and IDA): collapse the wavefunction after a successful hop
+                  if (ids.or.ida) then
+                     call collapse_wavefunction(istate)
+                     call calculate_density_matrix
+                  endif
+
                else
 
                   write(itraj_channel,'("#--------------------------------------------------------------------")')
@@ -2171,6 +2208,12 @@ subroutine dynamicset2
                   write(itraj_channel,'("#--------------------------------------------------------------------")')
 
                   number_of_rejected = number_of_rejected + 1
+
+                  !-- Instantaneous decoherence algorithm (IDA): collapse the wavefunction after a rejected hop
+                  if (ida) then
+                     call collapse_wavefunction(istate)
+                     call calculate_density_matrix
+                  endif
 
                endif
 
@@ -2191,6 +2234,8 @@ subroutine dynamicset2
                   write(*,'("*** Leaving interaction region: wavefunction collapsed to pure state ",i2)') istate
                endif
             endif
+
+
 
          endif  !mdqt
 

@@ -160,6 +160,10 @@ subroutine dynamics3
 !  ADJUST_ALONG_MOMENTS - adjust velocities along the difference of vectors of moments in decoherence algorithm,
 !           Augmented Fewest Switches Surface Hopping (AFSSH-0) [N. Shenvi, J. E. Subotnik, 2011]
 !
+!  IDS - "Instantaneous Decoherence fror Succesful Hops" decoherence algorithm
+!
+!  IDA - "Instantaneous Decoherence fror Any Hops" decoherence algorithm
+!
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
@@ -274,7 +278,7 @@ subroutine dynamics3
    logical :: interaction_region=.false.
 
    integer :: nstates_dyn, nzdim_dyn, ielst_dyn, iseed_inp, iset_dyn
-   integer :: initial_state=-1, iground=1
+   integer :: initial_state=-1, iground=1, idecoherence=0
    integer :: istate, new_state, ndump6, ndump777, pump_s
    integer :: number_of_skipped_trajectories=0
    integer :: number_of_failed_trajectories=0
@@ -746,24 +750,26 @@ subroutine dynamics3
                    &1x,"[N. Shenvi, J. E. Subotnik, and W. Yang, J. Chem. Phys. 135, 024101 (2011) ]"/)')
       endif
 
+      !-- decoherence options
 
-      !-- decoherence options                                                                                                
+      idecoherence = 0
+      if (index(options,' AFSSH').ne.0) idecoherence = idecoherence + 1
+      if (index(options,' COLLAPSE_REGION_COUPLING').ne.0) idecoherence = idecoherence + 1
+      if (index(options,' IDS').ne.0) idecoherence = idecoherence + 1
+      if (index(options,' IDA').ne.0) idecoherence = idecoherence + 1
 
-      if (index(options,' AFSSH').ne.0.or.&
-         &index(options,' COLLAPSE_REGION_COUPLING').ne.0) then
+      if (idecoherence.gt.0) then
 
          !-- make sure that only one decoherence option has been chosen
-         if (index(options,' AFSSH').ne.0.and.&
-            &index(options,' COLLAPSE_REGION_COUPLING').ne.0) then
-
+         if (idecoherence.gt.1) then
             write(6,'(/1x,"Only one decoherence option can be specified.")')
-            write(6,'( 1x,"Your input contains both AFSSH and COLLAPSE_REGION_COUPLING options in DYNAMICS2 keyword.")')
+            write(6,'( 1x,"Your input contains more then one decoherence option in DYNAMICS2 keyword.")')
+            write(6,'( 1x,"Choose one of: AFSSH, COLLAPSE_REGION_COUPLING, IDS, or IDA. ")')
             write(6,'( 1x,"Check your input and make up your mind!!! Aborting...")')
             call clean_exit
+         endif
 
-         endif                                                                                                        
-
-         decoherence = .true.                                                                                                
+         decoherence = .true.
 
       endif
 
@@ -774,6 +780,8 @@ subroutine dynamics3
 
             afssh = .true.
             collapse_region_coupling = .false.
+            ids = .false.
+            ida = .false.
 
             ioption = index(options," DZETA=")
             if (ioption.ne.0) then
@@ -815,6 +823,8 @@ subroutine dynamics3
 
          collapse_region_coupling = .true.
          afssh = .false.
+         ids = .false.
+         ida = .false.
 
          ioption = index(options," COUPLING_CUTOFF=")
          if (ioption.ne.0) then
@@ -825,6 +835,24 @@ subroutine dynamics3
          write(6,'(/1x,"Simple decoherence algorithm with collapsing events occuring upon leaving the interaction region")')
          write(6,'( 1x,"The interaction region is defined as region where the largest nonadiabatic coupling")')
          write(6,'( 1x,"is smaller in magnitude than the cutoff value of ",g15.6," (kcal/mol)^{-1/2}"/)') coupling_cutoff
+
+
+      elseif (index(options,' IDS').ne.0) then
+
+         ids = .true.
+         collapse_region_coupling = .false.
+         afssh = .false.
+         ida = .false.
+         write(6,'(/1x,"Instantaneous decoherence algorithm with collapsing events occuring upon succesful hops (IDS)")')
+
+
+      elseif (index(options,' IDA').ne.0) then
+
+         ida = .true.
+         collapse_region_coupling = .false.
+         afssh = .false.
+         ids = .false.
+         write(6,'(/1x,"Instantaneous decoherence algorithm with collapsing events occuring upon any hop (IDA)")')
 
       endif
 
@@ -2237,6 +2265,12 @@ subroutine dynamics3
                   istate = new_state
                   number_of_switches = number_of_switches + 1
 
+                  !-- Instantaneous decoherence algorithms (IDS and IDA): collapse the wavefunction after a successful hop
+                  if (ids.or.ida) then
+                     call collapse_wavefunction(istate)
+                     call calculate_density_matrix
+                  endif
+
                else
 
                   write(itraj_channel,'("#--------------------------------------------------------------------")')
@@ -2248,6 +2282,12 @@ subroutine dynamics3
                   write(itraj_channel,'("#--------------------------------------------------------------------")')
 
                   number_of_rejected = number_of_rejected + 1
+
+                  !-- Instantaneous decoherence algorithm (IDA): collapse the wavefunction after a rejected hop
+                  if (ida) then
+                     call collapse_wavefunction(istate)
+                     call calculate_density_matrix
+                  endif
 
                endif
 
@@ -2261,10 +2301,11 @@ subroutine dynamics3
                call calculate_density_matrix
             endif
 
-            !-- Collapse the wavefunction if leaving the interaction region: "poor man's" decoherence                        
+            !-- Collapse the wavefunction if leaving the interaction region: "poor man's" decoherence
             if (collapse_region_coupling) then
                if (interaction_region_prev.and.(.not.interaction_region)) then
                   call collapse_wavefunction(istate)
+                  call calculate_density_matrix
                   write(*,'("*** Leaving interaction region: wavefunction collapsed to pure state ",i2)') istate
                endif
             endif
