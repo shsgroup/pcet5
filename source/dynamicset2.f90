@@ -2189,7 +2189,6 @@ subroutine dynamicset2
                   write(itraj_channel,'("#--------------------------------------------------------------------")')
                   write(itraj_channel,'("#  t  = ",f13.6," ps ==> SWITCH ",i3,"  -->",i3)') zeit,istate,new_state
                   write(itraj_channel,'("#  d  = ",f20.6)') get_nonadiabatic_coupling(istate,new_state)
-                  write(itraj_channel,'("#--------------------------------------------------------------------")')
 
                   istate = new_state
                   number_of_switches = number_of_switches + 1
@@ -2198,14 +2197,16 @@ subroutine dynamicset2
                   if (ids.or.ida) then
                      call collapse_wavefunction(istate)
                      call calculate_density_matrix
+                     write(*,'("*** (ID): wavefunction collapsed to pure state ",i2)') istate
+                     write(itraj_channel,'("# (ID) Wavefunction collapse to state ",i2," occurred")') istate
                   endif
+                  write(itraj_channel,'("#--------------------------------------------------------------------")')
 
                else
 
                   write(itraj_channel,'("#--------------------------------------------------------------------")')
                   write(itraj_channel,'("#  t  = ",f13.6," ps ==> REJECTED SWITCH ",i3,"  -->",i3)') zeit,istate,new_state
                   write(itraj_channel,'("#  d  = ",f20.6)') get_nonadiabatic_coupling(istate,new_state)
-                  write(itraj_channel,'("#--------------------------------------------------------------------")')
 
                   number_of_rejected = number_of_rejected + 1
 
@@ -2213,7 +2214,10 @@ subroutine dynamicset2
                   if (ida) then
                      call collapse_wavefunction(istate)
                      call calculate_density_matrix
+                     write(*,'("*** (ID): wavefunction collapsed to pure state ",i2)') istate
+                     write(itraj_channel,'("# (ID) Wavefunction collapse to state ",i2," occurred")') istate
                   endif
+                  write(itraj_channel,'("#--------------------------------------------------------------------")')
 
                endif
 
@@ -2231,10 +2235,10 @@ subroutine dynamicset2
             if (collapse_region_coupling) then
                if (interaction_region_prev.and.(.not.interaction_region)) then
                   call collapse_wavefunction(istate)
+                  call calculate_density_matrix
                   write(*,'("*** Leaving interaction region: wavefunction collapsed to pure state ",i2)') istate
                endif
             endif
-
 
 
          endif  !mdqt

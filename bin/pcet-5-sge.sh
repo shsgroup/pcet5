@@ -19,6 +19,7 @@ COMP="intel"
 SCRBASE="local"
 THREADS=1
 NJOBS=1
+EMAIL=""
 inputlist=""
 
 #-- help
@@ -34,6 +35,7 @@ if [ x$1 == x ]; then
     echo "-c | --compiler      :  intel/pgi - build compiler (default intel)"
     echo "-t | --threads       :  number of OpenMP threads used by diagonalization routines"
     echo "-j | --jobs          :  number of jobs to submit (default 1)"
+    echo "-m | --mail          :  send mail upon successful job completion"
     echo "================================================================================="
     exit 0
 fi
@@ -47,6 +49,7 @@ case $1 in
 -c | --compiler     ) shift; COMP="$1" ;;
 -t | --threads      ) shift; THREADS="$1" ;;
 -j | --jobs         ) shift; NJOBS="$1" ;;
+-m | --mail         ) shift; EMAIL="$1" ;;
 *) break ;;
 esac
 shift
@@ -206,6 +209,19 @@ echo "Job is finished."
 echo "---------------------------------------------------------------------------"
 echo "Date: " \`date\`
 echo "==========================================================================="
+
+# send e-mail about the job completion
+if [ x$EMAIL != x ]; then
+   MAILTEXT=msg$RANDOM
+   rm -rf $MAILTEXT
+   echo "Subject: The job $JOBNAME has finished"  >> $MAILTEXT
+   echo "To: $EMAIL"  >> $MAILTEXT
+   echo "From: souda@HOSTNAME"  >> $MAILTEXT
+   echo "Reply-To: souda@HOSTNAME"  >> $MAILTEXT
+   echo "$HOSTNAME : The job $JOBNAME has finished" >> $MAILTEXT
+   cat $MAILTEXT | sendmail -t
+   rm $MAILTEXT
+fi
 
 # deliver the output directory
 tar cvjf $JOBNAME.tar.bz2 *
