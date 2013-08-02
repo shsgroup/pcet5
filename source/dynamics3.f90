@@ -164,6 +164,8 @@ subroutine dynamics3
 !
 !  IDA - "Instantaneous Decoherence fror Any Hops" decoherence algorithm
 !
+!  GEDC - Granucci's Energy-based Decoherence Correction (with C = 1, E0 = 0.1 a.u.)
+!
 !-------------------------------------------------------------------
 !
 !  $Author: souda $
@@ -757,6 +759,7 @@ subroutine dynamics3
       if (index(options,' COLLAPSE_REGION_COUPLING').ne.0) idecoherence = idecoherence + 1
       if (index(options,' IDS').ne.0) idecoherence = idecoherence + 1
       if (index(options,' IDA').ne.0) idecoherence = idecoherence + 1
+      if (index(options,' GEDC').ne.0) idecoherence = idecoherence + 1
 
       if (idecoherence.gt.0) then
 
@@ -764,7 +767,7 @@ subroutine dynamics3
          if (idecoherence.gt.1) then
             write(6,'(/1x,"Only one decoherence option can be specified.")')
             write(6,'( 1x,"Your input contains more then one decoherence option in DYNAMICS2 keyword.")')
-            write(6,'( 1x,"Choose one of: AFSSH, COLLAPSE_REGION_COUPLING, IDS, or IDA. ")')
+            write(6,'( 1x,"Choose one of: AFSSH, COLLAPSE_REGION_COUPLING, IDS, IDA, or GEDC. ")')
             write(6,'( 1x,"Check your input and make up your mind!!! Aborting...")')
             call clean_exit
          endif
@@ -782,6 +785,7 @@ subroutine dynamics3
             collapse_region_coupling = .false.
             ids = .false.
             ida = .false.
+            gedc = .false.
 
             ioption = index(options," DZETA=")
             if (ioption.ne.0) then
@@ -825,11 +829,12 @@ subroutine dynamics3
          afssh = .false.
          ids = .false.
          ida = .false.
+         gedc = .false.
 
          ioption = index(options," COUPLING_CUTOFF=")
          if (ioption.ne.0) then
             coupling_cutoff = reada(options,ioption+17)
-         else                                                                                                                
+         else
             coupling_cutoff = 1.d-5
          endif
          write(6,'(/1x,"Simple decoherence algorithm with collapsing events occuring upon leaving the interaction region")')
@@ -843,6 +848,7 @@ subroutine dynamics3
          collapse_region_coupling = .false.
          afssh = .false.
          ida = .false.
+         gedc = .false.
          write(6,'(/1x,"Instantaneous decoherence algorithm with collapsing events occuring upon succesful hops (IDS)")')
 
 
@@ -852,7 +858,17 @@ subroutine dynamics3
          collapse_region_coupling = .false.
          afssh = .false.
          ids = .false.
+         gedc = .false.
          write(6,'(/1x,"Instantaneous decoherence algorithm with collapsing events occuring upon any hop (IDA)")')
+
+      elseif (index(options,' GEDC').ne.0) then
+
+         gedc = .true.
+         ida = .false.
+         collapse_region_coupling = .false.
+         afssh = .false.
+         ids = .false.
+         write(6,'(/1x,"Granucci-s Energy-based Decoherence correction (GEDC) with C=1 and E0=0.1au")')
 
       endif
 
@@ -1325,7 +1341,7 @@ subroutine dynamics3
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    if (fcdia) then
-   
+
       write(6,'(/1x,"Initial state is a product of the diabatic electronic state and")')
       write(6,'( 1x,"proton vibrational wavepacket (vertical Franck-Condon excitation)")')
 
@@ -1534,7 +1550,7 @@ subroutine dynamics3
 
             open(11,file=job(1:ljob)//"/vibronic_spectrum_lconv.dat")
             call print_vibronic_spectrum_conv(11,iground,1,vib_linewidth)
-   
+
          elseif (str.eq."GAUSSIAN") then
 
             write(6,'(/1x,"Vibronic spectrum with Gaussian convolution will be written to the external file ",a)') &
@@ -1557,7 +1573,7 @@ subroutine dynamics3
          endif
 
          close(11)
-      
+
       endif
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1783,7 +1799,7 @@ subroutine dynamics3
 
          call calculate_absorption_prob(iground,kg0,z1,z2)
          istate = assign_initial_state(iground)
-         
+
          if (istate.eq.0) then
             write(6,'(1x,"From DYNAMICS3: FAILURE to assign the initial vibronic state after laser excitation.")')
             write(6,'(1x,"Consider to include more states in NSTATES.")')
@@ -1884,7 +1900,7 @@ subroutine dynamics3
       write(itraj_channel,'("#   Data for the trajectory #",i6.6)') itraj
       if (weights) then
          write(itraj_channel,'("#",168("-"))')
-         write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"z2",t44,"vz1",t56,"vz2",t68,"zp",t80,"ze",t92,"vzp",t103,"vze",t115,"Ekin",t126,"Efe",t135,"occ.",t142,"EVB weights (1a,1b,2a,2b)       Ekin1      Ekin2")')
+         write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"z2",t44,"vz1",t56,"vz2",t68,"zp",t80,"ze",t92,"vzp",t103,"vze",t115,"Ekin",t126,"Efe",t135,"occ.",t150,"EVB weights (1a,1b,2a,2b)",t202,"Ekin1",t214,"Ekin2")')
          write(itraj_channel,'("#",168("-"))')
       else
          write(itraj_channel,'("#",141("-"))')
@@ -1918,7 +1934,7 @@ subroutine dynamics3
       !-- initial free energy (PMF)
       efes = get_free_energy(istate)
 
-      !-- initial kinetic energy                                                                                                                           
+      !-- initial kinetic energy
       ekin1 = half*f0*tau0*taul*vz1*vz1
       ekin2 = half*f0*tau0*taul*vz2*vz2
       ekin = ekin1 + ekin2
@@ -1948,7 +1964,7 @@ subroutine dynamics3
 
          !-- MDQT: store couplings, vibronic energies, and velocities
          !         from the previous step (for iterpolation)
-         
+
          if (mdqt) then
             vz1_prev = vz1
             vz2_prev = vz2
@@ -1961,9 +1977,9 @@ subroutine dynamics3
          endif
 
          !-- Propagate solvent coordinates and velocities
-         
+
          if (solvent_model.eq."DEBYE") then
-         
+
             !-- overdamped Langevin equation (pure Debye model)
             call langevin_debye_2d(istate,kg0,z1,z2,vz1,vz2,tstep,temp,ekin1,ekin2,efes)
             ekin = ekin1 + ekin2
@@ -2110,7 +2126,7 @@ subroutine dynamics3
                !-- accumulate swithing probabilities (array operation)
                !------------------------------------------------------
                call accumulate_switch_prob(qtstep_var)
-               
+
             enddo
 
             !-- check the norm of the time-dependent wavefunction
@@ -2310,6 +2326,13 @@ subroutine dynamics3
                endif
             endif
 
+            !-- Energy-based decoherence correction: damp the amplitudes using an approximate Granucci's prescription (GEDC)
+            if (gedc) then
+               call damp_amplitudes_gedc(istate,tstep,ekin,1.d0,0.1d0*au2cal)
+               call calculate_density_matrix
+            endif
+
+
          endif  !mdqt
 
          !---------------------------!
@@ -2327,7 +2350,7 @@ subroutine dynamics3
 
          if (mod(istep,ndump).eq.0) then
             if (weights) then
-               write(itraj_channel,'(f13.6,10f12.5,i5,4f10.3,2f12.5)') &
+               write(itraj_channel,'(f13.6,10f12.5,i5,4f15.9,2f12.5)') &
                & zeit, z1, z2, vz1, vz2, zp, ze, vzp, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn), ekin1, ekin2
             else
                write(itraj_channel,'(f13.6,10f12.5,i5,2f12.5)') &

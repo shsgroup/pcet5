@@ -622,7 +622,7 @@ contains
       r = ran2nr()
 
       s = 0.d0
-      
+
       do i=1,nstates
 
          w = z(dstate_,i)
@@ -962,7 +962,7 @@ contains
       x0 = t_prev_
       x2 = t_
       x1 = 0.5d0*(x0 + x2)
-      
+
       x01 = x0 - x1
       x02 = x0 - x2
       x12 = x1 - x2
@@ -976,7 +976,7 @@ contains
          y01 = y0 - y1
          y02 = y0 - y2
          y12 = y1 - y2
-         
+
          a0 = (y0*x1*x2*x12 - x0*y1*x2*x02 + x0*x1*y2*x01)/xdenom
          a1 = (x2*x2*y01 - x1*x1*y02 + x0*x0*y12)/xdenom
          a2 = (-x2*y01 + x1*y02 - x0*y12)/xdenom
@@ -990,7 +990,7 @@ contains
          y0 = ekin_prev_
          y2 = ekin_
          y02 = y0 - y2
-         
+
          a0 = (x0*y2 - x2*y0)/x02
          a1 = y02/x02
          a2 = 0.d0
@@ -1017,18 +1017,18 @@ contains
       real(kind=8) :: x0, x1, x2, x01, x02, x12
       real(kind=8) :: y0, y1, y2, y01, y02, y12
       real(kind=8) :: xdenom, a0, a1, a2
-      
+
       x0 = t_prev_
       x2 = t_
       x1 = 0.5d0*(x0 + x2)
-      
+
       x01 = x0 - x1
       x02 = x0 - x2
       x12 = x1 - x2
       xdenom = x01*x02*x12
-      
+
       if (interpolation.eq."QUADRATIC") then
-      
+
          !-- Quadratic interpolation
 
          do i=1,nstates-1
@@ -1040,7 +1040,7 @@ contains
                y01 = y0 - y1
                y02 = y0 - y2
                y12 = y1 - y2
-            
+
                a0 = (y0*x1*x2*x12 - x0*y1*x2*x02 + x0*x1*y2*x01)/xdenom
                a1 = (x2*x2*y01 - x1*x1*y02 + x0*x0*y12)/xdenom
                a2 = (-x2*y01 + x1*y02 - x0*y12)/xdenom
@@ -1065,7 +1065,7 @@ contains
                y0 = v_dot_d_prev(i,j)
                y2 = v_dot_d(i,j)
                y02 = y0 - y2
-            
+
                a0 = (x0*y2 - x2*y0)/x02
                a1 = y02/x02
                a2 = 0.d0
@@ -1197,7 +1197,7 @@ contains
       v = vz1
 
       !-- define Ciccotti constants
-      
+
       gamma = (tau0 + tauD)/(tau0*tauD)
       sigma = sqrt(2*kb*temp*(tau0l+taul)/f0)/(tau0*taul)
 
@@ -1501,7 +1501,7 @@ contains
          do j=i,nstates
 
             droij = (0.d0, 0.d0)
-            
+
             if (i.eq.j) then
 
                do k=1,nstates
@@ -1553,7 +1553,7 @@ contains
          do j=i,nstates
 
             droij = (0.d0, 0.d0)
-            
+
             if (i.eq.j) then
 
                do k=1,nstates
@@ -2000,7 +2000,7 @@ contains
 
       integer, intent(in) :: istate_
       real(kind=8), intent(in) :: t_, qtstep_
-      
+
       integer :: i, j
       real(kind=8) :: dt, dt2
 
@@ -2081,7 +2081,7 @@ contains
          de = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_ - e0
 
          dci = -ii*c(i)*de/hbarps
-         
+
          do j=1,nstates
             !-- calculate the interpolated value of the
             !   nonadiabatic coupling term
@@ -2129,9 +2129,9 @@ contains
             !-- calculate the interpolated value of energy
             !   of the current state
             efei = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_
-            
+
             conservation = ekinocc + efeocc - efei
-            
+
             if (conservation.gt.0.d0) then
                hii = -2.d0*sqrt(ekinocc*conservation)
             else
@@ -2221,7 +2221,7 @@ contains
 
       integer, intent(in) :: istate_
       real(kind=8), intent(in) :: t_, qtstep_
-      
+
       integer :: i, j
       real(kind=8) :: dt, dt2
 
@@ -2284,7 +2284,7 @@ contains
 
       integer, intent(in) :: istate_
       real(kind=8), intent(in) :: t_, qtstep_
-      
+
       integer :: i, j
       real(kind=8) :: dt, dt2
 

@@ -250,6 +250,7 @@ module propagators_3d
    public :: collapse_and_reset_afssh_erratum
    public :: interaction_region_check
    public :: collapse_wavefunction
+   public :: damp_amplitudes_gedc
    public :: print_populations_den
    public :: print_populations_amp
    public :: print_coherences_den
@@ -861,7 +862,7 @@ contains
       !fc_prob = fc_prob/pnorm
 
       !-- stop the program if the norm is less than 0.99 or greater than 1 (unphysical situation)
-      
+
       if (pnorm.lt.0.98d0) then
          write(*,'(/1x,"WARNING: Bad normalization (<0.99): increase the number of states NSTATES")')
          call deallocate_all_arrays
@@ -1511,7 +1512,7 @@ contains
       x0 = t_prev_
       x2 = t_
       x1 = 0.5d0*(x0 + x2)
-      
+
       x01 = x0 - x1
       x02 = x0 - x2
       x12 = x1 - x2
@@ -1525,7 +1526,7 @@ contains
          y01 = y0 - y1
          y02 = y0 - y2
          y12 = y1 - y2
-         
+
          a0 = (y0*x1*x2*x12 - x0*y1*x2*x02 + x0*x1*y2*x01)/xdenom
          a1 = (x2*x2*y01 - x1*x1*y02 + x0*x0*y12)/xdenom
          a2 = (-x2*y01 + x1*y02 - x0*y12)/xdenom
@@ -1539,7 +1540,7 @@ contains
          y0 = ekin_prev_
          y2 = ekin_
          y02 = y0 - y2
-         
+
          a0 = (x0*y2 - x2*y0)/x02
          a1 = y02/x02
          a2 = 0.d0
@@ -1564,18 +1565,18 @@ contains
       real(kind=8) :: x0, x1, x2, x01, x02, x12
       real(kind=8) :: y0, y1, y2, y01, y02, y12
       real(kind=8) :: xdenom, a0, a1, a2
-      
+
       x0 = t_prev_
       x2 = t_
       x1 = 0.5d0*(x0 + x2)
-      
+
       x01 = x0 - x1
       x02 = x0 - x2
       x12 = x1 - x2
       xdenom = x01*x02*x12
-      
+
       if (interpolation.eq."QUADRATIC") then
-      
+
          !-- Quadratic interpolation
 
          do i=1,nstates-1
@@ -1587,7 +1588,7 @@ contains
                y01 = y0 - y1
                y02 = y0 - y2
                y12 = y1 - y2
-            
+
                a0 = (y0*x1*x2*x12 - x0*y1*x2*x02 + x0*x1*y2*x01)/xdenom
                a1 = (x2*x2*y01 - x1*x1*y02 + x0*x0*y12)/xdenom
                a2 = (-x2*y01 + x1*y02 - x0*y12)/xdenom
@@ -1612,7 +1613,7 @@ contains
                y0 = v_dot_d_prev(i,j)
                y2 = v_dot_d(i,j)
                y02 = y0 - y2
-            
+
                a0 = (x0*y2 - x2*y0)/x02
                a1 = y02/x02
                a2 = 0.d0
@@ -1754,7 +1755,7 @@ contains
       v(2) = vz2
 
       !-- define Ciccotti constants
-      
+
       gamma = (tau0 + tauD)/(tau0*tauD)
       sigma = sqrt(2*kb*temp*(tau0l+taul)/f0)/(tau0*taul)
 
@@ -1808,7 +1809,7 @@ contains
       enddo
 
       !-- propagate velocities for half-step
-      
+
       do i=1,2
          vhalf(i) = v(i) + half*dt*f(i) - half*dt*gamma*v(i) &
          &               + half*sqdt*sigma*ksi(i) &
@@ -2261,7 +2262,7 @@ contains
          do j=i,nstates
 
             droij = (0.d0, 0.d0)
-            
+
             if (i.eq.j) then
 
                do k=1,nstates
@@ -2780,7 +2781,7 @@ contains
 
       integer, intent(in) :: istate_
       real(kind=8), intent(in) :: t_, qtstep_
-      
+
       integer :: i, j
       real(kind=8) :: dt, dt2
 
@@ -2859,7 +2860,7 @@ contains
 
       integer, intent(in) :: istate_
       real(kind=8), intent(in) :: t_, qtstep_
-      
+
       integer :: i, j
       real(kind=8) :: dt, dt2
 
@@ -2938,7 +2939,7 @@ contains
 
       integer, intent(in) :: istate_
       real(kind=8), intent(in) :: t_, qtstep_
-      
+
       integer :: i, j
       real(kind=8) :: dt, dt2
 
@@ -3036,7 +3037,7 @@ contains
          de = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_ - e0
 
          dci = -ii*c(i)*de/hbarps
-         
+
          do j=1,nstates
             !-- calculate the interpolated value of the
             !   nonadiabatic coupling term
@@ -3084,9 +3085,9 @@ contains
             !-- calculate the interpolated value of energy
             !   of the current state
             efei = a0_fe(i) + a1_fe(i)*t_ + a2_fe(i)*t_*t_
-            
+
             conservation = ekinocc + efeocc - efei
-            
+
             if (conservation.gt.0.d0) then
                hii = -2.d0*sqrt(ekinocc*conservation)
             else
@@ -3829,6 +3830,35 @@ contains
       amplitude = cmplx(0.d0,0.d0,kind=8)
       amplitude(istate_) = cmplx(1.d0,0.d0,kind=8)
    end subroutine collapse_wavefunction
+
+
+   !-------------------------------------------------------------------------------------
+   !-- rescale the amplitudes according to GEDC (Granucci) prescription
+   !-------------------------------------------------------------------------------------
+   subroutine damp_amplitudes_gedc(istate_,dt_,ekin_,c_parameter_,e0_parameter_)
+
+      integer, intent(in) :: istate_
+      real(kind=8), intent(in) :: dt_, ekin_, c_parameter_, e0_parameter_
+
+      integer :: i
+      real(kind=8) :: sumamp, amp2, taui
+
+      !-- rescale amplitudes of unoccupied states
+      sumamp = 0.d0
+      do i=1,nstates
+         if (i.ne.istate_) then
+            taui = hbarps*(c_parameter_ + e0_parameter_/ekin_)/abs(fe(i) - fe(istate_))
+            amplitude(i) = amplitude(i)*exp(-dt_/taui)
+            sumamp = sumamp + real(amplitude(i)*conjg(amplitude(i)),kind=8)
+         endif
+      enddo
+
+      !-- rescale amplitude of occupied state
+      amp2 = real(amplitude(istate_)*conjg(amplitude(istate_)),kind=8)
+      amplitude(istate_) = amplitude(istate_)*sqrt((1.d0 - sumamp)/amp2)
+
+   end subroutine damp_amplitudes_gedc
+
 
 !===============================================================================
 end module propagators_3d

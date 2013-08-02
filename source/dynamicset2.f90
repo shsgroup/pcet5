@@ -120,7 +120,7 @@ subroutine dynamicset2
 !
 !  IDA - "Instantaneous Decoherence fror Any Hops" decoherence algorithm
 !
-!  GEDC - Granucci's Energy-based Decoherence Correction (with C=1, E0=1 a.u.)
+!  GEDC - Granucci's Energy-based Decoherence Correction (with C = 1, E0 = 0.1 a.u.)
 !
 !--------------------------------------------------------------------------------
 !
@@ -737,7 +737,7 @@ subroutine dynamicset2
          collapse_region_coupling = .false.
          afssh = .false.
          ids = .false.
-         write(6,'(/1x,"Granucci-s Energy-based Decoherence correction (GEDC)")')
+         write(6,'(/1x,"Granucci-s Energy-based Decoherence correction (GEDC) with C=1 and E0=0.1au")')
 
       endif
 
