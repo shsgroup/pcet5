@@ -213,14 +213,14 @@ echo "==========================================================================
 # send e-mail about the job completion
 if [ x$EMAIL != x ]; then
    MAILTEXT=msg$RANDOM
-   rm -rf $MAILTEXT
-   echo "Subject: The job $JOBNAME has finished"  >> $MAILTEXT
-   echo "To: $EMAIL"  >> $MAILTEXT
-   echo "From: souda@HOSTNAME"  >> $MAILTEXT
-   echo "Reply-To: souda@HOSTNAME"  >> $MAILTEXT
-   echo "$HOSTNAME : The job $JOBNAME has finished" >> $MAILTEXT
-   cat $MAILTEXT | sendmail -t
-   rm $MAILTEXT
+   rm -rf \$MAILTEXT
+   echo "Subject: The job $JOBNAME has finished"  >> \$MAILTEXT
+   echo "To: $EMAIL"  >> \$MAILTEXT
+   echo "From: souda@$HOSTNAME"  >> \$MAILTEXT
+   echo "Reply-To: souda@$HOSTNAME"  >> \$MAILTEXT
+   echo "$HOSTNAME : The job $JOBNAME has finished" >> \$MAILTEXT
+   cat \$MAILTEXT | sendmail -t
+   rm \$MAILTEXT
 fi
 
 # deliver the output directory
