@@ -161,6 +161,7 @@ module propagators_et2
    public :: collapse_and_reset_afssh_erratum
    public :: interaction_region_check
    public :: collapse_wavefunction
+   public :: damp_amplitudes_gedc
    public :: print_populations_den
    public :: print_populations_amp
    public :: print_coherences_den
@@ -2963,6 +2964,35 @@ contains
       amplitude = cmplx(0.d0,0.d0,kind=8)
       amplitude(istate_) = cmplx(1.d0,0.d0,kind=8)
    end subroutine collapse_wavefunction
+
+
+   !-------------------------------------------------------------------------------------
+   !-- rescale the amplitudes according to GEDC (Granucci) prescription
+   !-------------------------------------------------------------------------------------
+   subroutine damp_amplitudes_gedc(istate_,dt_,ekin_,c_parameter_,e0_parameter_)
+
+      integer, intent(in) :: istate_
+      real(kind=8), intent(in) :: dt_, ekin_, c_parameter_, e0_parameter_
+
+      integer :: i
+      real(kind=8) :: sumamp, amp2, taui
+
+      !-- rescale amplitudes of unoccupied states
+      sumamp = 0.d0
+      do i=1,nstates
+         if (i.ne.istate_) then
+            taui = hbarps*(c_parameter_ + e0_parameter_/ekin_)/abs(fe(i) - fe(istate_))
+            amplitude(i) = amplitude(i)*exp(-dt_/taui)
+            sumamp = sumamp + real(amplitude(i)*conjg(amplitude(i)),kind=8)
+         endif
+      enddo
+
+      !-- rescale amplitude of occupied state
+      amp2 = real(amplitude(istate_)*conjg(amplitude(istate_)),kind=8)
+      amplitude(istate_) = amplitude(istate_)*sqrt((1.d0 - sumamp)/amp2)
+
+   end subroutine damp_amplitudes_gedc
+
 
 !===============================================================================
 end module propagators_et2

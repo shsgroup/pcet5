@@ -120,7 +120,9 @@ subroutine dynamicset2
 !
 !  IDA - "Instantaneous Decoherence fror Any Hops" decoherence algorithm
 !
-!-------------------------------------------------------------------
+!  GEDC - Granucci's Energy-based Decoherence Correction (with C=1, E0=1 a.u.)
+!
+!--------------------------------------------------------------------------------
 !
 !  $Author$
 !  $Id$
@@ -626,6 +628,7 @@ subroutine dynamicset2
       if (index(options,' COLLAPSE_REGION_COUPLING').ne.0) idecoherence = idecoherence + 1
       if (index(options,' IDS').ne.0) idecoherence = idecoherence + 1
       if (index(options,' IDA').ne.0) idecoherence = idecoherence + 1
+      if (index(options,' GEDC').ne.0) idecoherence = idecoherence + 1
 
 
       if (idecoherence.gt.0) then
@@ -633,8 +636,8 @@ subroutine dynamicset2
          !-- make sure that only one decoherence option has been chosen
          if (idecoherence.gt.1) then
             write(6,'(/1x,"Only one decoherence option can be specified.")')
-            write(6,'( 1x,"Your input contains more then one decoherence option in DYNAMICS2 keyword.")')
-            write(6,'( 1x,"Choose one of: AFSSH, COLLAPSE_REGION_COUPLING, IDS, or IDA. ")')
+            write(6,'( 1x,"Your input contains more then one decoherence option in DYNAMICSET2 keyword.")')
+            write(6,'( 1x,"Choose one of: AFSSH, COLLAPSE_REGION_COUPLING, IDS, IDA, or GEDC. ")')
             write(6,'( 1x,"Check your input and make up your mind!!! Aborting...")')
             call clean_exit
          endif
@@ -652,6 +655,7 @@ subroutine dynamicset2
             collapse_region_coupling = .false.
             ids = .false.
             ida = .false.
+            gedc = .false.
 
             ioption = index(options," DZETA=")
             if (ioption.ne.0) then
@@ -694,6 +698,7 @@ subroutine dynamicset2
          afssh = .false.
          ids = .false.
          ida = .false.
+         gedc = .false.
 
          ioption = index(options," COUPLING_CUTOFF=")
          if (ioption.ne.0) then
@@ -712,6 +717,7 @@ subroutine dynamicset2
          collapse_region_coupling = .false.
          afssh = .false.
          ida = .false.
+         gedc = .false.
          write(6,'(/1x,"Instantaneous decoherence algorithm with collapsing events occuring upon succesful hops (IDS)")')
 
 
@@ -721,7 +727,17 @@ subroutine dynamicset2
          collapse_region_coupling = .false.
          afssh = .false.
          ids = .false.
+         gedc = .false.
          write(6,'(/1x,"Instantaneous decoherence algorithm with collapsing events occuring upon any hop (IDA)")')
+
+      elseif (index(options,' GEDC').ne.0) then
+
+         gedc = .true.
+         ida = .false.
+         collapse_region_coupling = .false.
+         afssh = .false.
+         ids = .false.
+         write(6,'(/1x,"Granucci-s Energy-based Decoherence correction (GEDC)")')
 
       endif
 
@@ -2238,6 +2254,12 @@ subroutine dynamicset2
                   call calculate_density_matrix
                   write(*,'("*** Leaving interaction region: wavefunction collapsed to pure state ",i2)') istate
                endif
+            endif
+
+            !-- Energy-based decoherence correction: damp the amplitudes using an approximate Granucci's prescription (GEDC)
+            if (gedc) then
+               call damp_amplitudes_gedc(istate,tstep,ekin,1.d0,0.1d0*au2cal)
+               call calculate_density_matrix
             endif
 
 

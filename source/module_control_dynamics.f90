@@ -42,6 +42,7 @@ module control_dynamics
 
    logical :: ids=.false.           ! flag for MDQT dynamics with instantaneous decoherence algorithm (succesful hops)
    logical :: ida=.false.           ! flag for MDQT dynamics with instantaneous decoherence algorithm (any hops)
+   logical :: gedc=.false.          ! flag for MDQT dynamics with Granucci's Energy-based Decoherence Correction (GEDC)
 
    logical :: decouple=.true.       ! flag for decoupling of TDSE in AFSSH algorithm
    logical :: along_moments=.false. ! flag for the direction of velocity adjustments (A-FSSH-0)
