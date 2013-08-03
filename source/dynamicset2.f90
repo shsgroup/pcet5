@@ -1832,15 +1832,16 @@ subroutine dynamicset2
 
       if (weights) then
          call get_evb_weights
-         write(itraj_channel,'("#",131("="))')
+         call get_diabatic_populations
+         write(itraj_channel,'("#",161("="))')
       else
          write(itraj_channel,'("#",131("="))')
       endif
       write(itraj_channel,'("#   Data for the trajectory #",i6.6)') itraj
       if (weights) then
-         write(itraj_channel,'("#",131("-"))')
-         write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"VZe",t68,"Ekin",t80,"Efe",t89,"occ.",t100,"EVB weights (1,2)")')
-         write(itraj_channel,'("#",131("-"))')
+         write(itraj_channel,'("#",161("-"))')
+         write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"VZe",t68,"Ekin",t80,"Efe",t89,"occ.",t100,"EVB weights (1,2)",t127,"diabatic populations")')
+         write(itraj_channel,'("#",161("-"))')
       else
          write(itraj_channel,'("#",131("-"))')
          write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"vze",t68,"Ekin",t80,"Efe",t89,"occ.")')
@@ -1882,8 +1883,8 @@ subroutine dynamicset2
       ekin = ekin1
 
       if (weights) then
-          write(itraj_channel,'(f13.6,6f12.5,i5,4f15.9)') &
-          & 0.d0, z1, vz1, ze, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn)
+          write(itraj_channel,'(f13.6,6f12.5,i5,8f15.9)') &
+          & 0.d0, z1, vz1, ze, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn), (diabatic_population(k),k=1,ielst_dyn)
       else
           write(itraj_channel,'(f13.6,6f12.5,i5)') &
           & 0.d0, z1, vz1, ze, vze, ekin, efes, istate
@@ -2106,7 +2107,7 @@ subroutine dynamicset2
                   number_of_failed_trajectories = number_of_failed_trajectories + 1
 
                   if (weights) then
-                     write(itraj_channel,'("#",131("-"))')
+                     write(itraj_channel,'("#",161("-"))')
                   else
                      write(itraj_channel,'("#",131("-"))')
                   endif
@@ -2116,7 +2117,7 @@ subroutine dynamicset2
                   write(itraj_channel,'("# This trajectory has failed... Even after several tries with smaller TDSE timesteps.")')
 
                   if (weights) then
-                     write(itraj_channel,'("#",131("-"))')
+                     write(itraj_channel,'("#",161("-"))')
                   else
                      write(itraj_channel,'("#",131("-"))')
                   endif
@@ -2276,9 +2277,11 @@ subroutine dynamicset2
          !-- end of the MDQT stage --!
          !---------------------------!
 
-
          !-- calculate EVB weights
-         if (weights) call get_evb_weights
+         if (weights) then
+            call get_evb_weights
+            call get_diabatic_populations
+         endif
 
          !-- write the current data to the trajectory file
 
@@ -2287,8 +2290,8 @@ subroutine dynamicset2
 
          if (mod(istep,ndump).eq.0) then
             if (weights) then
-               write(itraj_channel,'(f13.6,6f12.5,i5,4f15.9)') &
-               & zeit, z1, vz1, ze, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn)
+               write(itraj_channel,'(f13.6,6f12.5,i5,8f15.9)') &
+               & zeit, z1, vz1, ze, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn), (diabatic_population(k),k=1,ielst_dyn)
             else
                write(itraj_channel,'(f13.6,6f12.5,i5)') &
                & zeit, z1, vz1, ze, vze, ekin, efes, istate
@@ -2306,14 +2309,14 @@ subroutine dynamicset2
       traj_time_end = second()
 
       if (weights) then
-         write(itraj_channel,'("#",131("-"))')
+         write(itraj_channel,'("#",161("-"))')
       else
          write(itraj_channel,'("#",131("-"))')
       endif
       write(itraj_channel,'("# Number of allowed  switches: ",i5)') number_of_switches
       write(itraj_channel,'("# Number of rejected switches: ",i5)') number_of_rejected
       if (weights) then
-         write(itraj_channel,'("#",131("-"))')
+         write(itraj_channel,'("#",161("-"))')
       else
          write(itraj_channel,'("#",131("-"))')
       endif

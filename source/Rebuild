@@ -51,7 +51,9 @@ do
 done
 
 if [ -s "Rebuild.err" ]; then
-   echo "There might have been warnings and/or errors: check Rebuild.err!"
+   echo "There might have been warnings and/or errors: check Rebuild.err:"
+   echo
+   cat Rebuild.err
    echo "There might have been warnings and/or errors: check Rebuild.err!" >> Rebuild.log
 else
    echo "No warnings or errors!"

@@ -45,6 +45,12 @@ module propagators_et2
    !---------------------------------------------
    real(kind=8), allocatable, dimension(:,:), public :: wght
 
+   !-- array for diabatic populations
+   !   (calculated using the amplitudes
+   !    of the time-dependent wavefunction)
+   !---------------------------------------------
+   real(kind=8), allocatable, dimension(:), public :: diabatic_population
+
    !-- arrays for nonadaiabatic coupling vectors
    !---------------------------------------------
    real(kind=8), allocatable, dimension(:,:) :: coupz1
@@ -130,6 +136,7 @@ module propagators_et2
    public :: store_force_matrices
    public :: store_wavefunctions
    public :: get_evb_weights
+   public :: get_diabatic_populations
    public :: get_nonadiabatic_coupling
    public :: langevin_debye_1d
    public :: langevin_debye2_1d
@@ -291,6 +298,8 @@ contains
    subroutine allocate_evb_weights
       allocate (wght(ielst,nstates))
       wght = 0.d0
+      allocate (diabatic_population(ielst))
+      diabatic_population = 0.d0
    end subroutine allocate_evb_weights
    !---------------------------------------------------------------------
 
@@ -365,6 +374,7 @@ contains
 
    subroutine deallocate_evb_weights
       if (allocated(wght)) deallocate (wght)
+      if (allocated(diabatic_population)) deallocate (diabatic_population)
    end subroutine deallocate_evb_weights
 
    subroutine deallocate_mdqt_arrays
@@ -1087,7 +1097,7 @@ contains
 
    !--------------------------------------------------------------------
    !-- Interface to the calculation of the EVB weights
-   !   for current wavefunction
+   !   for each adiabatic state
    !--------------------------------------------------------------------
    subroutine get_evb_weights
       integer :: i, k
@@ -1099,6 +1109,26 @@ contains
          enddo
       enddo
    end subroutine get_evb_weights
+
+   !--------------------------------------------------------------------
+   !-- Interface to the calculation of the diabatic populations
+   !   using the amplitudes of the current time-dependent wavefunction
+   !--------------------------------------------------------------------
+   subroutine get_diabatic_populations
+      integer :: k, i, j
+      real(kind=8) :: zki, zkj, dia_pop
+      do k=1,ielst
+         dia_pop = 0.d0
+         do i=1,nstates
+            do j=1,nstates
+               zki = z(k,i)
+               zkj = z(k,j)
+               dia_pop = dia_pop + real(conjg(amplitude(i))*amplitude(j),kind=8)*zki*zkj
+            enddo
+         enddo
+         diabatic_population(k) = dia_pop
+      enddo
+   end subroutine get_diabatic_populations
 
 
    !--------------------------------------------------------------------

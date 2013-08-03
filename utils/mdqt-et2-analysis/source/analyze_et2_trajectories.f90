@@ -43,7 +43,7 @@ program analyze_et2_trajectories
    real(kind=8) :: z1_curr, ze_curr, ze_curr1, ze_curr2
    real(kind=8) :: vz1_curr, vze_curr
    real(kind=8) :: z1_0, ze_0, efe_curr, ekin_curr
-   real(kind=8) :: n_aver_r, n_aver_p, wh1_mean_0, w1_mean_0
+   real(kind=8) :: n_aver_r, n_aver_p, wh1_mean_0, w1_mean_0, wq1_mean_0
    real(kind=8) :: time_start, time_end, total_time_start, total_time_end
 
    real(kind=8) :: bin_width_z1, bin_width_ze
@@ -64,7 +64,7 @@ program analyze_et2_trajectories
    real(kind=8), dimension(:,:),   allocatable :: z1, vz1
    real(kind=8), dimension(:,:),   allocatable :: ze, vze
    real(kind=8), dimension(:,:),   allocatable :: ekin, efe
-   real(kind=8), dimension(:,:),   allocatable :: w1, w2
+   real(kind=8), dimension(:,:),   allocatable :: w1, w2, wq1, wq2
    real(kind=8), dimension(:),     allocatable :: histogram_z1
    real(kind=8), dimension(:),     allocatable :: histogram_ze
    real(kind=8), dimension(:,:),   allocatable :: state_histogram_z1
@@ -78,6 +78,7 @@ program analyze_et2_trajectories
    real(kind=8), dimension(:),     allocatable :: efe_mean, ekin_mean
    real(kind=8), dimension(:),     allocatable :: w1_mean, w2_mean
    real(kind=8), dimension(:),     allocatable :: wh1_mean, wh2_mean
+   real(kind=8), dimension(:),     allocatable :: wq1_mean, wq2_mean
    real(kind=8), dimension(:,:),   allocatable :: pop_ad
 
    integer, dimension(:,:), allocatable :: istate
@@ -221,6 +222,8 @@ program analyze_et2_trajectories
    allocate(istate(number_of_traj,number_of_timesteps))
    allocate(w1(number_of_traj,number_of_timesteps))
    allocate(w2(number_of_traj,number_of_timesteps))
+   allocate(wq1(number_of_traj,number_of_timesteps))
+   allocate(wq2(number_of_traj,number_of_timesteps))
 
    call allocated_memory
 
@@ -248,7 +251,7 @@ program analyze_et2_trajectories
          !-- skip comments and empty lines
          if (record(1:1).eq."#".or.record.eq."") cycle
 
-         call readrec(record,"rrrrrrrirr",carr,iarr,rarr)
+         call readrec(record,"rrrrrrrirrrr",carr,iarr,rarr)
 
          nsteps = nsteps + 1
 
@@ -270,9 +273,11 @@ program analyze_et2_trajectories
          efe(itraj,nsteps)  = rarr(7)
 
          istate(itraj,nsteps) = iarr(1)
- 
+
          w1(itraj,nsteps) = rarr(8)
          w2(itraj,nsteps) = rarr(9)
+         wq1(itraj,nsteps) = rarr(10)
+         wq2(itraj,nsteps) = rarr(11)
 
       enddo loop_over_timesteps
 
@@ -880,6 +885,9 @@ program analyze_et2_trajectories
    allocate (wh1_mean(number_of_timesteps))
    allocate (wh2_mean(number_of_timesteps))
 
+   allocate (wq1_mean(number_of_timesteps))
+   allocate (wq2_mean(number_of_timesteps))
+
    do istep=1,number_of_timesteps
 
       w1_mean(istep) = 0.d0
@@ -888,10 +896,16 @@ program analyze_et2_trajectories
       wh1_mean(istep) = 0.d0
       wh2_mean(istep) = 0.d0
 
+      wq1_mean(istep) = 0.d0
+      wq2_mean(istep) = 0.d0
+
       do itraj=1,number_of_traj
 
          w1_mean(istep) = w1_mean(istep) + w1(itraj,istep)
          w2_mean(istep) = w2_mean(istep) + w2(itraj,istep)
+
+         wq1_mean(istep) = wq1_mean(istep) + wq1(itraj,istep)
+         wq2_mean(istep) = wq2_mean(istep) + wq2(itraj,istep)
 
          !-- assign 1 for the largest weight (whXX arrays)
          tmparray(1) = w1(itraj,istep)
@@ -912,6 +926,9 @@ program analyze_et2_trajectories
       w1_mean(istep) = w1_mean(istep)/number_of_traj
       w2_mean(istep) = w2_mean(istep)/number_of_traj
 
+      wq1_mean(istep) = wq1_mean(istep)/number_of_traj
+      wq2_mean(istep) = wq2_mean(istep)/number_of_traj
+
       wh1_mean(istep) = wh1_mean(istep)/number_of_traj
       wh2_mean(istep) = wh2_mean(istep)/number_of_traj
 
@@ -921,12 +938,23 @@ program analyze_et2_trajectories
 
    open(2,file="weights_mean.dat")
    write(2,'("#",80("-"))')
-   write(2,'("#   Average diabatic populations (expectation values)")')
+   write(2,'("#   Average diabatic populations (expectation values for the occupied state)")')
    write(2,'("#",80("-"))')
    write(2,'("#",t10,"time",t30,"<1>",t50,"<2>")')
    write(2,'("#",80("-"))')
    do istep=1,number_of_timesteps
       write(2,'(3g20.10)') time1(istep), w1_mean(istep), w2_mean(istep)
+   enddo
+   close(2)
+
+   open(2,file="weights_quantum_mean.dat")
+   write(2,'("#",80("-"))')
+   write(2,'("#   Average diabatic populations (expectation values from time-dependent wavefunction)")')
+   write(2,'("#",80("-"))')
+   write(2,'("#",t10,"time",t30,"<1>",t50,"<2>")')
+   write(2,'("#",80("-"))')
+   do istep=1,number_of_timesteps
+      write(2,'(3g20.10)') time1(istep), wq1_mean(istep), wq2_mean(istep)
    enddo
    close(2)
 
@@ -943,12 +971,15 @@ program analyze_et2_trajectories
 
    wh1_mean_0 = wh1_mean(1)
    w1_mean_0  = w1_mean(1)
+   wq1_mean_0  = wq1_mean(1)
 
    time_end = secondi()
    write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
    deallocate (w1)
    deallocate (w2)
+   deallocate (wq1)
+   deallocate (wq2)
 
    !-----------------------------------------------------------------------
    !--(9)-- Time-dependent Marcus/Rips-Jortner/Zusman diabatic populations
@@ -1446,6 +1477,8 @@ contains
       if (allocated(efe))                memory = memory + number_of_traj*number_of_timesteps*8.d0
       if (allocated(w1))                 memory = memory + number_of_traj*number_of_timesteps*8.d0
       if (allocated(w2))                 memory = memory + number_of_traj*number_of_timesteps*8.d0
+      if (allocated(wq1))                memory = memory + number_of_traj*number_of_timesteps*8.d0
+      if (allocated(wq2))                memory = memory + number_of_traj*number_of_timesteps*8.d0
 
       if (allocated(pop_ad))             memory = memory + number_of_states*number_of_timesteps*8.d0
       if (allocated(state_histogram_z1)) memory = memory + number_of_bins_z1*number_of_timesteps*8.d0
@@ -1465,8 +1498,10 @@ contains
       if (allocated(efe_mean))           memory = memory + number_of_timesteps*8.d0
       if (allocated(ekin_mean))          memory = memory + number_of_timesteps*8.d0
       if (allocated(w1_mean))            memory = memory + number_of_timesteps*8.d0
+      if (allocated(wq1_mean))           memory = memory + number_of_timesteps*8.d0
       if (allocated(wh1_mean))           memory = memory + number_of_timesteps*8.d0
       if (allocated(w2_mean))            memory = memory + number_of_timesteps*8.d0
+      if (allocated(wq2_mean))           memory = memory + number_of_timesteps*8.d0
       if (allocated(wh2_mean))           memory = memory + number_of_timesteps*8.d0
       if (allocated(theta_corr))         memory = memory + number_of_timesteps*8.d0
 
