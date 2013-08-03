@@ -742,6 +742,13 @@ subroutine dynamics3
 
    if (index(options,' MDQT').ne.0) then
 
+      if (solvent_model.eq."DEBYE".or.solvent_model.eq."DEBYE2") then
+         write(6,'(/1x,"MDQT is not compatible with overdamped diffusive dynamics (DEBYE and DEBYE2).")')
+         write(6,'( 1x,"Please choose ONODERA or ONODERA2 model for solvent dynamics.")')
+         write(6,'( 1x,"Check your input and make up your mind!!! Aborting...")')
+         call clean_exit
+      endif
+
       mdqt = .true.
       write(6,'(/1x,"Mixed quantum-classical dynamics on multiple vibronic free energy surfaces.",/,&
                 &1x,"Tullys fewest switches surface hopping algorithm (MDQT) will be utilized."/)')
