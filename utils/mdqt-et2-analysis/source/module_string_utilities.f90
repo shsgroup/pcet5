@@ -237,22 +237,22 @@ CONTAINS
 
             if (i_carr.gt.size(carr)) then
                write(*,*) trim(subroutine_name),": size of carr array is too small..."
-	       stop
+               stop
             endif
 
             !-- check if the first character in record_tmp is a digit
 
-	    check = .true.
-	    do k=0,9
-	       if (record_tmp(1:1).eq.n(k)) then
-	          check = .false.
-		  exit
-	       endif
-	    enddo
+            check = .true.
+            do k=0,9
+               if (record_tmp(1:1).eq.n(k)) then
+                  check = .false.
+                  exit
+               endif
+            enddo
 
             !if (.not.check) then
             !   write(*,*) trim(subroutine_name),"Character string starts with a digit (",n(k),"): something is wrong..."
-	    !   stop
+            !   stop
             !endif
 
             carr(i_carr) = record_tmp(1:ispace-1)
@@ -265,7 +265,7 @@ CONTAINS
             i_iarr = i_iarr + 1
             if (i_iarr.gt.size(iarr)) then
                write(*,*) trim(subroutine_name),": size of iarr array is too small..."
-	       stop
+               stop
             endif
             iarr(i_iarr) = intstr(record_tmp(:ispace))
             record_tmp = adjustl(record_tmp(ispace+1:))
@@ -277,7 +277,7 @@ CONTAINS
             i_rarr = i_rarr + 1
             if (i_rarr.gt.size(rarr)) then
                write(*,*) trim(subroutine_name),": size of rarr array is too small..."
-	       stop
+               stop
             endif
             rarr(i_rarr) = dblstr(record_tmp(:ispace))
             record_tmp = adjustl(record_tmp(ispace+1:))
@@ -285,7 +285,7 @@ CONTAINS
          else
 
             write(*,*) trim(subroutine_name),": Wrong code in the codeline..."
-	    stop
+            stop
 
          endif
 

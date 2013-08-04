@@ -12,7 +12,7 @@ F90FLAGS = -c -O3 -xHOST -ipo -zero -static -prec-div -fstack-security-check -fs
 
 # Set the F90 Loader
 LD = $(F90) -o
-LDFLAGS = -O3 -xHOST -ipo -zero -static -prec-div -fstack-security-check -fstack-protector -fp-model strict
+LDFLAGS = -ipo
 #LDFLAGS = -L/opt/intel/Compiler/11.1/075/mkl/lib/em64t -Wl,--start-group /opt/intel/Compiler/11.1/075/mkl/lib/em64t/libmkl_intel_lp64.a /opt/intel/Compiler/11.1/075/mkl/lib/em64t/libmkl_core.a /opt/intel/Compiler/11.1/075/mkl/lib/em64t/libmkl_sequential.a -Wl,--end-group -lpthread -lm
 
 #LDFLAGS = -g -check
