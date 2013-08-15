@@ -31,6 +31,7 @@ module control_dynamics
    logical :: phase_corr=.false.      ! flag for MDQT dynamics with phase correction (Shenvi-Subotnik)
    logical :: decoherence=.false.     ! flag for MDQT dynamics with decoherence (three algorithms available)
    logical :: afssh=.false.           ! flag for AFSSH dynamics (Landry-Shenvi-Subotnik)
+   logical :: reactive_flux=.false.   ! flag for reactive flux mdqt procedure
 
    logical :: collapse_region_coupling=.false.  ! flag for MDQT dynamics with simple decoherence algorithm
                                                 ! (collapse leaving a region defined by the coupling magnitude)

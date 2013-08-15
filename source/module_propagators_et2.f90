@@ -5,9 +5,9 @@ module propagators_et2
    ! specific for a two-state ET model
    !---------------------------------------------------------------------
    !
-   !  $Author$
-   !  $Id$
-   !  $Revision$
+   !  $Author: souda $
+   !  $Id: module_propagators_et2.f90 177 2013-03-19 21:31:39Z souda $
+   !  $Revision: 177 $
    !
    !---------------------------------------------------------------------
 
@@ -91,6 +91,10 @@ module propagators_et2
    real(kind=8), allocatable, dimension(:,:) :: a0_vdotd, a1_vdotd, a2_vdotd
    real(kind=8), allocatable, dimension(:,:) :: a0_fmatz1, a1_fmatz1, a2_fmatz1
 
+   !-- save random force on first time step of Onodera-1 for reactive flux
+   !-- recall random force on first step of normal forward propagation for reactive flux
+   real(kind=8) :: ksi_save, eta_save
+
    !--(AVS-DEBUG)---
    !public :: v_dot_d, coupz1
    !--(AVS-DEBUG)---
@@ -166,6 +170,12 @@ module propagators_et2
    public :: print_coherences_den
    public :: print_coherences_amp
    public :: print_couplings_and_splittings
+   public :: calculate_switch_prob_function
+   public :: calculate_w_mu
+   public :: print_amplitudes
+   public :: initialize_reactiveflux_variables
+   public :: reactiveflux_choose_initial_state
+
 
 contains
 
@@ -724,6 +734,8 @@ contains
       enddo
    end function tdwf_norm
 
+
+
    !--------------------------------------------------------------------
    !-- calculate trace of the density matrix
    !--------------------------------------------------------------------
@@ -790,6 +802,9 @@ contains
       do j=1,nstates
          vdji = a0_vdotd(j,istate_) + a1_vdotd(j,istate_)*t_ + a2_vdotd(j,istate_)*t_*t_
          b_prob(j) = -2.d0*Real(amplitude(j)*conjg(amplitude(istate_))*vdji)
+!***********************Adiabat only propagation
+!        b_prob(j) = 0.d0
+
       enddo
    end subroutine calculate_bprob_amp
 
@@ -1163,13 +1178,17 @@ contains
    !   for Onodera model
    !   [Chem. Phys. Lett., 2006, 429, 310-316, Eq.23]
    !--------------------------------------------------------------------
-   subroutine langevin_onodera_1d(istate,z1,vz1,dt,temp,ekin1,efes)
+   subroutine langevin_onodera_1d(istate,z1,vz1,dt,temp,ekin1,efes,reactive_flux,normalforward,istep)
 
       implicit none
       integer, intent(in)    :: istate
       real(kind=8), intent(in)    :: dt, temp
       real(kind=8), intent(inout) :: z1, vz1
       real(kind=8), intent(out)   :: ekin1, efes
+
+      logical :: reactive_flux  !true if using reactive flux (for saving random force when istep = 1)
+      logical :: normalforward  !false through reverse trajectory.  Turns to true when doing the normal propagation in reactive flux
+      integer :: istep  !current timestep
 
       real(kind=8), parameter :: half=0.5d0
       real(kind=8), parameter :: eighth=1.d0/8.d0
@@ -1205,6 +1224,26 @@ contains
 
       ksi = gaussdist_boxmuller()
       eta = gaussdist_boxmuller()
+ 
+!     !These conditions are satisfied for the reverse trajectory (reactive_flux)
+!     !when the random force should be saved.  
+!     if((reactive_flux.eq..true.).and.(normalforward.eq..false.).and.(istep.eq.1)) then 
+!       write(*,*) 'Saving random force in reverse traj when istep = 1'
+!       ksi_save = ksi
+!       eta_save = eta
+!       write(*,*) 'ksi_save and eta_save', ksi_save,eta_save
+!     end if
+!
+!    !These conditions are satisfied for the normal forward propagation
+!    !(reactive_flux) when the random force should be recalled at timestep 1.
+!    if((reactive_flux.eq..true.).and.(normalforward.eq..true.).and.(istep.eq.1)) then
+!      write(*,*) 'recalling random force in normal forward traj when istep = 1'
+!      ksi = ksi_save
+!      eta = eta_save
+!      write(*,*) 'ksi and eta', ksi,eta
+!    end if
+ 
+      
 
       !-- regular forces from the self-energy
       f = -x/(tau0*taul)
@@ -2963,6 +3002,173 @@ contains
       amplitude = cmplx(0.d0,0.d0)
       amplitude(istate_) = cmplx(1.d0,0.d0)
    end subroutine collapse_wavefunction
+
+   !This subroutine uses the function f_nj = C *(1-exp(-abs(v_dot_d)*deltat_) to approximate the hopping probability.
+   subroutine calculate_switch_prob_function(istate_,istep_,fnj_storage,nsteps,nstates_dyn,tstep_)
+      integer, intent(in) :: istate_, nsteps, nstates_dyn, istep_
+      real(kind=8), intent(in) :: tstep_
+      real(kind=8), dimension(:,:,:) :: fnj_storage(1:nsteps,nstates_dyn,nstates_dyn)
+      integer :: j
+
+      do j=1,nstates_dyn
+         switch_prob(j)  = 0.5d0 * (1.d0-exp(-abs(v_dot_d(j,istate_))*tstep_))
+!************************Adiabat only propagation
+!        switch_prob(j) = 0.d0         
+
+         fnj_storage(istep_,j,istate_) = switch_prob(j)
+         fnj_storage(istep_,istate_,j) = switch_prob(j)
+         
+      end do
+
+   end subroutine calculate_switch_prob_function
+
+
+
+
+
+   subroutine calculate_w_mu(switch_attempt, w_mu,fnj_storage,nsteps,nstates_dyn,istep,switch_attempt_state,istate,occupied_adiabat, occupied_adiabat_beforehop)
+
+   integer :: nsteps, nstates_dyn, istep, istate
+   integer, dimension(:) :: switch_attempt(1:nsteps)
+   integer, dimension(:) :: switch_attempt_state(1:nsteps)
+   integer, dimension(:) :: occupied_adiabat(1:nsteps), occupied_adiabat_beforehop(1:nsteps)
+   double precision :: w_mu
+   double precision :: fnj_storage(1:nsteps,nstates_dyn,nstates_dyn)
+  
+   integer :: p,q
+   double precision :: fsum, gsum
+     !NOTE: the variable nstates_dyn is hard coded to have a value of 2
+     !This routine will only work for two states right now.  
+ 
+!   write(*,*) 'switch_attempt value',istep, switch_attempt(istep)
+     if(switch_attempt(istep).eq.1) then  !a switch was attempted
+       !state switching FROM
+       p = occupied_adiabat(istep)
+       !Value of q is the other state (not p)
+       !q = occupied_adiabat_beforehop(istep)  This only works if the switch was successful
+       if(p.eq.1) then 
+         q = 2
+       else
+         q = 1
+       end if
+       !state switching attempted to switch TO
+       w_mu = switch_prob(q)/fnj_storage(istep,p,q) !switch_prob contains the g_nj value
+     else  !no switch was attempted
+       p = occupied_adiabat(istep)  !This is the occupied adiabat for the current istep, should have same value as occupied_adiabat_beforehop(istep)
+       gsum = 0.d0
+       fsum = 0.d0
+       do q=1,nstates_dyn
+         if(p.ne.q) then 
+           gsum = gsum + switch_prob(q)
+           fsum = fsum + fnj_storage(istep,q,p) 
+         end if
+       end do
+       w_mu = (1.d0 - gsum)/(1.d0 - fsum)
+     end if
+
+   end subroutine  
+
+
+   subroutine print_amplitudes(ichannel)
+
+      integer, intent(in) :: ichannel
+      integer :: i, n
+      real(kind=8) :: pnorm, reamp
+
+      write(ichannel,'("#",100("="))')
+      write(ichannel,'("# Amplitudes of the time-dependent wavefunction")')
+      write(ichannel,'("#",100("-"))')
+
+      pnorm = 0.d0
+      do i=1,nstates
+         reamp = real(amplitude(i))
+         pnorm = pnorm + amplitude(i)*conjg(amplitude(i))
+      enddo
+
+      do n=1,nstates/10
+         write(ichannel,'(/1x,10i13)') (i,i=(n-1)*10+1,n*10)
+         write(ichannel,'(1x,10f13.6)') (real(amplitude(i)*conjg(amplitude(i))),i=(n-1)*10+1,n*10)
+      enddo
+
+      n = mod(nstates,10)
+      if (n.gt.0) then
+         write(ichannel,'(/1x,10i13)') (i,i=nstates-n+1,nstates)
+         write(ichannel,'(1x,10f13.6)') (real(amplitude(i)*conjg(amplitude(i))),i=nstates-n+1,nstates)
+      endif
+      write(6,'(/)')
+
+      write(ichannel,'("#",130("-"))')
+      write(ichannel,'("#",t10,"Norm:",f15.6)') pnorm
+      write(ichannel,'("#",130("="))')
+
+   end subroutine print_amplitudes
+
+      subroutine initialize_reactiveflux_variables(successfulreverse,normalforward,alpha_limit,W,alpha,Fn,Fd,fnj_storage,&
+              &occupied_adiabat,occupied_adiabat_beforehop,switch_attempt,switch_attempt_state,vz1_storage,z1_storage,&
+              &vz1_storage_beforehop,nsteps,nstates_dyn)
+ 
+      Implicit NONE
+      integer :: nsteps, nstates_dyn
+      logical :: successfulreverse, normalforward
+      double precision :: alpha_limit,W, Fn, Fd, alpha
+      double precision, dimension(:,:,:) :: fnj_storage(nsteps,nstates_dyn,nstates_dyn)
+      integer, dimension(:) :: switch_attempt(nsteps), switch_attempt_state(nsteps)
+      integer, dimension(:) :: occupied_adiabat(nsteps), occupied_adiabat_beforehop(nsteps)
+      double precision, dimension(:) :: vz1_storage(nsteps), vz1_storage_beforehop(nsteps), z1_storage
+
+      successfulreverse = .false.
+      normalforward = .false.
+      alpha_limit = 100.d0
+      alpha = 0.d0
+      W = 1.d0
+      Fn = 0.d0
+      Fd = 0.d0
+      fnj_storage(1:nsteps,1:nstates_dyn,1:nstates_dyn) = 0.d0
+      occupied_adiabat(1:nsteps) = 0
+      occupied_adiabat_beforehop(1:nsteps) = 0
+      switch_attempt(1:nsteps) = 0
+      switch_attempt_state(1:nsteps) = 0
+      vz1_storage(1:nsteps) = 0.d0
+      vz1_storage_beforehop(1:nsteps) = 0.d0
+      z1_storage(1:nsteps) = 0.d0
+ 
+      end subroutine initialize_reactiveflux_variables
+
+      subroutine reactiveflux_choose_initial_state(nstates_dyn,temp,istate,initial_state)
+
+      Implicit NONE
+      integer :: nstates_dyn, istate, initial_state
+      real(8) :: temp
+
+      double precision :: N_tot, rand, prob
+      integer :: i
+      !Choose initial adiabat from Maxwell-Boltzmann distribution
+      N_tot = 0.d0
+      do i=1,nstates_dyn
+        N_tot = N_tot + exp(-get_free_energy(i)/(kb*temp))
+      end do
+
+      rand = ran2nr()
+      prob = 0.d0
+      do i=1,nstates_dyn
+        prob = exp(-get_free_energy(i)/(kb*temp))/N_tot + prob
+        if(rand.le.prob) then
+          initial_state = i
+          istate = initial_state
+!*********************Adiabat only propagation
+!         initial_state = 1
+!         istate = initial_state
+        
+          write(*,*) 'Initial state for reactive flux (from cumulative distribution fxn):', istate
+          exit
+        end if
+      end do
+     
+     end subroutine reactiveflux_choose_initial_state
+      
+      
+
+
 
 
 !===============================================================================
