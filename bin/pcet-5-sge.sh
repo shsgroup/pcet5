@@ -236,8 +236,6 @@ rm -f \$SGE_O_WORKDIR/*.po*
 echo "Removing scratch directories..."
 rm -rf \$SCRDIR
 
-module purge
-
 EnD
 
 qsub ${HERE}/${JOBNAME}.sge
