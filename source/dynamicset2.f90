@@ -124,10 +124,11 @@ subroutine dynamicset2
 !
 !--------------------------------------------------------------------------------
 !  REACTIVE_FLUX - Starts trajectory at dividing surface.  Propagates
-!  "backwards" in time until reactant is reached.  Follow stored trajectory
+!  "backwards" in time until reactant or product is reached.  Follow stored trajectory
 !  forward and update time dependent Schroedinger equation coefficients until
 !  the dividing surface is reached.  Start the trajectory at the dividing
-!  surface and propagate normally until products are reached, at which time the
+!  surface if reactants were reached in the reverse trajectory
+!  and propagate normally until reactants or products are reached, at which time the
 !  trajecotory is stopped.
 !-------------------------------------------------------------------
 !
@@ -214,18 +215,20 @@ subroutine dynamicset2
    real(kind=8), dimension(2)   :: fe_diab, fe_adiab
 
    !Variables for the reactive_flux method
+   !Note: reactive_flux works for the two state system (the calculate_w_mu
+   !routine is coded to only work for two states)
    real(kind=8) :: N_tot, prob, rand !For calculating the initial adiabat
    integer :: i, final_step_reverse !keep track of time steps in reverse time loop
-   real(kind=8), allocatable, dimension(:) :: z1_storage, y1_storage, vz1_storage !Storage of energy gap/vel/auxiliary coordinate
-   real(kind=8), allocatable, dimension(:) :: vz1_storage_beforehop
+   real(kind=8), allocatable, dimension(:) :: z1_storage, vz1_storage !Storage of energy gap/vel
+   real(kind=8), allocatable, dimension(:) :: vz1_storage_beforehop !Storage of energy gap velocity at beginning of reverse timestep (before a hop)
    real(kind=8), allocatable, dimension(:,:,:) :: fnj_storage !Storage of the "fake" hopping probability
    integer, allocatable, dimension(:) :: switch_attempt  !has value 1 if switch attempted, 0 if not attempted
    integer, allocatable, dimension(:) :: occupied_adiabat !holds the occupied adiabat at end of reverse time step istep
    integer, allocatable, dimension(:) :: occupied_adiabat_beforehop !holds occupied adiabat at beginning of reverse timestep
    integer, allocatable, dimension(:) :: switch_attempt_state !holds the state to which a switch was attempted
    double precision :: W, alpha, dividing_surface_egap, Fn, Fd, alpha_limit  !quantities for reactive_flux
-   logical :: successfulreverse !true if trajectory did not run out of time steps in the reverse trajectory before reaching reactants
-   logical :: normalforward !true is should propagate from dividing surface foward
+   logical :: successfulreverse !true if trajectory did not run out of time steps in the reverse trajectory before reaching reactants or products
+   logical :: normalforward !true if should propagate from dividing surface foward (means reactant reached in reverse trajectory)
    integer :: Fnfile, Fdfile  !files to hold values of Fn and Fd for all trajectories
 
 
@@ -649,22 +652,6 @@ subroutine dynamicset2
                    &1x,"[N. Shenvi, J. E. Subotnik, and W. Yang, J. Chem. Phys. 135, 024101 (2011) ]"/)')
       endif
 
-
-      if (index(options,' REACTIVE_FLUX').ne.0) then 
-        reactive_flux = .true. 
-        Fnfile = 15
-        Fdfile = 16
-        open(unit=Fnfile,file='Fn',action='write')
-        open(unit=Fdfile,file='Fd',action='write')
-        write(6,'(1X,"Begin the calculation at the dividing surface. Propagate trajectories backward and forward in time.")')
-         !Make sure the solvent model is not ONODERA2 for reactive flux (memory of trajectory is unphysical for reverse trajectory)
-      else 
-        reactive_flux = .false.
-        normalforward = .false.
-        successfulreverse = .false.
-      end if
-
-
       !-- decoherence options
 
       idecoherence = 0
@@ -792,6 +779,24 @@ subroutine dynamicset2
       write(6,'(/1x,"Simulation of classical dynamics on a single free energy surface (default)."/)')
 
    endif
+ 
+   if (index(options,' REACTIVE_FLUX').ne.0) then 
+     reactive_flux = .true. 
+     Fnfile = 15
+     Fdfile = 16
+     open(unit=Fnfile,file='Fn',action='write')
+     open(unit=Fdfile,file='Fd',action='write')
+     write(6,'(1X,"Begin the calculation at the dividing surface. Propagate trajectories backward and forward in time.")')
+     if(mdqt.eq..false.) then 
+       write(6,'(1x,"The reactive_flux option can only be used when MDQT is turned on."/)')
+       write(6,'(1x,"MDQT is not turned on.  Please remove REACTIVE_FLUX or include MDQT in the DYNAMICSET2 group."/)')
+       Call clean_exit
+     end if
+   else 
+      reactive_flux = .false.
+      normalforward = .false.
+      successfulreverse = .false.
+   end if
 
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1664,8 +1669,8 @@ subroutine dynamicset2
          write(6,*) 'ERROR: REACTIVE_FLUX can only be turned on when using MDQT.'
          Call clean_exit
        end if
-       if((afssh.eq..true.).or.(collapse_region_coupling.eq..true.)) then
-         write(6,*) 'ERROR: Decoherence (either afssh or collapse_coupling_region) cannot be used with reactive flux algorithm.'
+       if((afssh.eq..true.).or.(collapse_region_coupling.eq..true.).or.(ids.eq..true.).or.(ida.eq..true.).or.(gedc.eq..true.)) then
+         write(6,*) 'ERROR: Decoherence (either AFSSH, COLLAPSE_REGION_COUPLING, IDS, IDA, or GEDC) cannot be used with reactive flux algorithm.'
          Call clean_exit
        end if
          !Make sure the solvent model is not ONODERA2 for reactive flux (memory of trajectory is unphysical for reverse trajectory)
@@ -2011,7 +2016,7 @@ subroutine dynamicset2
         write(6,'(131("-"))')
         write(6,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"vze",t68,"Ekin",t80,"Efe",t89,"occ.")')
         write(6,'(131("-"))')
-      end if  !reactive_flux eq false
+     end if  !reactive_flux eq false
       !write(6,'(137x,$)')
 
       !--(DEBUG)--start
@@ -2384,18 +2389,18 @@ subroutine dynamicset2
                      call calculate_density_matrix
                      write(*,'("*** (ID): wavefunction collapsed to pure state ",i2)') istate
                      if(reactive_flux.eq..false.) then 
-                     write(itraj_channel,'("# (ID) Wavefunction collapse to state ",i2," occurred")') istate
+                       write(itraj_channel,'("# (ID) Wavefunction collapse to state ",i2," occurred")') istate
                      end if
                   endif
                   if(reactive_flux.eq..false.) then 
-                  write(itraj_channel,'("#--------------------------------------------------------------------")')
+                    write(itraj_channel,'("#--------------------------------------------------------------------")')
                   end if
 
                else
                   if(reactive_flux.eq..false.) then 
-                  write(itraj_channel,'("#--------------------------------------------------------------------")')
-                  write(itraj_channel,'("#  t  = ",f13.6," ps ==> REJECTED SWITCH ",i3,"  -->",i3)') zeit,istate,new_state
-                  write(itraj_channel,'("#  d  = ",f20.6)') get_nonadiabatic_coupling(istate,new_state)
+                    write(itraj_channel,'("#--------------------------------------------------------------------")')
+                    write(itraj_channel,'("#  t  = ",f13.6," ps ==> REJECTED SWITCH ",i3,"  -->",i3)') zeit,istate,new_state
+                    write(itraj_channel,'("#  d  = ",f20.6)') get_nonadiabatic_coupling(istate,new_state)
                   end if !reactive_flux false
 
                   number_of_rejected = number_of_rejected + 1
@@ -2406,12 +2411,12 @@ subroutine dynamicset2
                      call calculate_density_matrix
                      write(*,'("*** (ID): wavefunction collapsed to pure state ",i2)') istate
                      if(reactive_flux.eq..false.) then 
-                     write(itraj_channel,'("# (ID) Wavefunction collapse to state ",i2," occurred")') istate
+                       write(itraj_channel,'("# (ID) Wavefunction collapse to state ",i2," occurred")') istate
                      end if
                   endif
                
                   if(reactive_flux.eq..false.) then 
-                  write(itraj_channel,'("#--------------------------------------------------------------------")')
+                    write(itraj_channel,'("#--------------------------------------------------------------------")')
                   end if
 
                endif
@@ -2472,8 +2477,8 @@ subroutine dynamicset2
              write(6,*) 'value of alpha', alpha
              write(6,*) 'value of W', W
              call v1_to_ve(vz1_storage_beforehop(1),vze)
-             Fn = Fn + vze*W/alpha
-             Fd = Fd + vze*W
+             Fn = vze*W/alpha
+             Fd = vze*W
              write(Fnfile,*) 'Fn', Fn
              write(Fdfile,*) 'Fd', Fd
              exit
@@ -2484,8 +2489,8 @@ subroutine dynamicset2
             if((ze.gt.z_1).and.(istate.eq.1)) then  !z_1 has the reactant energy for only solvation terms.  If gas phase bias is zero z_1 = lambda + dg_reaction
              write(6,*) 'Reached reactants on adiabat 1 in normal forward propagation.'
              call v1_to_ve(vz1_storage_beforehop(1),vze)
-             Fd = Fd + vze*W
-             Fn = Fn + 0.d0
+             Fd = vze*W
+             Fn = 0.d0
              write(Fnfile,*) 'Fn', Fn
              write(Fdfile,*) 'Fd ', Fd
              exit
@@ -2805,7 +2810,6 @@ end subroutine dynamicset2
 
 
       alpha = 0.d0   !Initialize alpha for forward trajectory
-     ! loop_over_time: do istep=final_step_reverse-1,1,-1
        loop_over_time: do istep=1,final_step_reverse-1
 
 
@@ -2814,9 +2818,6 @@ end subroutine dynamicset2
           zeit_prev = real(istep-1,kind=8)*tstep
           zeit = real(istep,kind=8)*tstep
 
-
-        !zeit_prev = real(istep+1)*tstep
-        !zeit = real(istep)*tstep
 
 
          !-- MDQT: store couplings, electronic energies, and velocities
@@ -2837,9 +2838,6 @@ end subroutine dynamicset2
          !Instead of calling the classical propagation routine, get the position
          !(z1,y1) and velocity (vz1) coordinates from data stored for the
          !reverse trajectory
-       !  z1 = z1_storage(istep)
-       !  vz1 = -1.d0*vz1_storage(istep)
-       !  istate = occupied_adiabat(istep)
           z1 = z1_storage(final_step_reverse - istep)
           vz1 = -1.d0*vz1_storage(final_step_reverse - istep)
           istate = occupied_adiabat(final_step_reverse - istep)

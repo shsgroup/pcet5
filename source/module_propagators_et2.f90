@@ -3070,7 +3070,6 @@ contains
      !NOTE: the variable nstates_dyn is hard coded to have a value of 2
      !This routine will only work for two states right now.  
  
-!   write(*,*) 'switch_attempt value',istep, switch_attempt(istep)
      if(switch_attempt(istep).eq.1) then  !a switch was attempted
        !state switching FROM
        p = occupied_adiabat(istep)
