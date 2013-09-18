@@ -226,6 +226,7 @@ subroutine dynamicset2
    double precision :: W, alpha, dividing_surface_egap, Fn, Fd, alpha_limit  !quantities for reactive_flux
    logical :: successfulreverse !true if trajectory did not run out of time steps in the reverse trajectory before reaching reactants
    logical :: normalforward !true is should propagate from dividing surface foward
+   integer :: Fnfile, Fdfile  !files to hold values of Fn and Fd for all trajectories
 
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -651,7 +652,11 @@ subroutine dynamicset2
 
       if (index(options,' REACTIVE_FLUX').ne.0) then 
         reactive_flux = .true. 
-          write(6,'(1X,"Begin the calculation at the dividing surface. Propagate trajectories backward and forward in time.")')
+        Fnfile = 15
+        Fdfile = 16
+        open(unit=Fnfile,file='Fn',action='write')
+        open(unit=Fdfile,file='Fd',action='write')
+        write(6,'(1X,"Begin the calculation at the dividing surface. Propagate trajectories backward and forward in time.")')
          !Make sure the solvent model is not ONODERA2 for reactive flux (memory of trajectory is unphysical for reverse trajectory)
       else 
         reactive_flux = .false.
@@ -1645,7 +1650,7 @@ subroutine dynamicset2
    end if
 
 
-       !Allocate arrays for reactive_flux if that is the calculation type
+   !Allocate arrays for reactive_flux if that is the calculation type
    if(reactive_flux) then
        allocate(z1_storage(1:nsteps))
        allocate(vz1_storage(1:nsteps))
@@ -1660,14 +1665,14 @@ subroutine dynamicset2
          Call clean_exit
        end if
        if((afssh.eq..true.).or.(collapse_region_coupling.eq..true.)) then
-         write(6,*) 'ERROR: Decoherence (either afsse or collapse_coupling_region) cannot be used with reactive flux algorithm.'
+         write(6,*) 'ERROR: Decoherence (either afssh or collapse_coupling_region) cannot be used with reactive flux algorithm.'
          Call clean_exit
+       end if
          !Make sure the solvent model is not ONODERA2 for reactive flux (memory of trajectory is unphysical for reverse trajectory)
-         if(solvent_model.ne."ONODERA") then
-           write(6,*) 'ERROR: Reactive flux can only be performed with the Onodera-1 model.'
-           write(6,*)  'Please select this solvent model.'
-           call clean_exit
-         end if
+       if(solvent_model.ne."ONODERA") then
+         write(6,*) 'ERROR: Reactive flux can only be performed with the Onodera-1 model.'
+         write(6,*)  'Please select this solvent model.'
+         call clean_exit
        end if
    end if
 
@@ -1879,7 +1884,7 @@ subroutine dynamicset2
             call set_initial_density_pure(istate)
          endif
 
-      elseif (initial_state_diab.and.(reactive_flux.eq..false.)) then
+      elseif (initial_state_diab) then
 
          !-- The initial state is sampled according to its amplitude in the coherent mixture
          istate = assign_initial_state(initial_state)
@@ -1907,17 +1912,16 @@ subroutine dynamicset2
          !For reactive_flux, we need to do the backwards trajectory first before we can set the initial amplitudes.
          !Choose the initial adiabat using the Maxwell-Boltzmann distribution
          call reactiveflux_choose_initial_state(nstates_dyn,temp,istate,initial_state)
-!**********************************for adiabat only
-        !istate = 1
-        !initial_state = 1
-
+         !**********************************for single adiabat propagation only
+         !istate = 1
+         !initial_state = 1
+         !**********************************
          !Set initial values of W, alpha, Fn, Fd for each trajectory.  Also zero all arrays for each trajectory.
          call initialize_reactiveflux_variables(successfulreverse,normalforward,alpha_limit,W,alpha,Fn,Fd,fnj_storage,&
               &occupied_adiabat,occupied_adiabat_beforehop,switch_attempt,switch_attempt_state,vz1_storage,z1_storage,&
               &vz1_storage_beforehop,nsteps,nstates_dyn)
          call set_initial_amplitudes_pure(istate)
          call set_initial_density_pure(istate)
-          write(*,*) 'going to go to reverse time'
          call reverse_time_propagation(z1_storage,vz1_storage,fnj_storage,&
                &dg_reaction,switch_attempt,nstates_dyn,occupied_adiabat,switch_attempt_state,final_step_reverse,&
                &vz1,z1,ekin,istate,successfulreverse,vz1_storage_beforehop,occupied_adiabat_beforehop,alpha_limit,&
@@ -1927,7 +1931,6 @@ subroutine dynamicset2
            cycle
          end if
          istate = occupied_adiabat_beforehop(final_step_reverse)
-         write(*,*) 'istate going into forward time', istate
          !This z1 and vz1 will be stored in z1_prev and vz1_prev upon entering forward_time_propgagtion_quantum_only routine.  
          !This allows for interpolation and integration of the TDSE.
          z1 = z1_storage(final_step_reverse)
@@ -1939,18 +1942,17 @@ subroutine dynamicset2
                 &W,vz1_storage_beforehop, occupied_adiabat_beforehop,istate)
          call print_amplitudes(6)
          if(normalforward.eq..false.) then
-           write(6,*) 'This trajectory went to products (in the reverse trajectory).  Stop here.'
+           write(6,*) 'This trajectory went to products (in the reverse trajectory).'
+           write(6,*) 'Cycle to next trajectory.'
            call v1_to_ve(vz1_storage_beforehop(1),vze)
-           write(6,*) 'Value of W', W
-           write(6,*) "Fd ", vze*W
-           write(6,*) "Fn ", 0.d0
+           write(Fdfile,*) "Fd ", vze*W
+           write(Fnfile,*) "Fn ", 0.d0
            cycle  !did not make it to reactant in reverse traj, don't do normal traj
          end if
          if((normalforward.eq..true.).and.(W.eq.0.d0)) then
-           write(6,*) 'normalforward is true but value of W is', W
-           write(6,*) 'Cycling for next trajectory because Fn and Fd will be 0'
-           write(6,*) 'Fd ', W
-           write(6,*) 'Fn ', W
+           write(6,*) 'Cycling for next trajectory because Fn and Fd will be 0 (W=0)'
+           write(Fdfile,*) 'Fd ', W
+           write(Fnfile,*) 'Fn ', W
            cycle
          end if
 
@@ -1979,38 +1981,37 @@ subroutine dynamicset2
       endif
 
       !-- open the trajectory output file (channel 1)
+     if(reactive_flux.eq..false.) then 
+        open(itraj_channel,file=trim(fname)//"_"//traj_suffix//".dat")
 
-      open(itraj_channel,file=trim(fname)//"_"//traj_suffix//".dat")
+        !-- write the header of the trajectory file
+        if (weights) then
+           call get_evb_weights
+           call get_diabatic_populations
+           write(itraj_channel,'("#",161("="))')
+        else
+           write(itraj_channel,'("#",131("="))')
+        endif
+        write(itraj_channel,'("#   Data for the trajectory #",i6.6)') itraj
+        if (weights) then
+           write(itraj_channel,'("#",161("-"))')
+           write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"VZe",t68,"Ekin",t80,"Efe",t89,"occ.",t100,"EVB weights (1,2)",t127,"diabatic populations")')
+           write(itraj_channel,'("#",161("-"))')
+        else
+           write(itraj_channel,'("#",131("-"))')
+           write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"vze",t68,"Ekin",t80,"Efe",t89,"occ.")')
+           write(itraj_channel,'("#",131("-"))')
+        endif
 
-      !-- write the header of the trajectory file
+        write(6,'(/1x,"===> Trajectory ",i5," starts on the electronic state ",i3)') itraj, istate
+        write(6,'( 1x,"===> Initial solvent coordinate (z1), (kcal/mol)^(1/2): ",f13.6)') z1
+        call z1_to_ze(z1,ze)
 
-      if (weights) then
-         call get_evb_weights
-         call get_diabatic_populations
-         write(itraj_channel,'("#",161("="))')
-      else
-         write(itraj_channel,'("#",131("="))')
-      endif
-      write(itraj_channel,'("#   Data for the trajectory #",i6.6)') itraj
-      if (weights) then
-         write(itraj_channel,'("#",161("-"))')
-         write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"VZe",t68,"Ekin",t80,"Efe",t89,"occ.",t100,"EVB weights (1,2)",t127,"diabatic populations")')
-         write(itraj_channel,'("#",161("-"))')
-      else
-         write(itraj_channel,'("#",131("-"))')
-         write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"vze",t68,"Ekin",t80,"Efe",t89,"occ.")')
-         write(itraj_channel,'("#",131("-"))')
-      endif
-
-      write(6,'(/1x,"===> Trajectory ",i5," starts on the electronic state ",i3)') itraj, istate
-      write(6,'( 1x,"===> Initial solvent coordinate (z1), (kcal/mol)^(1/2): ",f13.6)') z1
-      call z1_to_ze(z1,ze)
-
-      write(6,*)
-      write(6,'(131("-"))')
-      write(6,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"vze",t68,"Ekin",t80,"Efe",t89,"occ.")')
-      write(6,'(131("-"))')
-
+        write(6,*)
+        write(6,'(131("-"))')
+        write(6,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"vze",t68,"Ekin",t80,"Efe",t89,"occ.")')
+        write(6,'(131("-"))')
+      end if  !reactive_flux eq false
       !write(6,'(137x,$)')
 
       !--(DEBUG)--start
@@ -2037,13 +2038,15 @@ subroutine dynamicset2
       ekin1 = half*f0*tau0*taul*vz1*vz1
       ekin = ekin1
 
-      if (weights) then
-          write(itraj_channel,'(f13.6,6f12.5,i5,8f15.9)') &
-          & 0.d0, z1, vz1, ze, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn), (diabatic_population(k),k=1,ielst_dyn)
-      else
-          write(itraj_channel,'(f13.6,6f12.5,i5)') &
-          & 0.d0, z1, vz1, ze, vze, ekin, efes, istate
-      endif
+      if(reactive_flux.eq..false.) then 
+        if (weights) then
+            write(itraj_channel,'(f13.6,6f12.5,i5,8f15.9)') &
+            & 0.d0, z1, vz1, ze, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn), (diabatic_population(k),k=1,ielst_dyn)
+        else
+            write(itraj_channel,'(f13.6,6f12.5,i5)') &
+            & 0.d0, z1, vz1, ze, vze, ekin, efes, istate
+        endif
+      end if  !reactive_flux eq false
 
       number_of_switches = 0
       number_of_rejected = 0
@@ -2261,25 +2264,26 @@ subroutine dynamicset2
                   write(*,'( 1x,"--- The trajectory ",i6," will be discarded-------------------------------"/)') itraj
 
                   number_of_failed_trajectories = number_of_failed_trajectories + 1
+                  if(reactive_flux.eq..false.) then 
+                    if (weights) then
+                       write(itraj_channel,'("#",161("-"))')
+                    else
+                       write(itraj_channel,'("#",131("-"))')
+                    endif
 
-                  if (weights) then
-                     write(itraj_channel,'("#",161("-"))')
-                  else
-                     write(itraj_channel,'("#",131("-"))')
-                  endif
+                    write(itraj_channel,'("# Amplitudes are not normalized after timestep ",i6)') istep
+                    write(itraj_channel,'("# Norm of the time-dependent wavefunction:     ",g20.10)') wf_norm
+                    write(itraj_channel,'("# This trajectory has failed... Even after several tries with smaller TDSE timesteps.")')
 
-                  write(itraj_channel,'("# Amplitudes are not normalized after timestep ",i6)') istep
-                  write(itraj_channel,'("# Norm of the time-dependent wavefunction:     ",g20.10)') wf_norm
-                  write(itraj_channel,'("# This trajectory has failed... Even after several tries with smaller TDSE timesteps.")')
+                    if (weights) then
+                       write(itraj_channel,'("#",161("-"))')
+                    else
+                       write(itraj_channel,'("#",131("-"))')
+                    endif
 
-                  if (weights) then
-                     write(itraj_channel,'("#",161("-"))')
-                  else
-                     write(itraj_channel,'("#",131("-"))')
-                  endif
-
-                  close(itraj_channel)
-                  call system("mv "//trim(fname)//"_"//traj_suffix//".dat"//" "//trim(fname)//"_"//traj_suffix//".dat_failed")
+                    close(itraj_channel)
+                    call system("mv "//trim(fname)//"_"//traj_suffix//".dat"//" "//trim(fname)//"_"//traj_suffix//".dat_failed")
+                  end if  !reactive_flux eq false
                   cycle loop_over_trajectories
 
                endif
@@ -2365,10 +2369,11 @@ subroutine dynamicset2
                endif
 
                if (success) then
-
-                  write(itraj_channel,'("#--------------------------------------------------------------------")')
-                  write(itraj_channel,'("#  t  = ",f13.6," ps ==> SWITCH ",i3,"  -->",i3)') zeit,istate,new_state
-                  write(itraj_channel,'("#  d  = ",f20.6)') get_nonadiabatic_coupling(istate,new_state)
+                  if(reactive_flux.eq..false.) then 
+                    write(itraj_channel,'("#--------------------------------------------------------------------")')
+                    write(itraj_channel,'("#  t  = ",f13.6," ps ==> SWITCH ",i3,"  -->",i3)') zeit,istate,new_state
+                    write(itraj_channel,'("#  d  = ",f20.6)') get_nonadiabatic_coupling(istate,new_state)
+                  end if
 
                   istate = new_state
                   number_of_switches = number_of_switches + 1
@@ -2378,15 +2383,20 @@ subroutine dynamicset2
                      call collapse_wavefunction(istate)
                      call calculate_density_matrix
                      write(*,'("*** (ID): wavefunction collapsed to pure state ",i2)') istate
+                     if(reactive_flux.eq..false.) then 
                      write(itraj_channel,'("# (ID) Wavefunction collapse to state ",i2," occurred")') istate
+                     end if
                   endif
+                  if(reactive_flux.eq..false.) then 
                   write(itraj_channel,'("#--------------------------------------------------------------------")')
+                  end if
 
                else
-
+                  if(reactive_flux.eq..false.) then 
                   write(itraj_channel,'("#--------------------------------------------------------------------")')
                   write(itraj_channel,'("#  t  = ",f13.6," ps ==> REJECTED SWITCH ",i3,"  -->",i3)') zeit,istate,new_state
                   write(itraj_channel,'("#  d  = ",f20.6)') get_nonadiabatic_coupling(istate,new_state)
+                  end if !reactive_flux false
 
                   number_of_rejected = number_of_rejected + 1
 
@@ -2395,9 +2405,14 @@ subroutine dynamicset2
                      call collapse_wavefunction(istate)
                      call calculate_density_matrix
                      write(*,'("*** (ID): wavefunction collapsed to pure state ",i2)') istate
+                     if(reactive_flux.eq..false.) then 
                      write(itraj_channel,'("# (ID) Wavefunction collapse to state ",i2," occurred")') istate
+                     end if
                   endif
+               
+                  if(reactive_flux.eq..false.) then 
                   write(itraj_channel,'("#--------------------------------------------------------------------")')
+                  end if
 
                endif
 
@@ -2447,7 +2462,6 @@ subroutine dynamicset2
          if(reactive_flux.eq..true.) then
          !Check if passed through dividing surface toward products
            if((ze_prev - dividing_surface_egap).ge.0.d0.and.(ze - dividing_surface_egap).le.0.d0) then
-             write(6,*) 'Normal forward traj. ze_prev ze', ze_prev, ze
              alpha = alpha + 1.d0
            end if
 
@@ -2460,8 +2474,8 @@ subroutine dynamicset2
              call v1_to_ve(vz1_storage_beforehop(1),vze)
              Fn = Fn + vze*W/alpha
              Fd = Fd + vze*W
-             write(6,*) 'Fn', Fn
-             write(6,*) 'Fd', Fd
+             write(Fnfile,*) 'Fn', Fn
+             write(Fdfile,*) 'Fd', Fd
              exit
            end if
  
@@ -2469,12 +2483,11 @@ subroutine dynamicset2
           ! if((ze.gt.(lambda + dg_reaction)).and.(istate.eq.1)) then
             if((ze.gt.z_1).and.(istate.eq.1)) then  !z_1 has the reactant energy for only solvation terms.  If gas phase bias is zero z_1 = lambda + dg_reaction
              write(6,*) 'Reached reactants on adiabat 1 in normal forward propagation.'
-             write(6,*) 'Value of W', W
              call v1_to_ve(vz1_storage_beforehop(1),vze)
              Fd = Fd + vze*W
              Fn = Fn + 0.d0
-             write(6,*) 'Fn', Fn
-             write(6,*) 'Fd ', Fd
+             write(Fnfile,*) 'Fn', Fn
+             write(Fdfile,*) 'Fd ', Fd
              exit
            end if
 
@@ -2500,13 +2513,7 @@ subroutine dynamicset2
 
 
 
-
-
-
-
-
-
-
+       if(reactive_flux.eq..false.) then 
          if (mod(istep,ndump).eq.0) then
             if (weights) then
                write(itraj_channel,'(f13.6,6f12.5,i5,8f15.9)') &
@@ -2516,6 +2523,7 @@ subroutine dynamicset2
                & zeit, z1, vz1, ze, vze, ekin, efes, istate
             endif
          endif
+       end if  !reactive_flux false
 
          !if (ndump6.gt.0.and.mod(istep,ndump6).eq.0) &
          !& write(6,'(137("\b"),f13.6,6f12.5,i5,$)') zeit, z1, vz1, ze, vze, ekin, efes, istate
@@ -2527,6 +2535,7 @@ subroutine dynamicset2
 
       traj_time_end = second()
 
+    if(reactive_flux.eq..false.) then 
       if (weights) then
          write(itraj_channel,'("#",161("-"))')
       else
@@ -2540,6 +2549,7 @@ subroutine dynamicset2
          write(itraj_channel,'("#",131("-"))')
       endif
       close(itraj_channel)
+    end if !reactive_flux false
 
       !--(DEBUG)--start
       !-- close files with populations and coherences
@@ -2596,6 +2606,10 @@ subroutine dynamicset2
    !-- Deallocate arrays in propagators module
 
    call deallocate_all_arrays
+   if(reactive_flux.eq..true.) then 
+     close(Fnfile)
+     close(Fdfile)
+   end if
 
 contains
 
@@ -2666,7 +2680,6 @@ end subroutine dynamicset2
             new_state = switch_state(istate)
             switch = new_state.ne.istate
             if (switch) then
-               write(*,*) 'trying a switch'
                !-- record the attempted switch, which is needed to compute w_mu
                !The following two lines should be uncommented if you want to record each time a switch is attempted (even if it is not successful)
               !switch_attempt(istep) = 1  !1 b/c a switch was attempted, 0 if not
@@ -2732,7 +2745,6 @@ end subroutine dynamicset2
            !z_1 should have the reactant energy gap for only solvation terms
            !In reactant regime!  We can stop the reverse trajectory.
            write(6,*) 'Final energy gap in reverse trajectory:', ze
-           write(6,*) 'istate is', istate
            !Store the last time step
            final_step_reverse = istep 
            successfulreverse = .true.
@@ -2745,7 +2757,6 @@ end subroutine dynamicset2
           !z_2 should have the product energy gap for only solvation terms
           !In product regime!  We can stop the reverse trajectory. 
           write(6,*) 'Final energy gap in reverse trajectory:', ze
-          write(6,*) 'istate is', istate
           final_step_reverse = istep
           normalforward = .false.
           successfulreverse = .true.
@@ -2843,7 +2854,6 @@ end subroutine dynamicset2
            call z1_to_ze(z1_prev,ze_prev)
 
            if(((ze_prev-dividing_surface_egap).gt.0.d0).and.((ze-dividing_surface_egap).lt.0.d0)) then
-             write(*,*) 'Forward crossing ze_prev ze:', ze_prev, ze
              alpha = alpha + 1.d0
            end if
 
@@ -2982,8 +2992,9 @@ end subroutine dynamicset2
             call calculate_w_mu(switch_attempt,w_mu,fnj_storage,nsteps,nstates_dyn,(final_step_reverse - istep),switch_attempt_state,&
                  &istate,occupied_adiabat,occupied_adiabat_beforehop)
             W = W*w_mu
-!**************************** Adiabat only propagation
-           ! W = 1.d0
+            !**************************** Single adiabat propagation only
+            ! W = 1.d0
+            !****************************
 
          endif  !mdqt
 
@@ -2997,11 +3008,6 @@ end subroutine dynamicset2
          call z1_to_ze(z1,ze)
          call v1_to_ve(vz1,vze)
          
-         if((final_step_reverse - istep).eq.1) then
-           write(*,*) 'istate in last step of forward traj', istate
-           write(*,*) 'value of W', W
-         end if
-
       enddo loop_over_time
 
       end subroutine forward_time_propagation_quantum_only

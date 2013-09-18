@@ -3188,7 +3188,7 @@ contains
 !*********************Adiabat only propagation
 !         initial_state = 1
 !         istate = initial_state
-        
+!*********************
           write(*,*) 'Initial state for reactive flux (from cumulative distribution fxn):', istate
           exit
         end if
