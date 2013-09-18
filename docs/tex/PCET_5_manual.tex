@@ -2339,6 +2339,7 @@ and contain the input and output files.
 \item[{\tw\bf prnsol}] - writes out the solvated energy profiles
 \item[{\tw\bf wfnprt}] - writes out the vibrational wavefunctions
 \item[{\tw\bf xyzout}] - writes out the geometry in xyz format.
+\item[{\tw\bf print\_amplitudes}] - prints magnitude of TDSE coefficients for each adiabat.
 \end{description}
 
 %
@@ -2408,6 +2409,16 @@ and contain the input and output files.
 \item[{\tw\bf four1}] - fast Fourier transform routine
 \item[{\tw\bf griddx}] - calculates the matrix of the first derivative
 \item[{\tw\bf gridke}] - calculates the kinetic energy matrix
+\end{description}
+
+\section{Routines for Reactive Flux Calculations}
+\begin{description}
+\item[{\tw\bf calculate\_switch\_prob\_function}] - calculates the fake surface hopping probability 
+\item[{\tw\bf calculate\_w\_mu}] - computes $\rm{w}_\mu$ for each timestep in the recorded (reverse) trajectory (uses fake and real hopping probability)
+\item[{\tw\bf initialize\_reactiveflux\_variables}] - initializes and zeros variables and arrays for reactive\_flux calclulations
+\item[{\tw\bf reactiveflux\_choose\_initial\_state}] - chooses the initial adiabat for reactive flux at the dividing surface from the Boltzmann distribution
+\item[{\tw\bf reverse\_time\_propagation}] - Propagates trajectory from dividing surface backwards in time.  Stores the energy gap, energy gap velocity, occupied adiabat and whether there was a hop so that the trajectory can be retracted forward in time.  Updates the trajectory using the classical propagator (Onodera) but TDSE coefficients are not updated.  Hopping probability is calculated using the value calculated in calculate\_switch\_prob\_function.
+\item[{\tw\bf forward\_time\_propagation\_quantum\_only}] - Retraces trajectory forward in time to the dividing surface.  The time-dependent wavefunction coefficients are updated, and the trajectory weight ($W = \Pi_\mu \rm{w}_\mu$) is computed.
 \end{description}
 
 %
