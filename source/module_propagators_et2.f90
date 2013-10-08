@@ -45,11 +45,13 @@ module propagators_et2
    !---------------------------------------------
    real(kind=8), allocatable, dimension(:,:), public :: wght
 
-   !-- array for diabatic populations
-   !   (calculated using the amplitudes
-   !    of the time-dependent wavefunction)
-   !---------------------------------------------
+   !-- arrays for diabatic populations
+   !   diabatic_populations     - calculated using the amplitudes
+   !                              of the time-dependent wavefunction
+   !   diabatic_populations_lfs - calculated according to Landry-Falk-Subotnik
+   !---------------------------------------------------------------------------
    real(kind=8), allocatable, dimension(:), public :: diabatic_population
+   real(kind=8), allocatable, dimension(:), public :: diabatic_population_lfs
 
    !-- arrays for nonadaiabatic coupling vectors
    !---------------------------------------------
@@ -141,6 +143,7 @@ module propagators_et2
    public :: store_wavefunctions
    public :: get_evb_weights
    public :: get_diabatic_populations
+   public :: get_diabatic_populations_lfs
    public :: get_nonadiabatic_coupling
    public :: langevin_debye_1d
    public :: langevin_debye2_1d
@@ -309,7 +312,9 @@ contains
       allocate (wght(ielst,nstates))
       wght = 0.d0
       allocate (diabatic_population(ielst))
+      allocate (diabatic_population_lfs(ielst))
       diabatic_population = 0.d0
+      diabatic_population_lfs = 0.d0
    end subroutine allocate_evb_weights
    !---------------------------------------------------------------------
 
@@ -385,6 +390,7 @@ contains
    subroutine deallocate_evb_weights
       if (allocated(wght)) deallocate (wght)
       if (allocated(diabatic_population)) deallocate (diabatic_population)
+      if (allocated(diabatic_population_lfs)) deallocate (diabatic_population_lfs)
    end subroutine deallocate_evb_weights
 
    subroutine deallocate_mdqt_arrays
@@ -1143,6 +1149,35 @@ contains
          diabatic_population(k) = dia_pop
       enddo
    end subroutine get_diabatic_populations
+
+   !--------------------------------------------------------------------
+   !-- Interface to the calculation of the diabatic populations
+   !   using the prescription of Landry-Falk-Subotnik
+   !--------------------------------------------------------------------
+   subroutine get_diabatic_populations_lfs(istate)
+
+      integer, intent(in) :: istate
+      integer :: k, i, j
+      real(kind=8) :: zki, zjk, dia_pop
+
+      do k=1,ielst
+
+         dia_pop = 0.d0
+
+         do i=1,nstates
+            zki = z(k,i)
+            if (i.eq.istate) dia_pop = dia_pop + zki*zki
+            do j=i+1,nstates
+               zjk = z(j,k)
+               dia_pop = dia_pop + 2.d0*real(conjg(amplitude(i))*amplitude(j),kind=8)*zki*zjk
+            enddo
+         enddo
+
+         diabatic_population_lfs(k) = dia_pop
+
+      enddo
+
+   end subroutine get_diabatic_populations_lfs
 
 
    !--------------------------------------------------------------------

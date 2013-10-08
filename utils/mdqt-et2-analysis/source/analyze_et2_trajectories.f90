@@ -43,7 +43,7 @@ program analyze_et2_trajectories
    real(kind=8) :: z1_curr, ze_curr, ze_curr1, ze_curr2
    real(kind=8) :: vz1_curr, vze_curr
    real(kind=8) :: z1_0, ze_0, efe_curr, ekin_curr
-   real(kind=8) :: n_aver_r, n_aver_p, wh1_mean_0, w1_mean_0, wq1_mean_0
+   real(kind=8) :: n_aver_r, n_aver_p, wh1_mean_0, w1_mean_0, wq1_mean_0, wlfs1_mean_0
    real(kind=8) :: time_start, time_end, total_time_start, total_time_end
 
    real(kind=8) :: bin_width_z1, bin_width_ze
@@ -64,7 +64,7 @@ program analyze_et2_trajectories
    real(kind=8), dimension(:,:),   allocatable :: z1, vz1
    real(kind=8), dimension(:,:),   allocatable :: ze, vze
    real(kind=8), dimension(:,:),   allocatable :: ekin, efe
-   real(kind=8), dimension(:,:),   allocatable :: w1, w2, wq1, wq2
+   real(kind=8), dimension(:,:),   allocatable :: w1, w2, wq1, wq2, wlfs1, wlfs2
    real(kind=8), dimension(:),     allocatable :: histogram_z1
    real(kind=8), dimension(:),     allocatable :: histogram_ze
    real(kind=8), dimension(:,:),   allocatable :: state_histogram_z1
@@ -79,6 +79,7 @@ program analyze_et2_trajectories
    real(kind=8), dimension(:),     allocatable :: w1_mean, w2_mean
    real(kind=8), dimension(:),     allocatable :: wh1_mean, wh2_mean
    real(kind=8), dimension(:),     allocatable :: wq1_mean, wq2_mean
+   real(kind=8), dimension(:),     allocatable :: wlfs1_mean, wlfs2_mean
    real(kind=8), dimension(:,:),   allocatable :: pop_ad
 
    integer, dimension(:,:), allocatable :: istate
@@ -97,7 +98,7 @@ program analyze_et2_trajectories
    real(kind=8) :: reorganization_energy
    real(kind=8) :: reaction_free_energy
    real(kind=8) :: eps_0, eps_inf, tau_2
-   real(kind=8) :: temperature, k_fit_log, k_fit_odr, rcorr, shift, defect
+   real(kind=8) :: temperature, k_fit_log, k_fit_odr, klfs_fit_log, klfs_fit_odr, rcorr, shift, defect
    namelist /marcus_parameters/ electronic_coupling, reorganization_energy, reaction_free_energy, &
                               & eps_0, eps_inf, tau_2, temperature
 
@@ -115,7 +116,7 @@ program analyze_et2_trajectories
    read(1,nml=marcus_parameters,iostat=ierr2)
 
    if (ierr1.ne.0.or.ierr2.ne.0) then
-   
+
       marcus_flag = .false.
       write(*,*) "*** Error reading the file with Marcus parameters."
       write(*,*) "*** Marcus rate constant and populations will not be calculated."
@@ -224,6 +225,8 @@ program analyze_et2_trajectories
    allocate(w2(number_of_traj,number_of_timesteps))
    allocate(wq1(number_of_traj,number_of_timesteps))
    allocate(wq2(number_of_traj,number_of_timesteps))
+   allocate(wlfs1(number_of_traj,number_of_timesteps))
+   allocate(wlfs2(number_of_traj,number_of_timesteps))
 
    call allocated_memory
 
@@ -251,7 +254,7 @@ program analyze_et2_trajectories
          !-- skip comments and empty lines
          if (record(1:1).eq."#".or.record.eq."") cycle
 
-         call readrec(record,"rrrrrrrirrrr",carr,iarr,rarr)
+         call readrec(record,"rrrrrrrirrrrrr",carr,iarr,rarr)
 
          nsteps = nsteps + 1
 
@@ -278,6 +281,8 @@ program analyze_et2_trajectories
          w2(itraj,nsteps) = rarr(9)
          wq1(itraj,nsteps) = rarr(10)
          wq2(itraj,nsteps) = rarr(11)
+         wlfs1(itraj,nsteps) = rarr(12)
+         wlfs2(itraj,nsteps) = rarr(13)
 
       enddo loop_over_timesteps
 
@@ -888,6 +893,9 @@ program analyze_et2_trajectories
    allocate (wq1_mean(number_of_timesteps))
    allocate (wq2_mean(number_of_timesteps))
 
+   allocate (wlfs1_mean(number_of_timesteps))
+   allocate (wlfs2_mean(number_of_timesteps))
+
    do istep=1,number_of_timesteps
 
       w1_mean(istep) = 0.d0
@@ -899,6 +907,9 @@ program analyze_et2_trajectories
       wq1_mean(istep) = 0.d0
       wq2_mean(istep) = 0.d0
 
+      wlfs1_mean(istep) = 0.d0
+      wlfs2_mean(istep) = 0.d0
+
       do itraj=1,number_of_traj
 
          w1_mean(istep) = w1_mean(istep) + w1(itraj,istep)
@@ -906,6 +917,9 @@ program analyze_et2_trajectories
 
          wq1_mean(istep) = wq1_mean(istep) + wq1(itraj,istep)
          wq2_mean(istep) = wq2_mean(istep) + wq2(itraj,istep)
+
+         wlfs1_mean(istep) = wlfs1_mean(istep) + wlfs1(itraj,istep)
+         wlfs2_mean(istep) = wlfs2_mean(istep) + wlfs2(itraj,istep)
 
          !-- assign 1 for the largest weight (whXX arrays)
          tmparray(1) = w1(itraj,istep)
@@ -928,6 +942,9 @@ program analyze_et2_trajectories
 
       wq1_mean(istep) = wq1_mean(istep)/number_of_traj
       wq2_mean(istep) = wq2_mean(istep)/number_of_traj
+
+      wlfs1_mean(istep) = wlfs1_mean(istep)/number_of_traj
+      wlfs2_mean(istep) = wlfs2_mean(istep)/number_of_traj
 
       wh1_mean(istep) = wh1_mean(istep)/number_of_traj
       wh2_mean(istep) = wh2_mean(istep)/number_of_traj
@@ -958,6 +975,17 @@ program analyze_et2_trajectories
    enddo
    close(2)
 
+   open(2,file="weights_lfs_mean.dat")
+   write(2,'("#",80("-"))')
+   write(2,'("#   Average diabatic populations (Landry-Falk-Subotnik prescription #3)")')
+   write(2,'("#",80("-"))')
+   write(2,'("#",t10,"time",t30,"<1>",t50,"<2>")')
+   write(2,'("#",80("-"))')
+   do istep=1,number_of_timesteps
+      write(2,'(3g20.10)') time1(istep), wlfs1_mean(istep), wlfs2_mean(istep)
+   enddo
+   close(2)
+
    open(2,file="weights_assigned_mean.dat")
    write(2,'("#",80("-"))')
    write(2,'("#   Average diabatic populations (values by assignment)")')
@@ -972,6 +1000,7 @@ program analyze_et2_trajectories
    wh1_mean_0 = wh1_mean(1)
    w1_mean_0  = w1_mean(1)
    wq1_mean_0  = wq1_mean(1)
+   wlfs1_mean_0  = wlfs1_mean(1)
 
    time_end = secondi()
    write(*,'("Done in ",f10.3," sec")') time_end-time_start
@@ -980,6 +1009,8 @@ program analyze_et2_trajectories
    deallocate (w2)
    deallocate (wq1)
    deallocate (wq2)
+   deallocate (wlfs1)
+   deallocate (wlfs2)
 
    !-----------------------------------------------------------------------
    !--(9)-- Time-dependent Marcus/Rips-Jortner/Zusman diabatic populations
@@ -1065,6 +1096,8 @@ program analyze_et2_trajectories
       write(*,'(1x,"Fitting the rate constant (log regression)... ",t64,"--> ",$)')
       time_start = secondi()
 
+
+
       call fit_rate_constant_log(number_of_timesteps,time1(:),wh1_mean,k_fit_log,rcorr,shift,defect)
 
       open(2,file="fitlog_diab_pop.dat")
@@ -1089,9 +1122,9 @@ program analyze_et2_trajectories
 
       write(*,'( 1x,"------------------------------------------------------")')
       write(*,'( 1x,"Log fit -  rate constant:  ",e16.9," ps^(-1) ")') k_fit_log
-      write(*,'( 1x,"*correlation coefficient: ",g20.9)') rcorr
-      write(*,'( 1x,"*Initial condition shift: ",g20.9)') shift
-      write(*,'( 1x,"*vertical shift (defect): ",g20.9)') defect
+      write(*,'( 1x," *correlation coefficient: ",g20.9)') rcorr
+      write(*,'( 1x," *Initial condition shift: ",g20.9)') shift
+      write(*,'( 1x," *vertical shift (defect): ",g20.9)') defect
       write(*,'( 1x,"------------------------------------------------------")')
 
 
@@ -1116,19 +1149,80 @@ program analyze_et2_trajectories
       enddo
       close(2)
 
+      write(*,'( 1x,"------------------------------------------------------")')
+      write(*,'( 1x,"ODR fit -  rate constant:  ",e16.9," ps^(-1) ")') k_fit_odr
+      write(*,'( 1x," *error:                   ",g20.9)') rcorr
+      write(*,'( 1x," *vertical shift (defect): ",g20.9)') defect
+      write(*,'( 1x,"------------------------------------------------------")')
+
+
+
+      write(*,'(1x,"Fitting the LFS rate constant (log regression)... ",t64,"--> ",$)')
+      time_start = secondi()
+
+      call fit_rate_constant_log(number_of_timesteps,time1(:),wlfs1_mean,klfs_fit_log,rcorr,shift,defect)
+
+      open(2,file="fitlog_diab_poplfs.dat")
+      write(2,'("#",80("-"))')
+      write(2,'("#   Fitted diabatic LFS populations (LOG linear regression)")')
+      write(2,'("#   Fitted rate constant:        ",g20.10," ps^(-1)")') k_fit_log
+      write(2,'("#   Correlation coefficient:     ",g20.10)') rcorr
+      write(2,'("#   Initial condition shift:     ",g20.10)') shift
+      write(2,'("#   Vertical shift (fit defect): ",g20.10)') defect
+      write(2,'("#",80("-"))')
+      write(2,'("#",t10,"time",t30,"Pfit(1)",t50,"Pfit(2)",t70,"Pfit0(1)",t90,"Pfit0(2)")')
+      write(2,'("#",80("-"))')
+      do istep=1,number_of_timesteps
+         p_fit = exp_diabatic_populations(time1(istep),klfs_fit_log,wlfs1_mean_0,defect)
+         p_fit0 = exp_diabatic_populations(time1(istep),klfs_fit_log,1.d0,0.d0)
+         write(2,'(5g20.10)') time1(istep), p_fit(1), p_fit(2), p_fit0(1), p_fit0(2)
+      enddo
+      close(2)
+
       time_end = secondi()
       write(*,'("Done in ",f10.3," sec")') time_end-time_start
 
       write(*,'( 1x,"------------------------------------------------------")')
-      write(*,'( 1x,"ODR fit -  rate constant:  ",e16.9," ps^(-1) ")') k_fit_odr
-      write(*,'( 1x,"*error:                   ",g20.9)') rcorr
-      write(*,'( 1x,"*vertical shift (defect): ",g20.9)') defect
+      write(*,'( 1x,"Log fit - LFS rate constant:  ",e16.9," ps^(-1) ")') k_fit_log
+      write(*,'( 1x," *correlation coefficient: ",g20.9)') rcorr
+      write(*,'( 1x," *Initial condition shift: ",g20.9)') shift
+      write(*,'( 1x," *vertical shift (defect): ",g20.9)') defect
       write(*,'( 1x,"------------------------------------------------------")')
 
 
+      write(*,'(1x,"Fitting the LFS rate constant (exponential ODR fit)... ",t64,"--> "/)')
+      time_start = secondi()
+
+      call fit_rate_constant_odr(number_of_timesteps,time1(:),wlfs1_mean,klfs_fit_odr,rcorr,defect)
+
+      open(2,file="fitexp_diab_poplfs.dat")
+      write(2,'("#",80("-"))')
+      write(2,'("#   Fitted diabatic LFS populations (ODR fit)")')
+      write(2,'("#   Fitted rate constant:        ",g20.10," ps^(-1)")') k_fit_odr
+      write(2,'("#   Error:                       ",g20.10)') rcorr
+      write(2,'("#   Vertical shift (fit defect): ",g20.10)') defect
+      write(2,'("#",80("-"))')
+      write(2,'("#",t10,"time",t30,"Pfit(1)",t50,"Pfit(2)",t70,"Pfit0(1)",t90,"Pfit0(2)")')
+      write(2,'("#",80("-"))')
+      do istep=1,number_of_timesteps
+         p_fit = exp_diabatic_populations(time1(istep),klfs_fit_odr,wlfs1_mean_0,defect)
+         p_fit0 = exp_diabatic_populations(time1(istep),klfs_fit_odr,1.d0,0.d0)
+         write(2,'(5g20.10)') time1(istep), p_fit(1), p_fit(2), p_fit0(1), p_fit0(2)
+      enddo
+      close(2)
+
+      write(*,'( 1x,"------------------------------------------------------")')
+      write(*,'( 1x,"ODR fit -  LFS rate constant:  ",e16.9," ps^(-1) ")') k_fit_odr
+      write(*,'( 1x," *error:                   ",g20.9)') rcorr
+      write(*,'( 1x," *vertical shift (defect): ",g20.9)') defect
+      write(*,'( 1x,"------------------------------------------------------")')
+
+      time_end = secondi()
+      write(*,'("Done in ",f10.3," sec")') time_end-time_start
+
       open(2,file="marcus_and_fitted_rates.dat")
-      write(2,'("#",t5,"V, kcal/mol",t26,"dG,kcal/mol",t45,"k_fit_log, 1/ps",t65,"k_fit_odr, 1/ps",t85,"k_marcus, 1/ps",t105,"k_Rips-Jortner",t125,"k_Zusman")')
-      write(2,'(10g20.10)') electronic_coupling, reaction_free_energy, k_fit_log, k_fit_odr, k_marcus, k_rips_jortner, k_zusman
+      write(2,'("#",t5,"V, kcal/mol",t26,"dG,kcal/mol",t45,"k_fit_log, 1/ps",t65,"k_fit_odr, 1/ps",t85,"klfs_fit_log, 1/ps",t105,"klfs_fit_odr, 1/ps",t125,"k_marcus, 1/ps",t145,"k_Rips-Jortner",t165,"k_Zusman")')
+      write(2,'(10g20.10)') electronic_coupling, reaction_free_energy, k_fit_log, k_fit_odr, klfs_fit_log, klfs_fit_odr, k_marcus, k_rips_jortner, k_zusman
       close(2)
 
    endif
@@ -1437,6 +1531,10 @@ contains
       if (allocated(all_states)) deallocate(all_states)
       if (allocated(w1)) deallocate(w1)
       if (allocated(w2)) deallocate(w2)
+      if (allocated(wq1)) deallocate(wq1)
+      if (allocated(wq2)) deallocate(wq2)
+      if (allocated(wlfs1)) deallocate(wlfs1)
+      if (allocated(wlfs2)) deallocate(wlfs2)
       if (allocated(histogram_z1)) deallocate(histogram_z1)
       if (allocated(histogram_ze)) deallocate(histogram_ze)
       if (allocated(state_histogram_z1)) deallocate(state_histogram_z1)
@@ -1452,6 +1550,10 @@ contains
       if (allocated(efe_mean)) deallocate(efe_mean)
       if (allocated(w1_mean)) deallocate(w1_mean)
       if (allocated(w2_mean)) deallocate(w2_mean)
+      if (allocated(wq1_mean)) deallocate(wq1_mean)
+      if (allocated(wq2_mean)) deallocate(wq2_mean)
+      if (allocated(wlfs1_mean)) deallocate(wlfs1_mean)
+      if (allocated(wlfs2_mean)) deallocate(wlfs2_mean)
       if (allocated(wh1_mean)) deallocate(wh1_mean)
       if (allocated(wh2_mean)) deallocate(wh2_mean)
       if (allocated(pop_ad)) deallocate(pop_ad)
@@ -1479,6 +1581,8 @@ contains
       if (allocated(w2))                 memory = memory + number_of_traj*number_of_timesteps*8.d0
       if (allocated(wq1))                memory = memory + number_of_traj*number_of_timesteps*8.d0
       if (allocated(wq2))                memory = memory + number_of_traj*number_of_timesteps*8.d0
+      if (allocated(wlfs1))              memory = memory + number_of_traj*number_of_timesteps*8.d0
+      if (allocated(wlfs2))              memory = memory + number_of_traj*number_of_timesteps*8.d0
 
       if (allocated(pop_ad))             memory = memory + number_of_states*number_of_timesteps*8.d0
       if (allocated(state_histogram_z1)) memory = memory + number_of_bins_z1*number_of_timesteps*8.d0
@@ -1499,9 +1603,11 @@ contains
       if (allocated(ekin_mean))          memory = memory + number_of_timesteps*8.d0
       if (allocated(w1_mean))            memory = memory + number_of_timesteps*8.d0
       if (allocated(wq1_mean))           memory = memory + number_of_timesteps*8.d0
+      if (allocated(wlfs1_mean))         memory = memory + number_of_timesteps*8.d0
       if (allocated(wh1_mean))           memory = memory + number_of_timesteps*8.d0
       if (allocated(w2_mean))            memory = memory + number_of_timesteps*8.d0
       if (allocated(wq2_mean))           memory = memory + number_of_timesteps*8.d0
+      if (allocated(wlfs2_mean))         memory = memory + number_of_timesteps*8.d0
       if (allocated(wh2_mean))           memory = memory + number_of_timesteps*8.d0
       if (allocated(theta_corr))         memory = memory + number_of_timesteps*8.d0
 

@@ -43,7 +43,7 @@ module cst
    public
    save
 
-   character(len=10), parameter :: program_version="5.3"
+   character(len=10), parameter :: program_version="5.4"
 
    real(8), parameter :: zero  = 0.0d0,&
                        & half  = 0.5d0,&

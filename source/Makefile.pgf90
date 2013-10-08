@@ -7,7 +7,7 @@
 #
 #############################################################
 
-ARCH = pgi-9.02-x86_64
+ARCH = pgi-13.9-x86_64
 FC      = pgf90
 # Important: MODFLAG must have a trailing blank
 MODFLAG = -module 
@@ -15,4 +15,4 @@ BACKSLASH = -Mbackslash
 NOBACKSLASH = -Mnobackslash
 F90FLAGS = -fast -Mipa=fast -Mdaz
 F77FLAGS = -O2 -Mdaz
-LDFLAGS = -L/usr/pgi/linux86-64/9.0-2/lib -llapack -lblas -lm
+LDFLAGS = -llapack -lblas -lm

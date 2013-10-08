@@ -20,6 +20,7 @@ SCRBASE="local"
 THREADS=1
 NJOBS=1
 EMAIL=""
+VERSION="5.3"
 inputlist=""
 
 #-- help
@@ -36,6 +37,7 @@ if [ x$1 == x ]; then
     echo "-t | --threads       :  number of OpenMP threads used by diagonalization routines"
     echo "-j | --jobs          :  number of jobs to submit (default 1)"
     echo "-m | --mail          :  send mail upon successful job completion"
+    echo "-v | --version       :  program version (default 5.3)"
     echo "================================================================================="
     exit 0
 fi
@@ -50,6 +52,7 @@ case $1 in
 -t | --threads      ) shift; THREADS="$1" ;;
 -j | --jobs         ) shift; NJOBS="$1" ;;
 -m | --mail         ) shift; EMAIL="$1" ;;
+-v | --version      ) shift; VERSION="$1" ;;
 *) break ;;
 esac
 shift
@@ -64,17 +67,17 @@ fi
 
 
 if [ x$COMP == xintel ]; then
-   /usr/bin/modulecmd bash load intel/intel-11
+   module load intel/intel-11
    if [ "$THREADS" -gt "1" ]; then
-      EXEC=$BINDIR/pcet_5.3_intel_11.1.omp.x
+      EXEC=$BINDIR/pcet_${VERSION}_intel_11.1.omp.x
    else
-      EXEC=$BINDIR/pcet_5.3_intel_11.1.x
+      EXEC=$BINDIR/pcet_${VERSION}_intel_11.1.x
    fi
-   /usr/bin/modulecmd bash list
+   module list
 elif [ x$COMP == xpgi ]; then
-   /usr/bin/modulecmd bash load pgi64
-   /usr/bin/modulecmd bash list
-   EXEC=$BINDIR/pcet_5.3_pgi-9.02-x86_64.x
+   module load pgi
+   module list
+   EXEC=$BINDIR/pcet_${VERSION}_pgi-13.9-x86_64.x
 else
    echo "Unknown build version: " $COMP
    exit 1
@@ -82,8 +85,8 @@ fi
 
 
 if [ x$SCRBASE == xglobal ]; then
-   echo Scratch directory - global scratch space on the master node: /scratch/${USER}
-   SCRATCH=/scratch
+   echo Scratch directory - global scratch space on the master node: /share/scratch/${USER}
+   SCRATCH=/share/scratch
 elif [ x$SCRBASE == xlocal ]; then
    echo Scratch directory - local scratch space on the compute node: /scr/${USER}
    SCRATCH=/state/partition1
@@ -114,6 +117,11 @@ echo "INPUTNAME = " $INPUTNAME
 echo "THREADS   = " $THREADS
 echo "SCRTYPE   = " $SCRBASE
 echo "SGEQUEUE  = " $SGEQUEUE
+echo "NJOBS     = " $NJOBS
+if [ x$EMAIL != x ]; then
+   echo "----------------------------------------"
+   echo "Notification will be sent to " $EMAIL
+fi
 echo "----------------------------------------"
 echo
 
@@ -180,11 +188,11 @@ do
    if [ -e \$file ]; then
         cp -f \$file \$SCRDIR
    else
-	echo "File " \$file " is referenced in the main input but can not be found."
-	echo "Check your input..."
-	echo "Removing scratch directories..."
-	rm -rf \$SCRDIR
-	exit 1
+      echo "File " \$file " is referenced in the main input but can not be found."
+      echo "Check your input..."
+      echo "Removing scratch directories..."
+      rm -rf \$SCRDIR
+      exit 1
    fi
 done
 

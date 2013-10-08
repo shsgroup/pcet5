@@ -213,19 +213,23 @@ subroutine dynamicset2
    real(kind=8), dimension(4,4) :: tk, tinfk, trk, trinfk
    real(kind=8), dimension(2)   :: fe_diab, fe_adiab
 
-   !Variables for the reactive_flux method
-   real(kind=8) :: N_tot, prob, rand !For calculating the initial adiabat
-   integer :: i, final_step_reverse !keep track of time steps in reverse time loop
-   real(kind=8), allocatable, dimension(:) :: z1_storage, y1_storage, vz1_storage !Storage of energy gap/vel/auxiliary coordinate
+   !-- Variables for the reactive_flux method
+
+   real(kind=8) :: N_tot, prob, rand          ! For calculating the initial adiabat
+   integer :: i, final_step_reverse           ! keep track of time steps in reverse time loop
+
+   real(kind=8), allocatable, dimension(:) :: z1_storage, y1_storage, vz1_storage    ! Storage of energy gap/vel/auxiliary coordinate
    real(kind=8), allocatable, dimension(:) :: vz1_storage_beforehop
-   real(kind=8), allocatable, dimension(:,:,:) :: fnj_storage !Storage of the "fake" hopping probability
-   integer, allocatable, dimension(:) :: switch_attempt  !has value 1 if switch attempted, 0 if not attempted
-   integer, allocatable, dimension(:) :: occupied_adiabat !holds the occupied adiabat at end of reverse time step istep
-   integer, allocatable, dimension(:) :: occupied_adiabat_beforehop !holds occupied adiabat at beginning of reverse timestep
-   integer, allocatable, dimension(:) :: switch_attempt_state !holds the state to which a switch was attempted
-   double precision :: W, alpha, dividing_surface_egap, Fn, Fd, alpha_limit  !quantities for reactive_flux
-   logical :: successfulreverse !true if trajectory did not run out of time steps in the reverse trajectory before reaching reactants
-   logical :: normalforward !true is should propagate from dividing surface foward
+
+   real(kind=8), allocatable, dimension(:,:,:) :: fnj_storage                ! Storage of the "fake" hopping probability
+   integer, allocatable, dimension(:) :: switch_attempt                      ! has value 1 if switch attempted, 0 if not attempted
+   integer, allocatable, dimension(:) :: occupied_adiabat                    ! holds the occupied adiabat at end of reverse time step istep
+   integer, allocatable, dimension(:) :: occupied_adiabat_beforehop          ! holds occupied adiabat at beginning of reverse timestep
+   integer, allocatable, dimension(:) :: switch_attempt_state                ! holds the state to which a switch was attempted
+   double precision :: W, alpha, dividing_surface_egap, Fn, Fd, alpha_limit  ! quantities for reactive_flux
+
+   logical :: successfulreverse     ! true if trajectory did not run out of time steps in the reverse trajectory before reaching reactants
+   logical :: normalforward         ! true is should propagate from dividing surface foward
 
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -650,13 +654,13 @@ subroutine dynamicset2
 
 
       if (index(options,' REACTIVE_FLUX').ne.0) then 
-        reactive_flux = .true. 
-          write(6,'(1X,"Begin the calculation at the dividing surface. Propagate trajectories backward and forward in time.")')
-         !Make sure the solvent model is not ONODERA2 for reactive flux (memory of trajectory is unphysical for reverse trajectory)
+         reactive_flux = .true. 
+         write(6,'(1X,"Begin the calculation at the dividing surface. Propagate trajectories backward and forward in time.")')
+         !-- Make sure the solvent model is not ONODERA2 for reactive flux (memory of trajectory is unphysical for reverse trajectory)
       else 
-        reactive_flux = .false.
-        normalforward = .false.
-        successfulreverse = .false.
+         reactive_flux = .false.
+         normalforward = .false.
+         successfulreverse = .false.
       end if
 
 
@@ -1508,25 +1512,25 @@ subroutine dynamicset2
 
    endif
 
-    if(reactive_flux) then
-      if(scaled.eq..true.) then 
-        Call z1_to_ze(z10,ze0)
-        dividing_surface_egap = ze0
-      else
-        dividing_surface_egap = ze0
-      end if
+    if (reactive_flux) then
+       if (scaled) then 
+          Call z1_to_ze(z10,ze0)
+          dividing_surface_egap = ze0
+       else
+          dividing_surface_egap = ze0
+       end if
     end if
 
    call ze_to_z1(ze0,z10)
 
-   if(reactive_flux.eq..false.) then 
-     write(6,'(/1x,"Center of the initial distribution of the solvent coordinate:",/,&
-     &          1x,"Ze(0) = ",F10.3,2X,A,/,&
-     &          1x,"z1(0) = ",F10.3,2X,A)') ze0,zgapdim,z10,zscadim
+   if (reactive_flux.eq..false.) then 
+      write(6,'(/1x,"Center of the initial distribution of the solvent coordinate:",/,&
+      &          1x,"Ze(0) = ",F10.3,2X,A,/,&
+      &          1x,"z1(0) = ",F10.3,2X,A)') ze0, zgapdim, z10, zscadim
    else
-     write(6,'(/1x,"Initial solvent coordinate for each trajectory:",/,&
-     &          1x,"Ze(0) = ",F10.3,2X,A,/,&
-     &          1x,"z1(0) = ",F10.3,2X,A)') ze0,zgapdim,z10,zscadim
+      write(6,'(/1x,"Initial solvent coordinate for each trajectory:",/,&
+      &          1x,"Ze(0) = ",F10.3,2X,A,/,&
+      &          1x,"z1(0) = ",F10.3,2X,A)') ze0, zgapdim, z10, zscadim
    end if
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1592,10 +1596,10 @@ subroutine dynamicset2
 
    endif
 
-   if(reactive_flux) then
-     write(6,'(1x,"Ignoring any ISTATE and DSTATE values specified for the reactive_flux calculation.)")')
-     initial_state_diab = .false.
-     initial_state_pure = .false.
+   if (reactive_flux) then
+      write(6,'(1x,"Ignoring any ISTATE and DSTATE values specified for the reactive_flux calculation.)")')
+      initial_state_diab = .false.
+      initial_state_pure = .false.
    end if
 
    if (initial_state_pure) then
@@ -1638,38 +1642,46 @@ subroutine dynamicset2
       if (initial_state.eq.0) initial_state = 1
       write(6,'(1x,"At t=0: initial diabatic electronic state: ",i6)') initial_state
 
-   else if(reactive_flux) then 
+   elseif (reactive_flux) then 
+
       write(6,'(1x,"Initial state will be chosen at the beginning of each trajectory for reactive_flux")')
+
    else
+
       write(6,'(1x,"No initial state was chosen.  WARNING: You might need to specify ISTATE or DSTATE.")')
-   end if
+
+   endif
 
 
-       !Allocate arrays for reactive_flux if that is the calculation type
-   if(reactive_flux) then
-       allocate(z1_storage(1:nsteps))
-       allocate(vz1_storage(1:nsteps))
-       allocate(vz1_storage_beforehop(1:nsteps))
-       allocate(fnj_storage(1:nsteps,1:nstates_dyn,1:nstates_dyn))
-       allocate(switch_attempt(1:nsteps))
-       allocate(occupied_adiabat(1:nsteps))
-       allocate(occupied_adiabat_beforehop(1:nsteps))
-       allocate(switch_attempt_state(1:nsteps))
-       if(mdqt.eq..false.) then
+   !-- Allocate arrays for reactive_flux if that is the calculation type
+
+   if (reactive_flux) then
+
+      allocate(z1_storage(1:nsteps))
+      allocate(vz1_storage(1:nsteps))
+      allocate(vz1_storage_beforehop(1:nsteps))
+      allocate(fnj_storage(1:nsteps,1:nstates_dyn,1:nstates_dyn))
+      allocate(switch_attempt(1:nsteps))
+      allocate(occupied_adiabat(1:nsteps))
+      allocate(occupied_adiabat_beforehop(1:nsteps))
+      allocate(switch_attempt_state(1:nsteps))
+
+      if (mdqt.eq..false.) then
          write(6,*) 'ERROR: REACTIVE_FLUX can only be turned on when using MDQT.'
          Call clean_exit
-       end if
-       if((afssh.eq..true.).or.(collapse_region_coupling.eq..true.)) then
+      endif
+
+      if (afssh.or.collapse_region_coupling) then
          write(6,*) 'ERROR: Decoherence (either afsse or collapse_coupling_region) cannot be used with reactive flux algorithm.'
          Call clean_exit
-         !Make sure the solvent model is not ONODERA2 for reactive flux (memory of trajectory is unphysical for reverse trajectory)
-         if(solvent_model.ne."ONODERA") then
-           write(6,*) 'ERROR: Reactive flux can only be performed with the Onodera-1 model.'
-           write(6,*)  'Please select this solvent model.'
-           call clean_exit
-         end if
-       end if
-   end if
+         !-- Make sure the solvent model is not ONODERA2 for reactive flux (memory of trajectory is unphysical for reverse trajectory)
+         if (solvent_model.ne."ONODERA") then
+            write(6,*) 'ERROR: Reactive flux can only be performed with the Onodera-1 model.'
+            write(6,*) 'Please select this solvent model.'
+            call clean_exit
+         endif
+       endif
+   endif
 
 
 
@@ -1779,17 +1791,18 @@ subroutine dynamicset2
       !-- pick the initial value of the solvent coordinate
       !   from a gaussian distribution centered at (z10)
 
-      !CAS adding this to set initial energy gap to value chosen in input file (no distribution around center)
-      if(reactive_flux.eq..true.) then 
-        z1 = z10
+      !-- CAS adding this to set initial energy gap to value chosen in input file (no distribution around center)
+      if (reactive_flux) then 
+         z1 = z10
       else
-        sigma = sqrt(kb*temp/f0)
-        sample = gaussdist_boxmuller()
-        z1 = z10 + sigma*sample
-      end if
+         sigma = sqrt(kb*temp/f0)
+         sample = gaussdist_boxmuller()
+         z1 = z10 + sigma*sample
+      endif
 
-      !Reactive flux cannot be done for Onodera2 so the y1 (auxiliary solvent
-      !coordinate) value will not be modified.
+      !-- Reactive flux cannot be done for Onodera2 so the y1
+      !   (auxiliary solvent coordinate) value will not be modified.
+
       if (solvent_model.eq."ONODERA2") then
          !-- pick the initial value of auxiliary solvent coordinate
          !   from a gaussian distribution centered at (-z10)
@@ -1841,13 +1854,13 @@ subroutine dynamicset2
 
       endif
 
-      !For reactive flux, check if velocity is negative.  If it is, reverse it.  
-      if(reactive_flux.eq..true.) then 
-        if(vz1.lt.0.d0) then 
-          vz1 = -1.d0*vz1
-        end if
-        write(*,*) 'Initial (scaled) velocity for reactive flux trajectory:', vz1
-      end if
+      !-- For reactive flux, check if velocity is negative.  If it is, reverse it.  
+      if (reactive_flux) then
+         if (vz1.lt.0.d0) then
+            vz1 = -1.d0*vz1
+         endif
+         write(*,*) 'Initial (scaled) velocity for reactive flux trajectory:', vz1
+      endif
 
       !-- calculate electronic state for the initial value of solvent coordinate
       !   at t=0 (very first time for this trajectory)
@@ -1902,58 +1915,69 @@ subroutine dynamicset2
                call set_initial_density_mixture(initial_state)
             endif
          endif
- 
-      else if(reactive_flux) then 
-         !For reactive_flux, we need to do the backwards trajectory first before we can set the initial amplitudes.
-         !Choose the initial adiabat using the Maxwell-Boltzmann distribution
-         call reactiveflux_choose_initial_state(nstates_dyn,temp,istate,initial_state)
-!**********************************for adiabat only
-        !istate = 1
-        !initial_state = 1
 
-         !Set initial values of W, alpha, Fn, Fd for each trajectory.  Also zero all arrays for each trajectory.
+      elseif (reactive_flux) then 
+
+         !-- For reactive_flux, we need to do the backwards trajectory first before we can set the initial amplitudes.
+         !   Choose the initial adiabat using the Maxwell-Boltzmann distribution
+         call reactiveflux_choose_initial_state(nstates_dyn,temp,istate,initial_state)
+
+         !**********************************for adiabat only
+         !istate = 1
+         !initial_state = 1
+
+         !-- Set initial values of W, alpha, Fn, Fd for each trajectory.  Also zero all arrays for each trajectory.
+
          call initialize_reactiveflux_variables(successfulreverse,normalforward,alpha_limit,W,alpha,Fn,Fd,fnj_storage,&
               &occupied_adiabat,occupied_adiabat_beforehop,switch_attempt,switch_attempt_state,vz1_storage,z1_storage,&
               &vz1_storage_beforehop,nsteps,nstates_dyn)
          call set_initial_amplitudes_pure(istate)
          call set_initial_density_pure(istate)
-          write(*,*) 'going to go to reverse time'
+
+         write(*,*) 'going to go to reverse time'
+
          call reverse_time_propagation(z1_storage,vz1_storage,fnj_storage,&
                &dg_reaction,switch_attempt,nstates_dyn,occupied_adiabat,switch_attempt_state,final_step_reverse,&
                &vz1,z1,ekin,istate,successfulreverse,vz1_storage_beforehop,occupied_adiabat_beforehop,alpha_limit,&
                &normalforward,dividing_surface_egap)
-         if(successfulreverse.eq..false.) then 
+
+         if (successfulreverse.eq..false.) then
            !The trajectory did not make it to the reactant or product region.  Cycle for the next trajectory.
            cycle
-         end if
+         endif
+
          istate = occupied_adiabat_beforehop(final_step_reverse)
          write(*,*) 'istate going into forward time', istate
-         !This z1 and vz1 will be stored in z1_prev and vz1_prev upon entering forward_time_propgagtion_quantum_only routine.  
-         !This allows for interpolation and integration of the TDSE.
+
+         !-- This z1 and vz1 will be stored in z1_prev and vz1_prev upon entering forward_time_propgagtion_quantum_only routine.
+         !   This allows for interpolation and integration of the TDSE.
+
          z1 = z1_storage(final_step_reverse)
          vz1 =-1.d0*vz1_storage_beforehop(final_step_reverse)
+
          call set_initial_amplitudes_pure(istate)
          call set_initial_density_pure(istate)
          call forward_time_propagation_quantum_only(z1_storage,vz1_storage,switch_attempt,occupied_adiabat,switch_attempt_state,&
                 &z1,vz1,itraj,fnj_storage,nstates_dyn,final_step_reverse,alpha,dividing_surface_egap,ekin,&
                 &W,vz1_storage_beforehop, occupied_adiabat_beforehop,istate)
          call print_amplitudes(6)
-         if(normalforward.eq..false.) then
-           write(6,*) 'This trajectory went to products (in the reverse trajectory).  Stop here.'
-           call v1_to_ve(vz1_storage_beforehop(1),vze)
-           write(6,*) 'Value of W', W
-           write(6,*) "Fd ", vze*W
-           write(6,*) "Fn ", 0.d0
-           cycle  !did not make it to reactant in reverse traj, don't do normal traj
-         end if
-         if((normalforward.eq..true.).and.(W.eq.0.d0)) then
-           write(6,*) 'normalforward is true but value of W is', W
-           write(6,*) 'Cycling for next trajectory because Fn and Fd will be 0'
-           write(6,*) 'Fd ', W
-           write(6,*) 'Fn ', W
-           cycle
-         end if
 
+         if (normalforward.eq..false.) then
+            write(6,*) 'This trajectory went to products (in the reverse trajectory).  Stop here.'
+            call v1_to_ve(vz1_storage_beforehop(1),vze)
+            write(6,*) 'Value of W', W
+            write(6,*) "Fd ", vze*W
+            write(6,*) "Fn ", 0.d0
+            cycle  ! did not make it to reactant in reverse traj, don't do normal traj
+         endif
+
+         if ((normalforward.eq..true.).and.(W.eq.0.d0)) then
+            write(6,*) 'normalforward is true but value of W is', W
+            write(6,*) 'Cycling for next trajectory because Fn and Fd will be 0'
+            write(6,*) 'Fd ', W
+            write(6,*) 'Fn ', W
+            cycle
+         endif
 
       else
 
@@ -1969,9 +1993,9 @@ subroutine dynamicset2
          call calculate_electronic_states(z1)
 
          !-- print out the initial amplitudes of the time-dependent wavefunction
-         if(reactive_flux.eq..false.) then 
-           call print_initial_amplitudes(6) 
-         end if
+         if (reactive_flux.eq..false.) then
+            call print_initial_amplitudes(6)
+         endif
 
          !-- calculate force matrices (A-FSSH specific)
          if (afssh) call calculate_force_matrices(z1)
@@ -1987,15 +2011,16 @@ subroutine dynamicset2
       if (weights) then
          call get_evb_weights
          call get_diabatic_populations
-         write(itraj_channel,'("#",161("="))')
+         call get_diabatic_populations_lfs(istate)
+         write(itraj_channel,'("#",191("="))')
       else
          write(itraj_channel,'("#",131("="))')
       endif
       write(itraj_channel,'("#   Data for the trajectory #",i6.6)') itraj
       if (weights) then
-         write(itraj_channel,'("#",161("-"))')
+         write(itraj_channel,'("#",191("-"))')
          write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"VZe",t68,"Ekin",t80,"Efe",t89,"occ.",t100,"EVB weights (1,2)",t127,"diabatic populations")')
-         write(itraj_channel,'("#",161("-"))')
+         write(itraj_channel,'("#",191("-"))')
       else
          write(itraj_channel,'("#",131("-"))')
          write(itraj_channel,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"vze",t68,"Ekin",t80,"Efe",t89,"occ.")')
@@ -2007,9 +2032,9 @@ subroutine dynamicset2
       call z1_to_ze(z1,ze)
 
       write(6,*)
-      write(6,'(131("-"))')
-      write(6,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"vze",t68,"Ekin",t80,"Efe",t89,"occ.")')
-      write(6,'(131("-"))')
+      write(6,'(191("-"))')
+      write(6,'("#",t6,"t(ps)",t20,"z1",t32,"vz1",t44,"Ze",t56,"vze",t68,"Ekin",t80,"Efe",t89,"state",t100,"diab populations (evb,wavefun,LFSdensity)")')
+      write(6,'(191("-"))')
 
       !write(6,'(137x,$)')
 
@@ -2038,8 +2063,8 @@ subroutine dynamicset2
       ekin = ekin1
 
       if (weights) then
-          write(itraj_channel,'(f13.6,6f12.5,i5,8f15.9)') &
-          & 0.d0, z1, vz1, ze, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn), (diabatic_population(k),k=1,ielst_dyn)
+          write(itraj_channel,'(f13.6,6f12.5,i5,12f15.9)') &
+          & 0.d0, z1, vz1, ze, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn), (diabatic_population(k),k=1,ielst_dyn), (diabatic_population_lfs(k),k=1,ielst_dyn)
       else
           write(itraj_channel,'(f13.6,6f12.5,i5)') &
           & 0.d0, z1, vz1, ze, vze, ekin, efes, istate
@@ -2263,7 +2288,7 @@ subroutine dynamicset2
                   number_of_failed_trajectories = number_of_failed_trajectories + 1
 
                   if (weights) then
-                     write(itraj_channel,'("#",161("-"))')
+                     write(itraj_channel,'("#",191("-"))')
                   else
                      write(itraj_channel,'("#",131("-"))')
                   endif
@@ -2273,7 +2298,7 @@ subroutine dynamicset2
                   write(itraj_channel,'("# This trajectory has failed... Even after several tries with smaller TDSE timesteps.")')
 
                   if (weights) then
-                     write(itraj_channel,'("#",161("-"))')
+                     write(itraj_channel,'("#",191("-"))')
                   else
                      write(itraj_channel,'("#",131("-"))')
                   endif
@@ -2436,81 +2461,78 @@ subroutine dynamicset2
          if (weights) then
             call get_evb_weights
             call get_diabatic_populations
+            call get_diabatic_populations_lfs(istate)
          endif
 
          !-- write the current data to the trajectory file
 
          call z1_to_ze(z1,ze)
          call v1_to_ve(vz1,vze)
-
          call z1_to_ze(z1_prev,ze_prev)
-         if(reactive_flux.eq..true.) then
-         !Check if passed through dividing surface toward products
-           if((ze_prev - dividing_surface_egap).ge.0.d0.and.(ze - dividing_surface_egap).le.0.d0) then
-             write(6,*) 'Normal forward traj. ze_prev ze', ze_prev, ze
-             alpha = alpha + 1.d0
-           end if
 
-           !Check if we are in product region
-        !   if((ze.lt.(dg_reaction - lambda)).and.(istate.eq.1))  then
-            if((ze.lt.z_2).and.(istate.eq.1)) then    !z_2 has product energy gap only for solvation terms.  If gas phase bias is zero z_2 = dg_reaction - lambda
-             write(6,*) 'Reached products on adiabat 1 in normal forward propagation.'
-             write(6,*) 'value of alpha', alpha
-             write(6,*) 'value of W', W
-             call v1_to_ve(vz1_storage_beforehop(1),vze)
-             Fn = Fn + vze*W/alpha
-             Fd = Fd + vze*W
-             write(6,*) 'Fn', Fn
-             write(6,*) 'Fd', Fd
-             exit
-           end if
- 
-           !Check if we are in the reactant region
-          ! if((ze.gt.(lambda + dg_reaction)).and.(istate.eq.1)) then
-            if((ze.gt.z_1).and.(istate.eq.1)) then  !z_1 has the reactant energy for only solvation terms.  If gas phase bias is zero z_1 = lambda + dg_reaction
-             write(6,*) 'Reached reactants on adiabat 1 in normal forward propagation.'
-             write(6,*) 'Value of W', W
-             call v1_to_ve(vz1_storage_beforehop(1),vze)
-             Fd = Fd + vze*W
-             Fn = Fn + 0.d0
-             write(6,*) 'Fn', Fn
-             write(6,*) 'Fd ', Fd
-             exit
-           end if
+         if (reactive_flux) then
 
-           if(alpha.gt.alpha_limit) then
-             !W is set to 1, and update only Fd
-             call v1_to_ve(vz1_storage_beforehop(1),vze)
-             write(6,*) 'Alpha exceeded the upper limit in the normal forward trajectory.  Do not count this trajectory.'
-             write(6,*) 'Value of W and initial velocity', W, vze
-             !write(*,*) 'Fn ', 0.d0
-             !write(*,*) 'Fd ', vze*1.d0
-             exit
-           end if
+            !-- Check if passed through dividing surface toward products
+            if ((ze_prev - dividing_surface_egap).ge.0.d0.and.(ze - dividing_surface_egap).le.0.d0) then
+               write(6,*) 'Normal forward traj. ze_prev ze', ze_prev, ze
+               alpha = alpha + 1.d0
+            endif
 
+            !-- Check if we are in product region
 
-           if(istep.eq.nsteps) then  
-             write(6,*) 'Reached the last time step without reaching products, reactants or exceeding alpha. Disregard this trajectory. Arrays too short'
-             call v1_to_ve(vz1_storage_beforehop(1),vze)
-             write(6,*) 'Value of W and initial velocity', W, vze
-             exit
-           end if
-            
-        end if  !reactive_flux
+            ! if((ze.lt.(dg_reaction - lambda)).and.(istate.eq.1))  then
+            if ((ze.lt.z_2).and.(istate.eq.1)) then    ! z_2 has product energy gap only for solvation terms.  If gas phase bias is zero z_2 = dg_reaction - lambda
+               write(6,*) 'Reached products on adiabat 1 in normal forward propagation.'
+               write(6,*) 'value of alpha', alpha
+               write(6,*) 'value of W', W
+               call v1_to_ve(vz1_storage_beforehop(1),vze)
+               Fn = Fn + vze*W/alpha
+               Fd = Fd + vze*W
+               write(6,*) 'Fn', Fn
+               write(6,*) 'Fd', Fd
+               exit
+            endif
+
+            !-- Check if we are in the reactant region
+
+            ! if((ze.gt.(lambda + dg_reaction)).and.(istate.eq.1)) then
+            if ((ze.gt.z_1).and.(istate.eq.1)) then  !z_1 has the reactant energy for only solvation terms.  If gas phase bias is zero z_1 = lambda + dg_reaction
+               write(6,*) 'Reached reactants on adiabat 1 in normal forward propagation.'
+               write(6,*) 'Value of W', W
+               call v1_to_ve(vz1_storage_beforehop(1),vze)
+               Fd = Fd + vze*W
+               Fn = Fn + 0.d0
+               write(6,*) 'Fn', Fn
+               write(6,*) 'Fd ', Fd
+               exit
+            endif
+
+            if (alpha.gt.alpha_limit) then
+               !-- W is set to 1, and update only Fd
+               call v1_to_ve(vz1_storage_beforehop(1),vze)
+               write(6,*) 'Alpha exceeded the upper limit in the normal forward trajectory.  Do not count this trajectory.'
+               write(6,*) 'Value of W and initial velocity', W, vze
+               !write(*,*) 'Fn ', 0.d0
+               !write(*,*) 'Fd ', vze*1.d0
+               exit
+            endif
 
 
+            if (istep.eq.nsteps) then
+               write(6,*) 'Reached the last time step without reaching products, reactants or exceeding alpha. Disregard this trajectory. Arrays too short'
+               call v1_to_ve(vz1_storage_beforehop(1),vze)
+               write(6,*) 'Value of W and initial velocity', W, vze
+               exit
+            endif
 
-
-
-
-
+         endif  !reactive_flux
 
 
 
          if (mod(istep,ndump).eq.0) then
             if (weights) then
-               write(itraj_channel,'(f13.6,6f12.5,i5,8f15.9)') &
-               & zeit, z1, vz1, ze, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn), (diabatic_population(k),k=1,ielst_dyn)
+               write(itraj_channel,'(f13.6,6f12.5,i5,12f15.9)') &
+               & zeit, z1, vz1, ze, vze, ekin, efes, istate, (wght(k,istate),k=1,ielst_dyn), (diabatic_population(k),k=1,ielst_dyn), (diabatic_population_lfs(k),k=1,ielst_dyn)
             else
                write(itraj_channel,'(f13.6,6f12.5,i5)') &
                & zeit, z1, vz1, ze, vze, ekin, efes, istate
@@ -2521,21 +2543,22 @@ subroutine dynamicset2
          !& write(6,'(137("\b"),f13.6,6f12.5,i5,$)') zeit, z1, vz1, ze, vze, ekin, efes, istate
 
          if (ndump6.gt.0.and.mod(istep,ndump6).eq.0) &
-         & write(6,'(f13.6,6f12.5,i5)') zeit, z1, vz1, ze, vze, ekin, efes, istate
+         & write(6,'(f13.6,6f12.5,i5,12f12.8)') zeit, z1, vz1, ze, vze, ekin, efes, istate, &
+         & (wght(k,istate),k=1,ielst_dyn), (diabatic_population(k),k=1,ielst_dyn), (diabatic_population_lfs(k),k=1,ielst_dyn)
 
       enddo loop_over_time
 
       traj_time_end = second()
 
       if (weights) then
-         write(itraj_channel,'("#",161("-"))')
+         write(itraj_channel,'("#",191("-"))')
       else
          write(itraj_channel,'("#",131("-"))')
       endif
       write(itraj_channel,'("# Number of allowed  switches: ",i5)') number_of_switches
       write(itraj_channel,'("# Number of rejected switches: ",i5)') number_of_rejected
       if (weights) then
-         write(itraj_channel,'("#",161("-"))')
+         write(itraj_channel,'("#",191("-"))')
       else
          write(itraj_channel,'("#",131("-"))')
       endif
@@ -2608,13 +2631,12 @@ end subroutine dynamicset2
 
 
 
-    
-!&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+!(CAS)&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
 
-      subroutine reverse_time_propagation(z1_storage, vz1_storage, fnj_storage,&
-             &dg_reaction,switch_attempt,nstates_dyn,occupied_adiabat,switch_attempt_state,final_step_reverse,vz1,z1,&
-             &ekin,istate,successfulreverse,vz1_storage_beforehop,occupied_adiabat_beforehop,alpha_limit,normalforward,dividing_surface_egap)
+   subroutine reverse_time_propagation(z1_storage, vz1_storage, fnj_storage,&
+              &dg_reaction,switch_attempt,nstates_dyn,occupied_adiabat,switch_attempt_state,final_step_reverse,vz1,z1,&
+              &ekin,istate,successfulreverse,vz1_storage_beforehop,occupied_adiabat_beforehop,alpha_limit,normalforward,dividing_surface_egap)
 
       use control_dynamics
       use random_generators
@@ -2635,14 +2657,13 @@ end subroutine dynamicset2
       real(kind=8) :: zeitq, zeitq_prev
       real(kind=8) :: ze, vze, z10, ze0
       real(kind=8) :: vz1_prev, ekin_prev, ekin1, efes, ekinhalf1, dg_reaction, ze_prev, z1_prev
-      double precision :: alpha_limit, dividing_surface_egap
-
-      double precision :: alpha_temp  !local
+      real(kind=8) :: alpha_limit, dividing_surface_egap
+      real(kind=8) :: alpha_temp  !local
 
       loop_over_time: do istep=1,nsteps
 
          switch = .false.
-         !Store energy gap, velocity and current adiabat before checking for a hop
+         !-- Store energy gap, velocity and current adiabat before checking for a hop
          z1_storage(istep) = z1
          vz1_storage_beforehop(istep) = vz1
          occupied_adiabat_beforehop(istep) = istate
@@ -2658,27 +2679,31 @@ end subroutine dynamicset2
             !-------------------------------------------------------
             call calculate_v_dot_d(vz1,0.d0)
             call reset_switch_prob
-            !------------------------------------------------------
-            !Use f_nj function to estimate switch_prob().  The f_nj values are stored in switch_prob so we can use the switch_state subroutine.
+
+            !-- Use f_nj function to estimate switch_prob().
+            !   The f_nj values are stored in switch_prob so we can use the switch_state subroutine.
+            !---------------------------------------------------------------------------------------
             Call calculate_switch_prob_function(istate,istep,fnj_storage,nsteps,nstates_dyn,tstep)
+
             !-- decision time: should we make a hop?
             !-------------------------------------------
+
             new_state = switch_state(istate)
             switch = new_state.ne.istate
             if (switch) then
                write(*,*) 'trying a switch'
                !-- record the attempted switch, which is needed to compute w_mu
-               !The following two lines should be uncommented if you want to record each time a switch is attempted (even if it is not successful)
-              !switch_attempt(istep) = 1  !1 b/c a switch was attempted, 0 if not
-              !switch_attempt_state(istep) = new_state
+               !   The following two lines should be uncommented if you want to record each time a switch is attempted (even if it is not successful)
+               !switch_attempt(istep) = 1  !1 b/c a switch was attempted, 0 if not
+               !switch_attempt_state(istep) = new_state
 
                !-- attempt adjusting velocities
 
                call adjust_velocities(istate,new_state,vz1,success)
                if (success) then
-                 !Uncomment the two following lines if you want to record in switch_attempt only when a hop was actually successful.
-                   switch_attempt(istep) = 1
-                   switch_attempt_state(istep) = new_state
+                  !-- Uncomment the two following lines if you want to record in switch_attempt only when a hop was actually successful.
+                  switch_attempt(istep) = 1
+                  switch_attempt_state(istep) = new_state
                   istate = new_state
                endif
 
@@ -2690,7 +2715,7 @@ end subroutine dynamicset2
          !-- end of the MDQT stage --!
          !---------------------------!
 
-         !Collect the velocity and occupied adiabat at the end of the hop
+         !-- Collect the velocity and occupied adiabat at the end of the hop
          vz1_storage(istep) = vz1
          occupied_adiabat(istep)  = istate
 
@@ -2718,59 +2743,60 @@ end subroutine dynamicset2
          endif
 
          !-- Convert scaled energy gaps to unscaled values before determining if
-         !the energy gap is in the reactant or product state
+         !   the energy gap is in the reactant or product state
 
          call z1_to_ze(z1,ze)
 
-         if(mod(istep,10000).eq.0) then
+         if (mod(istep,10000).eq.0) then
            write(6,*) 'Step and Energy gap:', istep, ze
-         end if
+         endif
 
 
-        !if((ze.gt.(lambda + dg_reaction))) then   
-         if((ze.gt.z_1).and.(istate.eq.1)) then !z_1 should have value (lambda + dg_reaction) if the gas phase bias is 0
-           !z_1 should have the reactant energy gap for only solvation terms
-           !In reactant regime!  We can stop the reverse trajectory.
+         !if ((ze.gt.(lambda + dg_reaction))) then   
+         if ((ze.gt.z_1).and.(istate.eq.1)) then !z_1 should have value (lambda + dg_reaction) if the gas phase bias is 0
+           !-- z_1 should have the reactant energy gap for only solvation terms
+           !   In reactant regime!  We can stop the reverse trajectory.
            write(6,*) 'Final energy gap in reverse trajectory:', ze
            write(6,*) 'istate is', istate
-           !Store the last time step
+           !-- Store the last time step
            final_step_reverse = istep 
            successfulreverse = .true.
            normalforward = .true.
            exit
-         end if 
+         end if
 
-      ! if((ze.lt.(dg_reaction - lambda))) then
-        if((ze.lt.z_2).and.(istate.eq.1)) then  !z_2 should have the value of (dg_reaction-lambda) if the gas phase bias is 0
-          !z_2 should have the product energy gap for only solvation terms
-          !In product regime!  We can stop the reverse trajectory. 
-          write(6,*) 'Final energy gap in reverse trajectory:', ze
-          write(6,*) 'istate is', istate
-          final_step_reverse = istep
-          normalforward = .false.
-          successfulreverse = .true.
-          exit
-        end if
-
-
-       if(istep.eq.nsteps) then 
-        write(6,'("In the reverse trajectory, the maximum number of time steps was exceeded before reaching the reactant or product.")')
-        write(6,'("Disregard this trajectory.  Arrays were not long enough.")')
-        !Switch to false in order to prevent the forward trajectory from propagating
-        successfulreverse = .false.
-        normalforward = .false.
-       end if
+         !if ((ze.lt.(dg_reaction - lambda))) then
+         if ((ze.lt.z_2).and.(istate.eq.1)) then  !z_2 should have the value of (dg_reaction-lambda) if the gas phase bias is 0
+            !-- z_2 should have the product energy gap for only solvation terms
+            !   In product regime!  We can stop the reverse trajectory. 
+            write(6,*) 'Final energy gap in reverse trajectory:', ze
+            write(6,*) 'istate is', istate
+            final_step_reverse = istep
+            normalforward = .false.
+            successfulreverse = .true.
+            exit
+         end if
 
 
-       enddo loop_over_time
+         if (istep.eq.nsteps) then 
+            write(6,'("In the reverse trajectory, the maximum number of time steps was exceeded before reaching the reactant or product.")')
+            write(6,'("Disregard this trajectory.  Arrays were not long enough.")')
+            !-- Switch to false in order to prevent the forward trajectory from propagating
+            successfulreverse = .false.
+            normalforward = .false.
+         end if
 
 
-      end subroutine reverse_time_propagation
+      enddo loop_over_time
 
-!&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-      subroutine forward_time_propagation_quantum_only(z1_storage,vz1_storage,switch_attempt,occupied_adiabat,&
-          &switch_attempt_state,z1,vz1,itraj,fnj_storage,nstates_dyn,final_step_reverse,alpha,&
-          &dividing_surface_egap,ekin,W,vz1_storage_beforehop,occupied_adiabat_beforehop,istate)
+
+   end subroutine reverse_time_propagation
+
+!(CAS)&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+   subroutine forward_time_propagation_quantum_only(z1_storage,vz1_storage,switch_attempt,occupied_adiabat,&
+              &switch_attempt_state,z1,vz1,itraj,fnj_storage,nstates_dyn,final_step_reverse,alpha,&
+              &dividing_surface_egap,ekin,W,vz1_storage_beforehop,occupied_adiabat_beforehop,istate)
 
       use propagators_et2
       use control_dynamics
@@ -2790,22 +2816,23 @@ end subroutine dynamicset2
       real(kind=8) :: z1,vz1, ekin, ekinhalf1, population_current
       real(kind=8) :: zeitq, zeitq_prev, wf_norm, w_mu, fsum,gsum, W,ze, vze
       integer :: new_state
-      double precision ::  dividing_surface_egap, alpha
+      real(kind=8) :: dividing_surface_egap, alpha
 
+      !-- Initialize alpha for forward trajectory
+      alpha = 0.d0
 
-      alpha = 0.d0   !Initialize alpha for forward trajectory
-     ! loop_over_time: do istep=final_step_reverse-1,1,-1
-       loop_over_time: do istep=1,final_step_reverse-1
-
+      !-- LOOP OVER TIME STEPS
+      !loop_over_time: do istep=final_step_reverse-1,1,-1
+      loop_over_time: do istep=1,final_step_reverse-1
 
          switch = .false.
 
-          zeit_prev = real(istep-1,kind=8)*tstep
-          zeit = real(istep,kind=8)*tstep
+         zeit_prev = real(istep-1,kind=8)*tstep
+         zeit = real(istep,kind=8)*tstep
 
 
-        !zeit_prev = real(istep+1)*tstep
-        !zeit = real(istep)*tstep
+         !zeit_prev = real(istep+1)*tstep
+         !zeit = real(istep)*tstep
 
 
          !-- MDQT: store couplings, electronic energies, and velocities
@@ -2814,38 +2841,40 @@ end subroutine dynamicset2
          z1_prev = z1
 
          if (mdqt) then
-            vz1_prev = vz1                                   ! same as -1.d0*vz1_storage_beforehop(istep+1): want to use the velocity from 
-                                                             !before a hop (previous step) in the reverse when interpolating for 
-                                                             !the time dependent Schrodinger equation
+            vz1_prev = vz1       ! same as -1.d0*vz1_storage_beforehop(istep+1): want to use the velocity from 
+                                 ! before a hop (previous step) in the reverse when interpolating for 
+                                 ! the time dependent Schrodinger equation
             ekin_prev = ekin
-            call store_nonadiabatic_couplings             !  coupz(:,:) -> coupz_prev(:,:)
-            call store_electronic_energies                !  fe(:)      -> fe_prev(:)
-            call store_wavefunctions                      !  z(:,:)     -> z_prev(:,:)
+            call store_nonadiabatic_couplings     !  coupz(:,:) -> coupz_prev(:,:)
+            call store_electronic_energies        !  fe(:)      -> fe_prev(:)
+            call store_wavefunctions              !  z(:,:)     -> z_prev(:,:)
          endif
 
-         !Instead of calling the classical propagation routine, get the position
-         !(z1,y1) and velocity (vz1) coordinates from data stored for the
-         !reverse trajectory
-       !  z1 = z1_storage(istep)
-       !  vz1 = -1.d0*vz1_storage(istep)
-       !  istate = occupied_adiabat(istep)
-          z1 = z1_storage(final_step_reverse - istep)
-          vz1 = -1.d0*vz1_storage(final_step_reverse - istep)
-          istate = occupied_adiabat(final_step_reverse - istep)
+         !-- Instead of calling the classical propagation routine, get the position
+         !   (z1,y1) and velocity (vz1) coordinates from data stored for the
+         !   reverse trajectory
 
+         ! z1 = z1_storage(istep)
+         ! vz1 = -1.d0*vz1_storage(istep)
+         ! istate = occupied_adiabat(istep)
 
-         !Check to see if the trajectory crossed over the dividing surface
-         !(where the energy gap is 0)
-         !Only check this if we are not on the first timestep. If statement prob
-         !not relevant b/c starting the loop one lower than final step for
-         !interpolation purposes anyway.
-           call z1_to_ze(z1,ze)
-           call z1_to_ze(z1_prev,ze_prev)
+         z1 = z1_storage(final_step_reverse - istep)
+         vz1 = -1.d0*vz1_storage(final_step_reverse - istep)
+         istate = occupied_adiabat(final_step_reverse - istep)
 
-           if(((ze_prev-dividing_surface_egap).gt.0.d0).and.((ze-dividing_surface_egap).lt.0.d0)) then
-             write(*,*) 'Forward crossing ze_prev ze:', ze_prev, ze
-             alpha = alpha + 1.d0
-           end if
+         !-- Check to see if the trajectory crossed over the dividing surface
+         !   (where the energy gap is 0)
+         !   Only check this if we are not on the first timestep. If statement prob
+         !   not relevant b/c starting the loop one lower than final step for
+         !   interpolation purposes anyway.
+
+         call z1_to_ze(z1,ze)
+         call z1_to_ze(z1_prev,ze_prev)
+
+         if (((ze_prev-dividing_surface_egap).gt.0.d0).and.((ze-dividing_surface_egap).lt.0.d0)) then
+            write(*,*) 'Forward crossing ze_prev ze:', ze_prev, ze
+            alpha = alpha + 1.d0
+         end if
 
          !----------------!
          !-- MDQT stage --!
@@ -2903,14 +2932,13 @@ end subroutine dynamicset2
                zeitq_prev = (iqstep-1)*qtstep_var + zeit_prev
                zeitq = iqstep*qtstep_var + zeit_prev
 
-                  !-- propagate amplitudes forward in time 
-                  !-------------------------------------------------------
-                  if (phase_corr) then
-                     call propagate_amplitudes_phcorr_rk4(istate,zeitq_prev,qtstep_var)
-                  else
-                     call propagate_amplitudes_rk4(zeitq_prev,qtstep_var)
-                  endif
-
+               !-- propagate amplitudes forward in time 
+               !-------------------------------------------------------
+               if (phase_corr) then
+                  call propagate_amplitudes_phcorr_rk4(istate,zeitq_prev,qtstep_var)
+               else
+                  call propagate_amplitudes_rk4(zeitq_prev,qtstep_var)
+               endif
 
                call calculate_density_matrix
 
@@ -2965,25 +2993,29 @@ end subroutine dynamicset2
             !-------------------------------------------------------------------
             call normalize_switch_prob(population_current)
 
-            !In the forward_time_propagation we don't decide if we will hop
-            !We just take it from the reverse time trajectory
-            !After quantum transition (or attempt) update the velocity and
-            !state.  If there was not hop, these values will be the same as
-            !before the hop attempt (the "beforehop" array holds the same value as the corresponding array)
-          ! istate = occupied_adiabat_beforehop(istep)
-          ! vz1 = -1.d0*vz1_storage_beforehop(istep)
+            !-- In the forward_time_propagation we don't decide if we will hop
+            !   We just take it from the reverse time trajectory
+            !   After quantum transition (or attempt) update the velocity and
+            !   state.  If there was not hop, these values will be the same as
+            !   before the hop attempt (the "beforehop" array holds the same value as the corresponding array)
+
+            ! istate = occupied_adiabat_beforehop(istep)
+            ! vz1 = -1.d0*vz1_storage_beforehop(istep)
+
             istate = occupied_adiabat_beforehop(final_step_reverse - istep)
             vz1 = -1.d0*vz1_storage_beforehop(final_step_reverse - istep)
 
 
-            !Calculate the w_mu value for this time step.  Need g_nj and f_nj
-            !and knowledge of whether or not there is a switch
-            !Calculate w_mu
+            !-- Calculate the w_mu value for this time step.  Need g_nj and f_nj
+            !   and knowledge of whether or not there is a switch
+            !   Calculate w_mu
+
             call calculate_w_mu(switch_attempt,w_mu,fnj_storage,nsteps,nstates_dyn,(final_step_reverse - istep),switch_attempt_state,&
                  &istate,occupied_adiabat,occupied_adiabat_beforehop)
             W = W*w_mu
-!**************************** Adiabat only propagation
-           ! W = 1.d0
+
+            !**************************** Adiabat only propagation
+            ! W = 1.d0
 
          endif  !mdqt
 
@@ -2996,12 +3028,13 @@ end subroutine dynamicset2
 
          call z1_to_ze(z1,ze)
          call v1_to_ve(vz1,vze)
-         
-         if((final_step_reverse - istep).eq.1) then
-           write(*,*) 'istate in last step of forward traj', istate
-           write(*,*) 'value of W', W
+
+         if ((final_step_reverse - istep).eq.1) then
+            write(*,*) 'istate in last step of forward traj', istate
+            write(*,*) 'value of W', W
          end if
 
       enddo loop_over_time
 
-      end subroutine forward_time_propagation_quantum_only
+   end subroutine forward_time_propagation_quantum_only
+
