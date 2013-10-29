@@ -629,7 +629,7 @@ inertial ($\epsilon_0$) and electronic (optical) ($\epsilon_\infty$)
 dielectric constants (see Fig.~\ref{fig1}).
 \begin{figure}[!bbb]
 \begin{center}
-\includegraphics[scale=0.65,angle=-90]{ellips.pdf}
+\includegraphics[scale=0.65,angle=-90]{ellips.eps}
 \end{center}
 \caption{Ellipsoidal model cavity and its geometrical parameters.}
 \label{fig1}
@@ -1022,6 +1022,34 @@ energies in the exponential of Eq.(\ref{na-rate}) also
 can be calculated either numerically (from the intersecting
 surfaces) or analytically using the Marcus-like relation.
 
+\section{Reactive Flux Calculations}
+The method of reactive flux (or rates of rare events) is performed by
+starting a trajectory at a selected dividing surface ($ZE0=$) which is generally
+near the coupling region.  The trajectory is propagated backward in time
+until the trajectory reaches the reactant or product minimum on the ground
+state adiabat.  Values of energy gap (the reaction coordinate), velocity (before and after a hop), 
+artificial surface hopping probability ($f_{nj}$), and occupied adiabat (before and after a hop)
+are stored during the reverse trajectory.  The trajectory is retraced from the reactant or product minimum going
+forward in time until the initial point (at the dividing surface) is reached again.  
+Retracing the trajectory from the reactant or
+product minimum allows for calculation of the true surface hopping probability (needed for the trajectory weight $W$)
+and the time-dependent wavefunction coefficients at the dividing surface.  If the trajectory reached reactants 
+in the reverse time trajectory, the trajectory
+will be normally propagated forward in time from the dividing surface until reactants or products are reached and then stopped.  Otherwise
+propagation will stop after retracing of the trajectory is completed.
+Summing the values of $Fn$ and $Fd$ for each trajectory and dividing them 
+\begin{equation}
+\kappa = \frac{\sum{F_n}}{\sum{F_d}}
+\end{equation}
+yields the $\kappa$ value in the expression
+\begin{equation}
+k_{ET} = \kappa k_{TST}
+\end{equation}
+where $k_{TST}$ is the transition state theory and $k_{ET}$ is the electron transfer rate.
+
+This method is included for ground state electron transfer and can be accessed using the REACTIVE\_FLUX
+keyword in the DYNAMICSET2 group.  See Hammes-Schiffer and Tully, \textit{J. Chem. Phys.} \textbf{103}, 8528 (1995)
+for more detailed description of the algorithm.
 
 %=======================================================================
 \chapter{Compiling and Execution}
@@ -1242,6 +1270,20 @@ limits for one-dimensional Schr\"odinger equation (\AA).
 for gating coordinate. Default is 10.
 
 \item[{\tw QUANTUM}] - flag for quantization along the gating coordinate.
+
+\end{description}
+
+\subsubsection*{DYNAMICSET2({\it Options})}
+\begin{description}
+\item[{\tw REACTIVE\_FLUX}] - flag for running reactive flux calculations.  If using this keyword, set ZE0 to the initial energy gap (scaled or unscaled) and NSTEPS to the maximum number of timesteps to be run in the reverse time direction.
+ 
+\item[{\tw ZE0=}] - specifies the initial energy gap for the trajectory.  
+
+\item[{\tw NSTEPS=}] - number of classical timesteps.  If the calculation is of type {\tw REACTIVE\_FLUX}, this variable specifies the maximum number of steps that will be run in the reverse time trajectory.
+
+\item[{\tw NTRAJ=}] - the number of trajectories to be run
+
+\item[{\tw SEED=}] - random seed for ran2nr.  Acceptable values are CLOCK, PBSID, SGEID, or an integer seed.
 
 \end{description}
 
@@ -2167,6 +2209,13 @@ This file is created if the {\tw LOG} opiton is specified
 with the {\tw RATE} keyword. The file contains all the information
 concerning the nonadiabatic rate calculation.
 
+\subsection{Reactive Flux output}
+Two files are generated (Fn and Fd).  One value of Fn and Fd is printed for each 
+trajectory in the NTRAJ loop (unless the number of crossings of the dividing surface $\alpha$ is 
+exceeded before reactant or product states are reached on adiabat 1). 
+ See Hammes-Schiffer and Tully, \textit{J. Chem. Phys.} \textbf{103}, 8528 (1995)
+for the definitions of Fn and Fd for each trajectory.  
+
 
 %=======================================================================
 \chapter{PCET Examples}
@@ -2290,6 +2339,7 @@ and contain the input and output files.
 \item[{\tw\bf prnsol}] - writes out the solvated energy profiles
 \item[{\tw\bf wfnprt}] - writes out the vibrational wavefunctions
 \item[{\tw\bf xyzout}] - writes out the geometry in xyz format.
+\item[{\tw\bf print\_amplitudes}] - prints magnitude of TDSE coefficients for each adiabat.
 \end{description}
 
 %
@@ -2359,6 +2409,16 @@ and contain the input and output files.
 \item[{\tw\bf four1}] - fast Fourier transform routine
 \item[{\tw\bf griddx}] - calculates the matrix of the first derivative
 \item[{\tw\bf gridke}] - calculates the kinetic energy matrix
+\end{description}
+
+\section{Routines for Reactive Flux Calculations}
+\begin{description}
+\item[{\tw\bf calculate\_switch\_prob\_function}] - calculates the fake surface hopping probability 
+\item[{\tw\bf calculate\_w\_mu}] - computes $\rm{w}_\mu$ for each timestep in the recorded (reverse) trajectory (uses fake and real hopping probability)
+\item[{\tw\bf initialize\_reactiveflux\_variables}] - initializes and zeros variables and arrays for reactive\_flux calclulations
+\item[{\tw\bf reactiveflux\_choose\_initial\_state}] - chooses the initial adiabat for reactive flux at the dividing surface from the Boltzmann distribution
+\item[{\tw\bf reverse\_time\_propagation}] - Propagates trajectory from dividing surface backwards in time.  Stores the energy gap, energy gap velocity, occupied adiabat and whether there was a hop so that the trajectory can be retracted forward in time.  Updates the trajectory using the classical propagator (Onodera) but TDSE coefficients are not updated.  Hopping probability is calculated using the value calculated in calculate\_switch\_prob\_function.
+\item[{\tw\bf forward\_time\_propagation\_quantum\_only}] - Retraces trajectory forward in time to the dividing surface.  The time-dependent wavefunction coefficients are updated, and the trajectory weight ($W = \Pi_\mu \rm{w}_\mu$) is computed.
 \end{description}
 
 %
