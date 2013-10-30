@@ -78,6 +78,11 @@ elif [ x$COMP == xpgi ]; then
    module load pgi
    module list
    EXEC=$BINDIR/pcet_${VERSION}_pgi-13.9-x86_64.x
+elif [ x$COMP == xopen64 ]; then
+   module load open64
+   module load acml/open64
+   module list
+   EXEC=$BINDIR/pcet_${VERSION}_open64-x86_64.x
 else
    echo "Unknown build version: " $COMP
    exit 1
