@@ -1,0 +1,18 @@
+#############################################################
+#
+# Makefile for Open64 fortran compiler
+#
+# Alexander Soudackov, University of Illinois at Urbana-Champaign
+# October 29, 2013
+#
+#############################################################
+
+ARCH = open64-x86_64
+FC      = openf90
+# Important: MODFLAG must have a trailing blank
+MODFLAG = -module 
+BACKSLASH = -backslash
+NOBACKSLASH =
+F90FLAGS = -Ofast -ftz -fp-accuracy=strict
+F77FLAGS = -O2 -ftz -fp-accuracy=strict
+LDFLAGS = -Ofast -ftz -fp-accuracy=strict -L/share/apps/acml/acml-5.3.1/open64_64/lib -lacml

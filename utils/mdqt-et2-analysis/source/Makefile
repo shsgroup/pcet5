@@ -25,7 +25,7 @@ OBJS = analyze_et2_trajectories.o module_string_utilities.o module_sorting.o mod
 
 BINDIR = ../bin
 
-EXE = $(BINDIR)/analyze_et2_trajectories.bin
+EXE = $(BINDIR)/analyze_et2_trajectories_lfs.bin
 
 all:	analyze_et2_trajectories
 

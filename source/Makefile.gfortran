@@ -7,8 +7,8 @@
 #
 #############################################################
 
-ARCH = gfortran_4.1.2_x86_64
-FC = gfortran
+ARCH = gfortran_4.4.7_x86_64
+FC = /usr/bin/gfortran
 # Important: MODFLAG must NOT have a trailing blank
 MODFLAG = -J
 BACKSLASH = -fno-backslash

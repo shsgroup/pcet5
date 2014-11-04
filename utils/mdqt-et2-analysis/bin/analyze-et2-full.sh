@@ -37,7 +37,7 @@ zipfiles() {
    done
 }
 
-analysis_tool="/home/souda/PCET/pcet5/utils/mdqt-et2-analysis/bin/analyze_et2_trajectories.bin"
+analysis_tool="/home/souda/PCET/pcet5/utils/mdqt-et2-analysis/bin/analyze_et2_trajectories_lfs.bin"
 
 curdir=$PWD
 

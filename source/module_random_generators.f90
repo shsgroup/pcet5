@@ -124,7 +124,16 @@ contains
       logical :: numeric
       integer :: ierr, getenvqq, intvar, idot, i, j
 
-      ierr = getenvqq(pbsvar,varstring)
+      !-- Intel getenv
+      !ierr = getenvqq(pbsvar,varstring)
+
+      !-- standard
+      call getenv(pbsvar,varstring)
+
+      if (varstring.eq."") then
+         write(*,'(1x," *** (Random seed generation) The environment variable ",a," is not defined")') trim(pbsvar)
+         stop
+      endif
 
       !--DEBUG---
       write(*,*)
@@ -132,13 +141,13 @@ contains
       write(*,*)
       !--DEBUG---
 
-      if (ierr.lt.0) then
-         write(*,'(1x," *** Error code while getting the value of the environment variable ",a," : ",i4)') trim(pbsvar), ierr
-         stop
-      elseif (ierr.eq.0) then
-         write(*,'(1x," *** (Random seed generation) The environment variable ",a," is not defined")') trim(pbsvar)
-         stop
-      endif
+      !if (ierr.lt.0) then
+      !   write(*,'(1x," *** Error code while getting the value of the environment variable ",a," : ",i4)') trim(pbsvar), ierr
+      !   stop
+      !elseif (ierr.eq.0) then
+      !   write(*,'(1x," *** (Random seed generation) The environment variable ",a," is not defined")') trim(pbsvar)
+      !   stop
+      !endif
 
       !-- extract actual ID by cutting off the hostname
       !   For PBS: always necessary

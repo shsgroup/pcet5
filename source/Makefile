@@ -11,9 +11,9 @@
 
 include Makefile.machine
 
-VERSION = 5.3
+VERSION = 5.4
 
-###MODDIR  = ./mod
+MODDIR  = ./mod
 
 ifeq ($(FC),gfortran)
    MODDIR = .
@@ -21,9 +21,9 @@ else
    MODDIR  = ./mod
 endif
 
-ifeq ($(FC),openf90)
-   MODDIR = .
-endif
+#ifeq ($(FC),openf90)
+#   MODDIR = .
+#endif
 
 MODOPT  = $(MODFLAG)$(MODDIR)
 OBJDIR  = ./obj
@@ -269,7 +269,7 @@ all:    build
 	@echo "---------------------------------------------------------------------------------------"
 
 clean:
-	rm -f *.o $(OBJDIR)/*.o* *.mod $(MODDIR)/*.mod *.stb *.dll *.a
+	rm -f *.o $(OBJDIR)/*.o* *.mod $(MODDIR)/*.mod *.stb *.dll *.a *.mod
 
 #############################
 # source files dependencies
