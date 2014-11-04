@@ -1,0 +1,181 @@
+Christine Schwerdtfeger
+Description of Reactive Flux method added to pcet5 code. 
+
+In the PCET code, capabilities to perform reactive flux calculations
+have been added.  This allows the user to start the trajectory at
+a dividing surface (chosen by the user).  The trajectory begins and
+propagates 'backwards' in time until either reactants or products are reached, 
+using approximate hopping probabilities to check for hops in the 
+reverse time propagation.  If reactants or products are reached, the 
+trajectory is then propagated forward in time to its initial coordinates
+at the dividing surface, and the time dependent wavefunction coefficients
+are updated normally.  If the trajectory reached reactants in the reverse 
+trajectory, it is then propagated from the dividing surface forward in time
+to determine if it ultimately reaches products.  The probability that 
+the trajectory would occur is also computed as the trajectory moves forward in time. 
+When the trajectory reaches reactants or products in the forward direction, 
+the trajectory is stopped.  The values of Fn, Fd, and W are printed at 
+the end of each trajectory.  The value of F = Fn/Fd, and F is multiplied
+by the Transition State Theory rate constant, k = k_TST * F.
+Please see Hammes-Schiffer and Tully, JCP 103 (19), 8528 for more details
+about the theory of reactive flux calculations. 
+
+To perform this calculation, the user should choose a dividing surface
+by setting the ZE0= keyword (in the dynamicset2 group).  The dividing surface
+is the energy gap between the reactant and product states.  The value set for
+the ZE0 keyword corresponds to the energy gap coordinate where the trajectory should begin.  
+The REACTIVE_FLUX keyword must also be specified in the dynamicset2 group
+to perform this calculation also. 
+
+Execution of code:
+1) Turn on reactive_flux. Ensure MDQT is on.  Ensure decoherence is off. Ensure Onodera-1 
+   solvent model is being used.
+1) Allocate ararys for storage of energy gap, velocity, hopping probability, hop attempts
+2) Begin trajectory at the energy gap chosen by the user (using the ZE0=keyword). 
+3) Choose initial velocity according to a Boltzmann distribution; 
+   reverse velocity if it is negative (start trajectory moving towards reactants).
+4) Choose initial adiabat using the cumulative distribution function.
+5) Initialize reactive flux storage arrays to 0.  
+6) Call the routine that propagates the trajectory 'backwards' in time. 
+   This routine computes an approximate hopping probability and tracks
+   the energy gap, velocity, approximate hopping probability, and hop 
+   attempts.  The 'backwards' propagation stops when the energy gap of 
+   the trajectory passes the energy gap at the minimum of the reactant
+   or product well.
+7) If trajectory reached reactants or products in the reverse trajectory, 
+   set successfulreverse variable to True. 
+8) Initialize time-dependent wavefunction coefficients to the pure state occupied
+   in the last step of the reverse trajectory (at reactant or product minimum) 
+   On occupied adiabat, coefficient = 1.0 and on unoccupied adiabats, coefficient = 0.0.
+9) Reverse sign of velocities stored, and call the routine that 
+   retraces the 'backwards' trajectory from the reactant or product minimum towards 
+   the dividing surface (ZE0 value).  In this propagation, true time-dependent 
+   wavefunctions and hopping probabilities are computed.  The running value of 
+   w_mu is computing using the true and approximated hopping probabilitites. 
+10)If trajectory reached reactants in 'backwards' trajectory, propagate
+   the trajectory forward in time from the dividing surface (ZE0) normally.
+11)Print out values of Fn, Fd, and W needed to weight the trajectory.
+
+
+Info about the code:
+REACTIVE_FLUX: keyword in dynamicset2 group that requests a reactive flux
+   calculation.  In the code, the variable reactive_flux is set to true. 
+
+Reactive flux can *only* be turned on when the MDQT keyword is also turned on.
+
+Decoherence *cannot* be used with the reactive flux algorithm.
+
+Reactive flux can currently *only* be used with the Onodera-1 solvent model.
+The Onodera-2 model has a memory term that is needed to propagate, and we 
+are not sure how this should work going backwards in time. 
+   
+The keywords ISTATE and DSTATE will be ignored if this is a reactive flux
+calculation.  This is because the initial state is chosen at the beginning
+of each trajectory.  The routine which chooses the initial state is
+called reactiveflux_choose_initial_state.
+
+With reactive flux, there is no distribution in initial energy gaps around
+the center (ZE0) chosen.  The initial energy gap is *always* the energy gap
+specified using the ZE0 keyword.  However, the initial velocity is chosen
+from a Boltzmann distribution.  If the velocity is negative, the sign of the
+velocity is reversed so that it is going towards the reactants. 
+
+Arrays allocated for reactive flux are:
+   z1_storage(1:nsteps)
+   vz1_storage(1:nsteps)
+   vz1_storage_beforehop(1:nsteps)
+   fnj_storage(1:nsteps,1:nstates_dyn,1:nstates_dyn)
+   switch_attempt(1:nsteps)
+   occupied_adiabat(1:nsteps)
+   occupied_adiabat_beforehop(1:nsteps)
+   switch_attempt_state(1:nsteps)
+
+   These arrays are needed because we must store the information about energy gap (z1_storage), 
+   velocity (vz1_storage), velocity before a hop (vz1_storage_beforehop), hopping probability
+   (fnj_storage), switch attempts (switch_attempt), currently occupied adiabat (occupied_adiabat),
+   occupied adiabat before a hop (occupied_adiabat_beforehop), and if a switch is attempted at 
+   a particular timestep (switch_attempt_state).  We need to store this info so that we can retract
+   the trajectory 'forward' in time and compute the probability that this trajectory would have
+   occurred (if it had started at the reactant rather than the dividing surface). 
+
+subroutine reactiveflux_choose_initial_state
+Is in module_propagators_et2.f90
+This routine takes in the number of states in the dynamics, the temperature, and
+variables for the initial state and currently occupied state.  The cumulative
+distribution function is used to select the initial state. 
+
+subroutine initialize_reactiveflux_variables
+Is in module_propagators_et2.f90
+This routine is called at the beginning of a reactive flux trajectory.  It zeros
+all of the arrays that store data for the reverse trajectory.  It also initializes
+the values of W (1.0), Fn (0.0), Fd (0.0), and alpha (0.0).  It sets the limit of alpha to
+100, which is the maximum number of times a trajectory can cross the dividing
+surface.  The value of 'successfulreverse', which is a logical indicating whether the
+trajectory reached the reactant or product state in the reverse trajectory, is initialized
+to false.  The logical 'normalforward' is initialized to false and is set to true if 
+the trajectory reaches the reactant state in the reverse trajectory.  
+It is important to know if the trajectory reaches reactants or products (successfulreverse=True)
+in the reverse trajectory because only those trajectories go into computing the 
+values of Fn and Fd.  If successfulreverse is true, the trajectory is 
+propagated from its final point (in 'negative' time/at reactant or product minimum) to 
+the t=0 starting point.   If the reverse trajectory made it to reactants, normalforward is also set to true.
+This indicates that after the trajectory gets from 'negative' time back to 0, the 
+the trajectory should be propagated normally forward in time from the dividing surface. 
+
+subroutine reverse_time_propagation.f90
+Is in dynamicset2.f90
+This routine runs the trajectory from the dividing surface 'back' in time.  If
+the trajectory reaches the reactant or product state before the maximum number of
+timesteps is reached, then the value of the logical successfulreverse changes to 
+True and the reverse trajectory stops.   Throughout the reverse trajectory, 
+values of energy gap, velocity, occupied adiabat, and the approximated hopping 
+probabilities are stored.  This routine calls the calculate_switch_prob_function 
+routine, which approximates the hopping probability according to a function 
+that depends on nonadiabatic coupling. Because we don't have real TDSE 
+coefficients, we cannot compute the real hopping probability in the reverse trajectory. 
+The classical propagation backwards in time is also performed in this routine. 
+If there is a hop or hop attempt, that is recorded, and the occupied adiabat
+is also recorded.  After each timestep, the energy gap is checked and compared
+with that of the reactant and product states.  If it is determined that the 
+trajectory crossed the energy gap at the reactant or product minimum while it
+is occupying adiabat 1, then the values of successfulreverse and
+normalforward and the index of the final timestep in the reverse 
+trajectory are set accordingly.  If the number of timesteps in the
+reverse trajectory exceeds the maximum, the reverse propagation is also stopped.
+
+subroutine calculate_switch_prob_function
+Is in module_propagators_et2.f90
+This routine approximates a hopping probability using the function
+switch_probability(adiabat j) = 0.5*(1-e^|v dot dij* timestep|).
+It then stores the hopping probability in the fnj_storage array in case it is
+needed in the forward trajectory. 
+
+subroutine forward_time_propagation_quantum_only
+Is in dynamicset2.f90
+This routine is called if successfulreverse is set to True, meaning that
+the reactant or product state was reached in the reverse trajectory. 
+The purpose of this routine is to start at the last timestep in the reverse
+trajectory and propagate forward towards the t=0 starting point.  The
+coefficients of the TDSE are set to a pure state (on the adiabat occupied
+at the end of the reverse trajectory) before entering this routine.  The
+trajectory is propagated forward in time using the values of energy gap
+and velocity that were stored during the reverse trajectory.  Hops also 
+occur in this trajectory in the same timesteps where they occurred in the
+reverse trajectory.  In this routine, the value of W_mu, which relates
+the true hopping probability to the approximated one used in the reverse
+trajectory, is also computed. 
+
+subroutine calculate_w_mu
+In module_propagators_et2.f90
+The quantity, w_mu, relates the true hopping probability to the one that is
+approximated in the calculate_switch_prob_function routine which is used in 
+the reverse trajectory.  The value of w_mu at all timesteps are multiplied
+to give the overall value of W, used in weighting the probability that the
+trajectory actually would occur if it had begin at the reactant state rather
+than the dividing surface (ZE0 value).
+
+
+
+
+
+
