@@ -176,6 +176,74 @@ than the dividing surface (ZE0 value).
 
 
 
+Example of set of input files I used:
+Filename: const-gas.d:
+
+XYZ
+2-state ET model
+
+De  0.000  0.000  -2.50000
+Ae  0.000  0.000   2.50000
+
+ATOMIC CHARGES
+ -0.250  -0.250   0.250   0.250
+  0.250   0.250  -0.250  -0.250
+
+PT interface: donor-hydrogen-acceptor
+ 1 1 1
+ET interface: donor-acceptor
+ 1  2
+
+Filename: const.ini
+C==== CONSTANT POTENTIAL PARAMETERS (kcal/mole, Angstroms)
+
+      V12    0.0
+      V34    0.0
+      V13    0.1
+      V24    0.1
+      V14    0.0
+      V23    0.0
+
+C     Energy biases
+      CORR   0.0  0.0  0.0  0.0
+
+
+Filename: const-sol.d
+
+XYZ RADIUS MODFE=20
+2-state ET model
+
+De  0.000  0.000  -2.50000
+Ae  0.000  0.000   2.50000
+
+RADIUS
+De 2.5
+Ae 2.5
+
+ATOMIC CHARGES
+ -0.250  -0.250   0.250   0.250
+  0.250   0.250  -0.250  -0.250
+
+PT interface: donor-hydrogen-acceptor
+ 1 1 1
+ET interface: donor-acceptor
+ 1  2
+
+
+Filename: et-o2c-V01-dG-top+5.inp
+
+JOBNAME=et-o2c-er23-V01-dG-top+5
+2-state ET model test
+CHARGE=0
+HGAS(constant,pars=const.ini,GEOM=const-gas.d)
+SOLV(TSET,EPS0=85.748308,EPS8=1.0,GSOLV1=0.0,GSOLV2=0.0,ER=23.4656,GEOM=const-sol.d)
+DYNAMICSET2(MDQT,ADIAB=1/3,ZE0=0,NSTATES=2,DSTATE=1
+INTERPOLATION=LINEAR,T=298.0,SEED=30184,
+EPSMODEL=ONODERA,EPSPARS,TAU0=0.00200631,TAUD=6.8867,EPS0=85.74308,EPS8=1.0000,
+TSTEP=0.0000025,NSTEPS=100000000,NTRAJ=20000,NQSTEPS=40,MAXNQSTEPS=4000,NDUMP=400,NDUMP6=40000,REACTIVE_FLUX)
+
+END
+
 
 
 
