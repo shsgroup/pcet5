@@ -29,32 +29,32 @@ to perform this calculation also.
 
 Execution of code:
 1) Turn on reactive_flux. Ensure MDQT is on.  Ensure decoherence is off. Ensure Onodera-1 
-   solvent model is being used.
-1) Allocate ararys for storage of energy gap, velocity, hopping probability, hop attempts
-2) Begin trajectory at the energy gap chosen by the user (using the ZE0=keyword). 
-3) Choose initial velocity according to a Boltzmann distribution; 
+   solvent model is being used. Onodera-1 is chosen using EPSMODEL=ONODERA
+2) Allocate ararys for storage of energy gap, velocity, hopping probability, hop attempts
+3) Begin trajectory at the energy gap chosen by the user (using the ZE0=keyword). 
+4) Choose initial velocity according to a Boltzmann distribution; 
    reverse velocity if it is negative (start trajectory moving towards reactants).
-4) Choose initial adiabat using the cumulative distribution function.
-5) Initialize reactive flux storage arrays to 0.  
-6) Call the routine that propagates the trajectory 'backwards' in time. 
+5) Choose initial adiabat using the cumulative distribution function.
+6) Initialize reactive flux storage arrays to 0.  
+7) Call the routine that propagates the trajectory 'backwards' in time. 
    This routine computes an approximate hopping probability and tracks
    the energy gap, velocity, approximate hopping probability, and hop 
    attempts.  The 'backwards' propagation stops when the energy gap of 
    the trajectory passes the energy gap at the minimum of the reactant
    or product well.
-7) If trajectory reached reactants or products in the reverse trajectory, 
+8) If trajectory reached reactants or products in the reverse trajectory, 
    set successfulreverse variable to True. 
-8) Initialize time-dependent wavefunction coefficients to the pure state occupied
+9) Initialize time-dependent wavefunction coefficients to the pure state occupied
    in the last step of the reverse trajectory (at reactant or product minimum) 
    On occupied adiabat, coefficient = 1.0 and on unoccupied adiabats, coefficient = 0.0.
-9) Reverse sign of velocities stored, and call the routine that 
+10) Reverse sign of velocities stored, and call the routine that 
    retraces the 'backwards' trajectory from the reactant or product minimum towards 
    the dividing surface (ZE0 value).  In this propagation, true time-dependent 
    wavefunctions and hopping probabilities are computed.  The running value of 
    w_mu is computing using the true and approximated hopping probabilitites. 
-10)If trajectory reached reactants in 'backwards' trajectory, propagate
+11)If trajectory reached reactants in 'backwards' trajectory, propagate
    the trajectory forward in time from the dividing surface (ZE0) normally.
-11)Print out values of Fn, Fd, and W needed to weight the trajectory.
+12)Print out values of Fn, Fd, and W needed to weight the trajectory.
 
 
 Info about the code:
