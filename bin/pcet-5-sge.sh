@@ -13,14 +13,14 @@ HERE=`pwd`
 BINDIR=/home/souda/PCET/pcet5/bin
 
 #-- defaults
-SGEQUEUE="sing*.q"
-WALLTIME="720:00:00"
+SGEQUEUE="single.q"
+WALLTIME="72:00:00"
 COMP="intel"
 SCRBASE="local"
 THREADS=1
 NJOBS=1
 EMAIL=""
-VERSION="5.3"
+VERSION="5.4"
 inputlist=""
 
 #-- help
@@ -30,14 +30,14 @@ if [ x$1 == x ]; then
     echo $0 "<options> <input_file_name>"
     echo "---------------------------------------------------------------------------------"
     echo "Options:"
-    echo "-q | --queue         :  SGE queue (default batch)"
-    echo "-w | --walltime      :  wall time (default 240 hours)"
+    echo "-q | --queue         :  SGE queue (default single.q)"
+    echo "-w | --walltime      :  wall time (default 72 hours)"
     echo "-s | --scratch-base  :  global/local - base scratch directory (default local)"
     echo "-c | --compiler      :  intel/pgi - build compiler (default intel)"
     echo "-t | --threads       :  number of OpenMP threads used by diagonalization routines"
     echo "-j | --jobs          :  number of jobs to submit (default 1)"
     echo "-m | --mail          :  send mail upon successful job completion"
-    echo "-v | --version       :  program version (default 5.3)"
+    echo "-v | --version       :  program version (default 5.4)"
     echo "================================================================================="
     exit 0
 fi
