@@ -667,7 +667,7 @@ subroutine dynamicset2
       if (index(options,' REVVEL').ne.0) then
          revvel = .true.
          write(6,'(/1x,"Velocity reversal will be performed in case of frustrated hops.",/,&
-                   &1x,"[A. Jain and J. E. Subotnik. Surface hopping, transition state theory and decoherence"./.&
+                   &1x,"[A. Jain and J. E. Subotnik. Surface hopping, transition state theory and decoherence",/,&
                    &1x," 2: Thermal rate constants and detailed balance. J. Chem. Phys., Preprint (2015)]"/)')
       endif
 
