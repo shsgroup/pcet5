@@ -145,6 +145,7 @@ module propagators_et2
    public :: get_diabatic_populations
    public :: get_diabatic_populations_lfs
    public :: get_nonadiabatic_coupling
+   public :: get_gradient
    public :: langevin_debye_1d
    public :: langevin_debye2_1d
    public :: langevin_onodera_1d
@@ -698,6 +699,15 @@ contains
       real(kind=8) :: coupz
       coupz = coupz1(i_,j_)
    end function get_nonadiabatic_coupling
+
+   !--------------------------------------------------------------------
+   !-- extract gradient vector
+   !--------------------------------------------------------------------
+   function get_gradient(i_) result(gradi)
+      integer, intent(in) :: i_
+      real(kind=8) :: gradi
+      gradi = grad1(i_)
+   end function get_gradient
 
    !--------------------------------------------------------------------
    !-- store nonadiabatic couplings

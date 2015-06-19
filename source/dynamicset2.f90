@@ -122,6 +122,8 @@ subroutine dynamicset2
 !
 !  GEDC - Granucci's Energy-based Decoherence Correction (with C = 1, E0 = 0.1 a.u.)
 !
+!  REVVEL - Use Subotnik (Truhlar’s Nabla-V) approach for velocity reversal in case of frustrated hops
+!
 !--------------------------------------------------------------------------------
 !  REACTIVE_FLUX - Starts trajectory at dividing surface.  Propagates
 !  "backwards" in time until reactant or product is reached.  Follow stored trajectory
@@ -173,6 +175,9 @@ subroutine dynamicset2
    logical :: initial_state_pure=.true.
    logical :: initial_state_diab=.false.
    logical :: purestate=.true.
+   logical :: revvel=.false.
+   logical :: revvel_cond1=.false.
+   logical :: revvel_cond2=.false.
 
    logical :: interaction_region_prev=.false.
    logical :: interaction_region=.false.
@@ -200,7 +205,7 @@ subroutine dynamicset2
    real(kind=8) :: zeit_start, zeit_end, zeit_total, traj_time_start, traj_time_end
    real(kind=8) :: zeit, zeit_prev
    real(kind=8) :: zeitq, zeitq_prev
-   real(kind=8) :: z1, ze, vz1, vze, z10, ze0, y1
+   real(kind=8) :: z1, ze, vz1, vze, z10, ze0, y1, force1, force2, coup12
    real(kind=8) :: ekin, ekin1, ekin_prev, ekinhalf1, efes
    real(kind=8) :: vz1_prev, z1_prev, ze_prev
    real(kind=8) :: qtstep_var
@@ -656,6 +661,16 @@ subroutine dynamicset2
          write(6,'(/1x,"Phase correction algorithm will be used.",/,&
                    &1x,"[N. Shenvi, J. E. Subotnik, and W. Yang, J. Chem. Phys. 135, 024101 (2011) ]"/)')
       endif
+
+      !-- velocity reversal option
+
+      if (index(options,' REVVEL').ne.0) then
+         revvel = .true.
+         write(6,'(/1x,"Velocity reversal will be performed in case of frustrated hops.",/,&
+                   &1x,"[A. Jain and J. E. Subotnik. Surface hopping, transition state theory and decoherence"./.&
+                   &1x," 2: Thermal rate constants and detailed balance. J. Chem. Phys., Preprint (2015)]"/)')
+      endif
+
 
       !-- decoherence options
 
@@ -2467,6 +2482,28 @@ subroutine dynamicset2
                      call calculate_density_matrix
                      write(*,'("*** (ID): wavefunction collapsed to pure state ",i2)') istate
                      write(itraj_channel,'("# (ID) Wavefunction collapse to state ",i2," occurred")') istate
+                  endif
+
+                  if (revvel) then
+
+                     !-- calculate both criteria for velocity reversal algorithm
+
+                     !--(1) (F1*d12)(F2*d12) < 0
+                     !--(2) (P1*d12)(F2*d12) < 0
+
+                     force1 = -get_gradient(istate) - f0*z1
+                     force2 = -get_gradient(new_state) - f0*z1
+                     coup12 =  get_nonadiabatic_coupling(istate,new_state)
+
+                     revvel_cond1 = (force1*coup12)*(force2*coup12) .lt. 0
+                     revvel_cond2 = (vz1*coup12)*(force2*coup12) .lt. 0
+
+                     if (revvel_cond1.and.revvel_cond2) then
+                        vz1 = -vz1
+                        write(*,'("*** (REVVEL): velocity has been reversed")')
+                        write(itraj_channel,'("#  velocity has been reversed")')
+                     endif
+
                   endif
 
                   write(itraj_channel,'("#--------------------------------------------------------------------")')
