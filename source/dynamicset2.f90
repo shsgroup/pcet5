@@ -196,7 +196,7 @@ subroutine dynamicset2
    integer :: islash1, islash2, islash3, idum1, idum2, idum3, idum4
    integer :: ioutput, lenf, ispa, idash, icount, ireac, iprod
    integer :: itraj, istep, iqstep, k, itmp, itmp1
-   integer :: number_of_switches=0, number_of_rejected=0
+   integer :: number_of_switches=0, number_of_rejected=0, number_of_reversals=0
    integer :: itraj_channel=11
    integer :: ifes_channel=12
 
@@ -2132,6 +2132,7 @@ subroutine dynamicset2
 
       number_of_switches = 0
       number_of_rejected = 0
+      number_of_reversals = 0
 
       traj_time_start = second()
 
@@ -2500,6 +2501,7 @@ subroutine dynamicset2
 
                      if (revvel_cond1.and.revvel_cond2) then
                         vz1 = -vz1
+                        number_of_reversals = number_of_reversals + 1
                         write(*,'("*** (REVVEL): velocity has been reversed")')
                         write(itraj_channel,'("#  velocity has been reversed")')
                      endif
@@ -2635,15 +2637,15 @@ subroutine dynamicset2
       else
          write(itraj_channel,'("#",131("-"))')
       endif
-      write(itraj_channel,'("# Number of allowed  switches: ",i5)') number_of_switches
-      write(itraj_channel,'("# Number of rejected switches: ",i5)') number_of_rejected
+      write(itraj_channel,'("# Number of allowed  switches:  ",i5)') number_of_switches
+      write(itraj_channel,'("# Number of rejected switches:  ",i5)') number_of_rejected
+      write(itraj_channel,'("# Number of velocity reversals: ",i5)') number_of_reversals
       if (weights) then
          write(itraj_channel,'("#",191("-"))')
       else
          write(itraj_channel,'("#",131("-"))')
       endif
       close(itraj_channel)
-
 
       !--(DEBUG)--start
       !-- close files with populations and coherences
