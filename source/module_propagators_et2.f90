@@ -860,14 +860,14 @@ contains
    !-- zero out moments of coordinates (A-FSSH)
    !--------------------------------------------------------------------
    subroutine reset_zmoments
-      zmom1 = 0.d0
+      zmom1 = cmplx(0.d0,0.d0,kind=8)
    end subroutine reset_zmoments
 
    !--------------------------------------------------------------------
    !-- zero out moments of coordinate momenta (A-FSSH)
    !--------------------------------------------------------------------
    subroutine reset_pzmoments
-      pzmom1 = 0.d0
+      pzmom1 = cmplx(0.d0,0.d0,kind=8)
    end subroutine reset_pzmoments
 
    !--------------------------------------------------------------------
