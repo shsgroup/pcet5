@@ -124,6 +124,8 @@ subroutine dynamicset2
 !
 !  REVVEL - Use Subotnik (Truhlar’s Nabla-V) approach for velocity reversal in case of frustrated hops
 !
+!  REVVEL0 - Velocity reversal for all frustrated hops
+!
 !--------------------------------------------------------------------------------
 !  REACTIVE_FLUX - Starts trajectory at dividing surface.  Propagates
 !  "backwards" in time until reactant or product is reached.  Follow stored trajectory
@@ -175,6 +177,7 @@ subroutine dynamicset2
    logical :: initial_state_pure=.true.
    logical :: initial_state_diab=.false.
    logical :: purestate=.true.
+   logical :: revvel_all=.false.
    logical :: revvel=.false.
    logical :: revvel_cond1=.false.
    logical :: revvel_cond2=.false.
@@ -666,11 +669,16 @@ subroutine dynamicset2
 
       if (index(options,' REVVEL').ne.0) then
          revvel = .true.
-         write(6,'(/1x,"Velocity reversal will be performed in case of frustrated hops.",/,&
+         if (index(options,' REVVEL0').ne.0) revvel_all = .true.
+         write(6,'(/1x,"Velocity reversal will be performed in case of frustrated hops.")')
+         if (revvel_all) then
+            write(6,'(1x,"Original algorithm: Velocity reversal will be ALWAYS performed in case of frustrated hops.",/)')
+         else
+            write(6,'(1x,"Truhlar criterion:",/,&
                    &1x,"[A. Jain and J. E. Subotnik. Surface hopping, transition state theory and decoherence",/,&
                    &1x," 2: Thermal rate constants and detailed balance. J. Chem. Phys., Preprint (2015)]"/)')
+         endif
       endif
-
 
       !-- decoherence options
 
@@ -2487,23 +2495,34 @@ subroutine dynamicset2
 
                   if (revvel) then
 
-                     !-- calculate both criteria for velocity reversal algorithm
+                     if (.not.revvel_all) then
 
-                     !--(1) (F1*d12)(F2*d12) < 0
-                     !--(2) (P1*d12)(F2*d12) < 0
+                        !-- calculate both criteria for Truhlar velocity reversal algorithm
 
-                     force1 = -get_gradient(istate) - f0*z1
-                     force2 = -get_gradient(new_state) - f0*z1
-                     coup12 =  get_nonadiabatic_coupling(istate,new_state)
+                        !--(1) (F1*d12)(F2*d12) < 0
+                        !--(2) (P1*d12)(F2*d12) < 0
 
-                     revvel_cond1 = (force1*coup12)*(force2*coup12) .lt. 0
-                     revvel_cond2 = (vz1*coup12)*(force2*coup12) .lt. 0
+                        force1 = -get_gradient(istate) - f0*z1
+                        force2 = -get_gradient(new_state) - f0*z1
+                        coup12 =  get_nonadiabatic_coupling(istate,new_state)
 
-                     if (revvel_cond1.and.revvel_cond2) then
+                        revvel_cond1 = (force1*coup12)*(force2*coup12) .lt. 0
+                        revvel_cond2 = (vz1*coup12)*(force2*coup12) .lt. 0
+
+                        if (revvel_cond1.and.revvel_cond2) then
+                           vz1 = -vz1
+                           number_of_reversals = number_of_reversals + 1
+                           write(*,'("*** (REVVEL): velocity has been reversed")')
+                           write(itraj_channel,'("#  velocity has been reversed")')
+                        endif
+
+                     else
+
                         vz1 = -vz1
                         number_of_reversals = number_of_reversals + 1
-                        write(*,'("*** (REVVEL): velocity has been reversed")')
+                        write(*,'("*** (REVVEL0): velocity has been reversed")')
                         write(itraj_channel,'("#  velocity has been reversed")')
+
                      endif
 
                   endif
