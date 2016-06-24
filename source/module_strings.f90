@@ -27,7 +27,7 @@ module strings
    character(len= 1), parameter :: tab   = char(9)
 
    character(len=52), parameter :: allow1 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-   character(len=19), parameter :: allow2 = "1234567890()=,.:-_+"
+   character(len=20), parameter :: allow2 = "1234567890()=,.:-_+/"
 
    character(len=2), parameter, dimension(4) :: diab_symb=(/"1a","1b","2a","2b"/)
 
@@ -212,7 +212,7 @@ contains
       do i=1,length
       
          curr = index(allow1,line(i:i)).ne.0.or.index(allow2,line(i:i)).ne.0
-         if (i.lt.80) then
+         if (i.lt.length) then
             next = index(allow1,line(i+1:i+1)).ne.0.or.index(allow2,line(i+1:i+1)).ne.0
          else
             next = .false.

@@ -658,7 +658,7 @@ contains
       integer, intent(in) :: ichannel, iground, iconv
       real(kind=8), intent(in) :: width
 
-      character(len=10), parameter, dimension(2) :: conv=(/"Lorentzian","Gaussian"/)
+      character(len=10), parameter, dimension(2) :: conv=(/"Lorentzian","Gaussian  "/)
       integer, parameter :: npoints = 1000
 
       integer :: i, k

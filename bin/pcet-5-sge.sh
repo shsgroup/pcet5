@@ -14,7 +14,7 @@ BINDIR=/home/souda/PCET/pcet5/bin
 
 #-- defaults
 SGEQUEUE="single.q"
-WALLTIME="72:00:00"
+WALLTIME="168:00:00"
 COMP="intel"
 SCRBASE="local"
 THREADS=1
@@ -31,8 +31,8 @@ if [ x$1 == x ]; then
     echo "---------------------------------------------------------------------------------"
     echo "Options:"
     echo "-q | --queue         :  SGE queue (default single.q)"
-    echo "-w | --walltime      :  wall time (default 72 hours)"
-    echo "-s | --scratch-base  :  global/local - base scratch directory (default local)"
+    echo "-w | --walltime      :  wall time - default 168 hours (7 days)"
+    echo "-s | --scratch-base  :  global/global2/local - base scratch directory (default local)"
     echo "-c | --compiler      :  intel/pgi - build compiler (default intel)"
     echo "-t | --threads       :  number of OpenMP threads used by diagonalization routines"
     echo "-j | --jobs          :  number of jobs to submit (default 1)"
@@ -91,6 +91,9 @@ fi
 
 if [ x$SCRBASE == xglobal ]; then
    echo Scratch directory - global scratch space on the master node: /share/scratch/${USER}
+   SCRATCH=/share/scratch
+elif [ x$SCRBASE == xglobal2 ]; then
+   echo Scratch directory - global scratch2 space on the master node: /share/scratch2/${USER}
    SCRATCH=/share/scratch
 elif [ x$SCRBASE == xlocal ]; then
    echo Scratch directory - local scratch space on the compute node: /scr/${USER}
@@ -152,7 +155,10 @@ cat << EnD > $JOBNAME.sge
 #$ -pe mpi1 $THREADS
 
 module load intel/intel-11
-module load openmpi/intel-11
+module load openmpi/1.6.5/intel-11
+module load pgi
+module load open64
+module load acml/open64
 
 # define and create the scratch directories
 SCRDIR=$SCRATCH/\${SGE_O_LOGNAME}/\${JOB_NAME}_\${JOB_ID}

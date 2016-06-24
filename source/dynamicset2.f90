@@ -815,12 +815,12 @@ subroutine dynamicset2
       open(unit=Fnfile,file='Fn',action='write')
       open(unit=Fdfile,file='Fd',action='write')
       write(6,'(1X,"Begin the calculation at the dividing surface. Propagate trajectories backward and forward in time.")')
-      if (mdqt.eq..false.) then 
+      if (.not.mdqt) then
          write(6,'(1x,"The reactive_flux option can only be used when MDQT is turned on."/)')
          write(6,'(1x,"MDQT is not turned on.  Please remove REACTIVE_FLUX or include MDQT in the DYNAMICSET2 group."/)')
          Call clean_exit
       end if
-   else 
+   else
       reactive_flux = .false.
       normalforward = .false.
       successfulreverse = .false.
@@ -1557,7 +1557,7 @@ subroutine dynamicset2
 
    call ze_to_z1(ze0,z10)
 
-   if (reactive_flux.eq..false.) then 
+   if (.not.reactive_flux) then 
       write(6,'(/1x,"Center of the initial distribution of the solvent coordinate:",/,&
       &          1x,"Ze(0) = ",F10.3,2X,A,/,&
       &          1x,"z1(0) = ",F10.3,2X,A)') ze0, zgapdim, z10, zscadim
@@ -1700,7 +1700,7 @@ subroutine dynamicset2
       allocate(occupied_adiabat_beforehop(1:nsteps))
       allocate(switch_attempt_state(1:nsteps))
 
-      if (mdqt.eq..false.) then
+      if (.not.mdqt) then
          write(6,*) 'ERROR: REACTIVE_FLUX can only be turned on when using MDQT.'
          Call clean_exit
       endif
@@ -2002,7 +2002,7 @@ subroutine dynamicset2
                &vz1,z1,ekin,istate,successfulreverse,vz1_storage_beforehop,occupied_adiabat_beforehop,alpha_limit,&
                &normalforward,dividing_surface_egap)
 
-         if (successfulreverse.eq..false.) then
+         if (.not.successfulreverse) then
            !The trajectory did not make it to the reactant or product region.  Cycle for the next trajectory.
            cycle
          endif
@@ -2031,7 +2031,7 @@ subroutine dynamicset2
                 &W,vz1_storage_beforehop, occupied_adiabat_beforehop,istate,itraj_channel,ielst_dyn,weights)
          call print_amplitudes(6)
 
-         if (normalforward.eq..false.) then
+         if (.not.normalforward) then
             write(6,*) 'This trajectory went to products (in the reverse trajectory).'
             write(6,*) 'Cycle to next trajectory.'
             call v1_to_ve(vz1_storage_beforehop(1),vze)
@@ -2040,14 +2040,14 @@ subroutine dynamicset2
             cycle  !did not make it to reactant in reverse traj, don't do normal traj
          endif
 
-         if ((normalforward.eq..true.).and.(W.eq.0.d0)) then
+         if (normalforward.and.(W.eq.0.d0)) then
             write(6,*) 'Cycling for next trajectory because Fn and Fd will be 0 (W=0)'
             write(Fdfile,*) 'Fd ', W
             write(Fnfile,*) 'Fn ', W
             cycle
          endif
 
-         if (normalforward.eq..false.) then
+         if (.not.normalforward) then
             write(6,*) 'This trajectory went to products (in the reverse trajectory).  Stop here.'
             call v1_to_ve(vz1_storage_beforehop(1),vze)
             write(6,*) 'Value of W', W
@@ -2056,7 +2056,7 @@ subroutine dynamicset2
             cycle  ! did not make it to reactant in reverse traj, don't do normal traj
          endif
 
-         if ((normalforward.eq..true.).and.(W.eq.0.d0)) then
+         if (normalforward.and.(W.eq.0.d0)) then
             write(6,*) 'normalforward is true but value of W is', W
             write(6,*) 'Cycling for next trajectory because Fn and Fd will be 0'
             write(6,*) 'Fd ', W
@@ -2078,7 +2078,7 @@ subroutine dynamicset2
          call calculate_electronic_states(z1)
 
          !-- print out the initial amplitudes of the time-dependent wavefunction
-         if (reactive_flux.eq..false.) then
+         if (.not.reactive_flux) then
             call print_initial_amplitudes(6)
          endif
 
@@ -2575,7 +2575,7 @@ subroutine dynamicset2
          call v1_to_ve(vz1,vze)
          call z1_to_ze(z1_prev,ze_prev)
 
-         if (reactive_flux.eq..true.) then
+         if (reactive_flux) then
 
             !-- Check if passed through dividing surface toward products
             if ((ze_prev - dividing_surface_egap).ge.0.d0.and.(ze - dividing_surface_egap).le.0.d0) then
@@ -2721,9 +2721,9 @@ subroutine dynamicset2
    !-- Deallocate arrays in propagators module
 
    call deallocate_all_arrays
-   if(reactive_flux.eq..true.) then 
-     close(Fnfile)
-     close(Fdfile)
+   if (reactive_flux) then
+      close(Fnfile)
+      close(Fdfile)
    end if
 
 contains

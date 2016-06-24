@@ -170,7 +170,7 @@ contains
       varstring = trim(varstring_clean)
 
       !-- convert to integer
-      read(varstring,'(i)') intvar
+      read(varstring,*) intvar
 
       !-- use three last digits
       iseed = -mod(intvar,1000)

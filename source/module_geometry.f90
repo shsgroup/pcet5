@@ -65,7 +65,7 @@ contains
 
          ! remove double spaces and forbidden symbols
 
-         icount = 480
+         icount = len(line)
          call rmdbsp(line,icount)
 
          if (line(1:1).ne.space) then
