@@ -25,7 +25,7 @@ program analyze_et2_trajectories
 
    logical, parameter :: calculate_reactive_flux_rate = .false.
 
-   character(len=60)  :: filename
+   character(len=120) :: filename
    character(len=200) :: record
    character(len=3)   :: state_suffix
 
