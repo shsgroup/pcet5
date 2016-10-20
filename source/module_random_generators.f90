@@ -103,7 +103,7 @@ contains
    !--------------------------------------------------------------------
    subroutine set_random_seed_input(iseed_)
       integer, intent(in) :: iseed_
-      iseed = iseed_
+      iseed = -iseed_
    end subroutine set_random_seed_input
 
    !---------------------------------------------------------------------

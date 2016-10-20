@@ -16,7 +16,7 @@ module timers
    implicit none
    private
 
-   public :: seconde, second
+   public :: seconde, seconds, second
 
 !===================================================================
 contains
@@ -33,12 +33,22 @@ contains
 
    !-- calls intrinsic routine SYSTEM_CLOCK
    !   (works well with both Intel and PGI)
-   function second() result(sec)
+   function seconds() result(sec)
       implicit none
       real(kind=8) :: sec
       integer :: count, count_rate, count_max
       call system_clock(count, count_rate, count_max)
       sec = real(count,8)/real(count_rate,8)
+   end function seconds
+
+   !-- calls intrinsic routine CPU_TIME
+   !   (works well with both Intel and PGI)
+   function second() result(sec)
+      implicit none
+      real(kind=8) :: sec
+      real(kind=4) :: start
+      call cpu_time(start)
+      sec = real(start,8)
    end function second
 
 

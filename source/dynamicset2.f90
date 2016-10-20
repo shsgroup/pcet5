@@ -39,6 +39,8 @@ subroutine dynamicset2
 !  DUNISEEDS=i/j/k/l - random seeds for DUNI random number generator.
 !               (if DUNISEEDS=CLOCK then clock will be used to generate seeds)
 !
+!  RESET_RANDOM - reset the ran2nr() sequence when starting each trajectory
+!
 !  NTRAJ=<int> - number of trajectories to generate (default is 1)
 !
 !  EPSMODEL=<KEY> - dielectric relaxation model (no defaults!).
@@ -185,6 +187,8 @@ subroutine dynamicset2
    logical :: interaction_region_prev=.false.
    logical :: interaction_region=.false.
    logical :: double_well=.false.
+
+   logical :: reset_random=.false.
 
    integer :: nstates_dyn, nzdim_dyn, ielst_dyn, iseed_inp, iset_dyn
    integer :: initial_state=-1, iground=1, idecoherence=0
@@ -1457,6 +1461,15 @@ subroutine dynamicset2
 
    endif
 
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! reset ran2nr() random sequence when starting each trajectory
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   if (index(options,' RESET_RANDOM').ne.0) then
+      reset_random = .true.
+      write(6,'(/1x,"Reset ran2nr() random sequence when starting each new trajectory."/)')
+   endif
+
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Random seeds for DUNI
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2697,6 +2710,8 @@ subroutine dynamicset2
 
       !-- close checkpoint file
       close(1)
+
+      if (reset_random) call reset_random_seed
 
    enddo loop_over_trajectories
 
