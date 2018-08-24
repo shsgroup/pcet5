@@ -1248,7 +1248,8 @@ subroutine dynamicset2
    write(ifes_channel,'("#",t7,"Z(gap)",t19,"z(scaled)",t30,"U1(diab)",t42,"U2(diab)",t54,"U1(adiab)",t66,"U2(adiab)")')
    write(ifes_channel,'("#",74("-"))')
 
-   do zi=3.d0*lambda,-3.d0*lambda,-6.d0*lambda/101.d0
+   do i=1,101
+      zi = 3.d0*lambda - (i-1)*6.d0*lambda/100.d0
       call ze_to_z1(zi,zi_scaled)
       call fes_et2(mode="DIAB4",energy_gap=zi,free_energy=fe_diab)
       call fes_et2(mode="ADIAB",energy_gap=zi,free_energy=fe_adiab)

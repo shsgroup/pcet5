@@ -1,14 +1,14 @@
 #############################################################
 #
-# Makefile for GNU gfortran compiler
+# Makefile for macports gfortran compiler (macOS)
 #
 # Alexander Soudackov, The Pennsylvania State University
 # January 4, 2011
 #
 #############################################################
 
-ARCH = gfortran_x86_64
-FC = /usr/bin/gfortran
+ARCH = gfortran_6.4.0_macports
+FC = /opt/local/bin/gfortran
 # Important: MODFLAG must NOT have a trailing blank
 MODFLAG = -J
 BACKSLASH = -fno-backslash

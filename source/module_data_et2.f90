@@ -211,7 +211,7 @@ contains
       logical, intent(out) :: double_well
       real(kind=8), intent(out) :: fr, fb, eb
 
-      integer :: n_extrema, k
+      integer :: n_extrema, k, i
       real(kind=8), parameter :: tol=1.d-9
       real(kind=8) :: x, xr, xc, xp, x_right, x_left, dx, x_prev
       real(kind=8) :: xminr, xmaxb, fes_der, fes_der_prev, dg, vet
@@ -249,7 +249,9 @@ contains
 
       n_extrema = 0
 
-      do x=x_right,x_left,dx
+      do i=1,101
+
+         x = x_right + (i-1)*dx
 
          fes_der_prev = (2*f0*x_prev + sqrt(2.d0)*sqrt(f0*lambda))/2.d0 &
                  & - (sqrt(f0*lambda)*(dg + lambda + sqrt(2.d0)*x_prev*sqrt(f0*lambda)))/ &
