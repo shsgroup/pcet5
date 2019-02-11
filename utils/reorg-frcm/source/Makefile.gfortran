@@ -1,0 +1,18 @@
+#############################################################
+#
+# Makefile for GNU gfortran compiler
+#
+# Alexander Soudackov, The Pennsylvania State University
+# January 4, 2011
+#
+#############################################################
+
+ARCH = gfortran
+FC = /usr/local/bin/gfortran
+# Important: MODFLAG must NOT have a trailing blank
+MODFLAG = -J
+BACKSLASH = -fno-backslash
+NOBACKSLASH = -fbackslash
+F90FLAGS = -O3 -ffree-form -ffree-line-length-none
+F77FLAGS = -O2 -ffixed-form -std=legacy
+LDFLAGS = -lblas -llapack

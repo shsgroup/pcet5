@@ -1,0 +1,32 @@
+$(OBJDIR)/deinitmat.o: $(OBJDIR)/module_geosol.o $(OBJDIR)/module_pardim.o
+
+$(OBJDIR)/ereorg.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_elcm.o $(OBJDIR)/module_frcm.o \
+	$(OBJDIR)/module_geosol.o $(OBJDIR)/module_keys.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_strings.o
+
+$(OBJDIR)/module_elcm.o: $(OBJDIR)/module_cst.o $(OBJDIR)/module_geosol.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_parsol.o
+
+$(OBJDIR)/module_geometry.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_elmnts.o $(OBJDIR)/module_keys.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_strings.o
+
+$(OBJDIR)/module_geosol.o: $(OBJDIR)/module_pardim.o
+
+$(OBJDIR)/module_parsol.o: $(OBJDIR)/module_cst.o
+
+$(OBJDIR)/reorg_frcm.o: $(OBJDIR)/module_cst.o $(OBJDIR)/module_geometry.o \
+	$(OBJDIR)/module_keys.o $(OBJDIR)/module_pardim.o \
+	$(OBJDIR)/module_strings.o $(OBJDIR)/module_timers.o
+
+$(OBJDIR)/setjob.o: $(OBJDIR)/module_control.o $(OBJDIR)/module_cst.o \
+	$(OBJDIR)/module_frcm.o $(OBJDIR)/module_geometry.o \
+	$(OBJDIR)/module_geosol.o $(OBJDIR)/module_keys.o \
+	$(OBJDIR)/module_pardim.o $(OBJDIR)/module_parsol.o \
+	$(OBJDIR)/module_strings.o
+
+$(OBJDIR)/module_frcm.o: $(OBJDIR)/module_elmnts.o $(OBJDIR)/module_pardim.o \
+	$(OBJDIR)/module_parsol.o $(OBJDIR)/module_strings.o \
+	$(OBJDIR)/module_timers.o
+
