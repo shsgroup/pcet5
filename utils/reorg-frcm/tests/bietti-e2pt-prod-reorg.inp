@@ -1,6 +1,6 @@
 JOBNAME=BiettiE2PTprod
 Solvent reorganization energy (product equilibrium geometry)
-METHOD=1 CHARGE=0
+CHARGE=0
 SOLV(FRCM,EPS0=35.688,EPS8=1.807,GEOM=bietti-e2pt-prod-reorg-sol.d,XYZOUT=bietti-e2pt-geom-sol.xyz)
 EREORG(REAC=1,PROD=4,EBIAS=0,VEL=0.1,RATE,PLOT=bietti-e2pt-marcus.dat)
 
