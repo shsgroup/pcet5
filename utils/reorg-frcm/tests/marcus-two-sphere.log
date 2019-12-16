@@ -56,10 +56,10 @@
 
    Title of the job:  JOBNAME=marcus-two-sphere
                       Marcus reorganization energy
-   Start date:        12/15/2019 at 23:52:37
+   Start date:        12/16/2019 at 14:03:19
    Job identificator: marcus-two-sphere
  -------------------------------------------------------------------------------
- CHARGE=5 SOLV(FRCM,KAPPA=1.0,DELTA=0.0,EPS0=78.39,EPS8=1.78,
+ CHARGE=5 SOLV(FRCM,KAPPA=0.9,DELTA=0.9,EPS0=78.39,EPS8=1.78,
  GEOM=MARCUS-TWO-SPHERE.D,XYZOUT=MARCUS-TWO-SPHERE.XYZ) EREORG(REAC=1,PROD=2,EBIAS=0,VEL=0.1,RATE,
  PLOT=MARCUS-TWO-SPHERE.DAT)
  -------------------------------------------------------------------------------
@@ -81,8 +81,8 @@
 
 
  FRCM cavity parameters:
-          Factor for VdW radii (KAPPA):          1.000000
-          Width of the inner layer (DELTA):      0.000000 Angstroms
+          Factor for VdW radii (KAPPA):          0.900000
+          Width of the inner layer (DELTA):      0.900000 Angstroms
 
  Geometry for solvation calculations from the file <marcus-two-sphere.d>
  *   XYZ     - CARTESIAN COORDINATE SYSTEM TO BE USED
@@ -94,27 +94,19 @@
  *  at the centers of atomic spheres
  *
 *********************************************************************************
- Because of DELTA = 0.0 parameters for outer sphere (MODFE, NTETFI) corrected to be equal to parameters
-of inner sphere
 
 
  *********     PARAMETERS FOR THE SOLVATION CALCULATION     *********
 
  STATIC DIELECTRIC PERMITTIVITY,                     EPS =     78.390
  OPTICAL DIELECTRIC PERMITTIVITY,                  EPSEL =      1.780
- PARAMETER FOR INNER CAVITY SPHERES RADII,         KAPPA =      1.000
- PARAMETER FOR OUTER CAVITY SPHERES RADII,         DELTA =      0.000 ANGSTROEMS
+ PARAMETER FOR INNER CAVITY SPHERES RADII,         KAPPA =      0.900
+ PARAMETER FOR OUTER CAVITY SPHERES RADII,         DELTA =      0.900 ANGSTROEMS
 
  POLAR. PROCEDURE CRITERION,                      SELFCR =  0.20D-03
  MAXIMUM NUMBER OF ITERATION IN POLAR. PROCEDURE,   ITSE =  15
  MAX. ALLOWED DEVIATION OF SURFACE CHARGE
  BEFORE COMPENSATION,                             CHDIFF =  0.10D+00
-
-!!!
- THE CASE WITH DELTA=0.0 CAN NOT BE TREATED IN FRCM MODEL
- FOR THIS CASE ONE-CAVITY BKO MODEL WILL BE APPLIED 
-!!!
-
 
  INNER SPHERE PARAMETERS:
  EFFECTIVE RADIUS OF THE SOLVENT MOLECULE,         SOLRD =      1.000
@@ -123,16 +115,16 @@ of inner sphere
                                        PARAMETER NTETFI1 =  1
 
  OUTER SPHERE PARAMETERS:
- PARAMETER OF TESSERA SIZES                       MODFE2 =  6  (NORMAL)
-                                       PARAMETER NTETFI2 =  6
+ PARAMETER OF TESSERA SIZES                       MODFE2 =  9  (PRECISE USUAL)
+                                       PARAMETER NTETFI2 =  1
 
 
      CARTESIAN COORDINATES, RADII, AND ATOMIC CHARGES OF SOLUTE 
 
   NO.   ATOM      X         Y         Z      RVDW     RAD1     RAD2
 
-   1    Fe     0.0000    0.0000   -2.5000   1.5000   1.5000   1.5000
-   2    Fe     0.0000    0.0000    2.5000   1.5000   1.5000   1.5000
+   1    Fe     0.0000    0.0000 -500.0000   1.5000   1.3500   2.2500
+   2    Fe     0.0000    0.0000  500.0000   1.5000   1.3500   2.2500
 
  Geometry for solvation calculations is written to the file <marcus-two-sphere.xyz>
 in xyz format (use MOLDEN to view)
@@ -160,82 +152,86 @@ in xyz format (use MOLDEN to view)
 
  Total number of tesserae produced:
  on inner cavity =   166
- on outer cavity =   166
+ on outer cavity =   368
 
 
 
   N.SF     X         Y         Z        RV1       RV2   N.TES1 N.TES2
-   1    0.0000    0.0000   -2.5000    1.5000    1.5000    83    83
-   2    0.0000    0.0000    2.5000    1.5000    1.5000    83    83
+   1    0.0000    0.0000 -500.0000    1.3500    2.2500    83   184
+   2    0.0000    0.0000  500.0000    1.3500    2.2500    83   184
 
-       SQUARE OF INTERNAL CAVITY  =       56.549  ANGSTROM**2
-       VOLUME OF INTERNAL CAVITY  =       28.275  ANGSTROM**3
-     MEAN RADIUS OF INNER CAVITY  =        1.890  ANGSTROM
+       SQUARE OF INTERNAL CAVITY  =       45.804  ANGSTROM**2
+       VOLUME OF INTERNAL CAVITY  =       20.698  ANGSTROM**3
+     MEAN RADIUS OF INNER CAVITY  =        1.703  ANGSTROM
+
+       SQUARE OF EXTERNAL CAVITY  =      127.235  ANGSTROM**2
+       VOLUME OF EXTERNAL CAVITY  =       95.376  ANGSTROM**3
+     MEAN RADIUS OF OUTER CAVITY  =        2.834  ANGSTROM
 
  IN KCAL/MOL:
 
 
  MATRIX T (Y-REPRESENTATION), KCAL/MOL
            1         2         3         4
-    1 3627.6089 3474.6385 3627.6089 3474.6385
-    2 3474.6385 3627.6088 3474.6385 3627.6088
-    3 3627.6089 3474.6385 3627.6089 3474.6385
-    4 3474.6385 3627.6088 3474.6385 3627.6088
+    1 2458.4119 2269.9337 2458.4119 2269.9337
+    2 2269.9337 2458.4119 2269.9337 2458.4119
+    3 2458.4119 2269.9337 2458.4119 2269.9337
+    4 2269.9337 2458.4119 2269.9337 2458.4119
 
  MATRIX T_EL (Y-REPRESENTATION), KCAL/MOL
            1         2         3         4
-    1 1607.6875 1539.9777 1607.6875 1539.9777
-    2 1539.9777 1607.6877 1539.9777 1607.6877
-    3 1607.6875 1539.9777 1607.6875 1539.9777
-    4 1539.9777 1607.6877 1539.9777 1607.6877
+    1 1402.8928 1295.2578 1402.8928 1295.2578
+    2 1295.2578 1402.8928 1295.2578 1402.8928
+    3 1402.8928 1295.2578 1402.8928 1295.2578
+    4 1295.2578 1402.8928 1295.2578 1402.8928
 
  MATRIX T_IN (Y-REPRESENTATION), KCAL/MOL
            1         2         3         4
-    1 2019.9214 1934.6608 2019.9214 1934.6608
-    2 1934.6608 2019.9211 1934.6608 2019.9211
-    3 2019.9214 1934.6608 2019.9214 1934.6608
-    4 1934.6608 2019.9211 1934.6608 2019.9211
+    1 1055.5192  974.6760 1055.5192  974.6760
+    2  974.6760 1055.5192  974.6760 1055.5192
+    3 1055.5192  974.6760 1055.5192  974.6760
+    4  974.6760 1055.5192  974.6760 1055.5192
 
  Table of reorganization energies for all possible couples of diabatic states
 
     E_s(1,2)  E_s(3,4)  E_s(1,3)  E_s(2,4)  E_s(1,4)  E_s(2,3)
-    85.2605   85.2605    0.0000    0.0000   85.2605   85.2605
+    80.8432   80.8432    0.0000    0.0000   80.8432   80.8432
 
 ---------------------------------------------------------------------------------
 
  Full inertial reorganization energy matrix
                   1              2
-     1      2019.921408    1934.660773
-     2      1934.660773    2019.921066
+     1      1055.519160     974.675969
+     2       974.675969    1055.519160
 
  Full electronic reorganization energy matrix
                   1              2
-     1      1607.687503    1539.977679
-     2      1539.977679    1607.687730
+     1      1402.892765    1295.257751
+     2      1295.257751    1402.892765
 
  Full inertial reduced reorganization energy matrix
                   1              2
-     1      2019.921408     -85.260635
-     2       -85.260635     170.520928
+     1      1055.519160     -80.843190
+     2       -80.843190     161.686381
 
  Gas phase ET Hamiltonian with electronic solvation
                   1              2
-     1      -803.843751       0.100000
-     2         0.100000    -803.843865
+     1      -701.446382       0.100000
+     2         0.100000    -701.446382
 
- ET reorganization energy      :      85.260464 kcal/mol
- Stokes shift (linear response):   59680.495133 cm^-1
+ ET reorganization energy      :      80.843190 kcal/mol
+ Stokes shift (linear response):   56588.498366 cm^-1
 
- Total solvation free energy of the reactant state:  -1813.804455 kcal/mol
- Total solvation free energy of the product  state:  -1813.804398 kcal/mol
+ Total solvation free energy of the reactant state:  -1229.205962 kcal/mol
+ Total solvation free energy of the product  state:  -1229.205962 kcal/mol
 
- ET reaction free energy:              0.000057 kcal/mol
- ET activation free energy:           21.315144 kcal/mol
+ ET reaction free energy:              0.000000 kcal/mol
+ ET activation free energy:           20.210798 kcal/mol
 
- ET nonadiabatic rate  (1/sec) at    298.150 K:      0.390488205E-04
+ ET nonadiabatic rate  (1/sec) at    298.150 K:      0.258611104E-03
 
  ========================================================================
  all jobs done ...
- total time elapsed:           0.069 sec.
+ total time elapsed:           0.034 sec.
  ========================================================================
 

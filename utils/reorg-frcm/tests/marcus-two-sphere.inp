@@ -1,7 +1,7 @@
 JOBNAME=marcus-two-sphere
 Marcus reorganization energy
 CHARGE=5
-SOLV(FRCM,KAPPA=1.0,DELTA=0.0,EPS0=78.39,EPS8=1.78,GEOM=marcus-two-sphere.d,XYZOUT=marcus-two-sphere.xyz)
+SOLV(FRCM,KAPPA=0.9,DELTA=0.9,EPS0=78.39,EPS8=1.78,GEOM=marcus-two-sphere.d,XYZOUT=marcus-two-sphere.xyz)
 EREORG(REAC=1,PROD=2,EBIAS=0,VEL=0.1,RATE,PLOT=marcus-two-sphere.dat)
 
 END
