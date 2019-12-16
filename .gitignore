@@ -12,3 +12,5 @@ source/Rebuild.log
 *.o
 *.mod
 
+.DS_Store
+docs/.DS_Store
