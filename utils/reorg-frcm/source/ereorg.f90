@@ -82,7 +82,7 @@ subroutine ereorg
 
    real(8) :: ze1, ze2, alin, hreac, hprod, ebias, beta
    real(8) :: zestep, ze, se, ureac, uprod, uplus, uminu
-   real(8) :: uground, uexcite, temp, prefac, dg0, er, ea, wps
+   real(8) :: uground, uexcite, temp, prefac, dg0, er, ea, wps, gsreac, gsprod
 
    real(8), dimension(4,4) :: tk, tinfk, trk, trinfk
    real(8), dimension(2,2) :: hg2, erm
@@ -290,6 +290,14 @@ subroutine ereorg
    write(6,'( 1x,"Stokes shift (linear response): ",T35,F13.6," cm^-1")') 2.d0*er*cal2ev*ev2cm
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Calculate ET solvation energies
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   gsreac = -tinfk(ireac,ireac)/2.d0 - tk(ireac,ireac)/2.d0
+   gsprod = -tinfk(iprod,iprod)/2.d0 - tk(iprod,iprod)/2.d0
+   write(6,'(/1x,"Total solvation free energy of the reactant state: ",F13.6," kcal/mol")') gsreac
+   write(6,'( 1x,"Total solvation free energy of the product  state: ",F13.6," kcal/mol")') gsprod
+
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Free energy curves
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -368,7 +376,7 @@ subroutine ereorg
       ! Reaction free energy
       !~~~~~~~~~~~~~~~~~~~~~
       dg0 = hprod - hreac - 0.5d0*(tk(iprod,iprod)-tk(ireac,ireac))
-      write(6,'(1x,''ET reaction free energy: '',T35,F13.6,'' kcal/mol'')') dg0
+      write(6,'(/1x,''ET reaction free energy: '',T35,F13.6,'' kcal/mol'')') dg0
 
       !~~~~~~~~~~~~~~~~~~~~~~~~~
       ! Marcus activation energy

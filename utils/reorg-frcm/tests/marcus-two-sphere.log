@@ -1,0 +1,241 @@
+
+
+
+           2b, or not 2b: that is the question                                     
+
+
+                         William Shakespear, Hamlet (Act 3, Scene 1)               
+
+
+
+
+ ___/\\\\\\\\\\\\\__________/\\\\\\\\\__/\\\\\\\\\\\\\\\__/\\\\\\\\\\\\\\\_ 5.4
+  __\/\\\/////////\\\_____/\\\////////__\/\\\///////////__\///////\\\/////__       
+   __\/\\\_______\/\\\___/\\\/___________\/\\\___________________\/\\\_______      
+    __\/\\\\\\\\\\\\\/___/\\\_____________\/\\\\\\\\\\\___________\/\\\_______     
+     __\/\\\/////////____\/\\\_____________\/\\\///////____________\/\\\_______    
+      __\/\\\_____________\//\\\____________\/\\\___________________\/\\\_______   
+       __\/\\\______________\///\\\__________\/\\\___________________\/\\\_______  
+        __\/\\\________________\////\\\\\\\\\_\/\\\\\\\\\\\\\\\_______\/\\\_______ 
+         __\///____________________\/////////__\///////////////________\///________
+
+
+    Version 5.4
+
+
+    Hammes-Schiffer Group                                                          
+    Department of Chemistry                                                        
+    Yale University                                                                
+    New Haven, CT 06520                                                            
+ __________________________________________________________________________________
+
+
+    The program calculates solvent reorganization energy matrices for a set of     
+    fixed charge distributions given as collections of partial charges.            
+    The solvent is described in dielectric continuum approximation within the      
+    Frequency Resolved Cavity Model (FRCM) or Ellipsoidal Cavity Model (ELCM).     
+
+
+    REFERENCES                                                                     
+
+
+    1. A. V. Soudackov and S. Hammes-Schiffer.                                     
+       Multistate Continuum Theory for Multiple Charge Transfer                    
+       Reactions in Solution.                                                      
+       J. Chem. Phys. 111 (1999) 4672-4687.                                        
+
+
+    2. A. V. Soudackov and S. Hammes-Schiffer.                                     
+       Theoretical Study of Photoinduced Proton-Coupled Electron Transfer          
+       through Asymmetric Salt Bridges.                                            
+       J. Am. Chem. Soc. 121 (1999) 10598-10607.                                   
+
+
+ __________________________________________________________________________________
+
+
+   Title of the job:  JOBNAME=marcus-two-sphere
+                      Marcus reorganization energy
+   Start date:        12/15/2019 at 23:52:37
+   Job identificator: marcus-two-sphere
+ -------------------------------------------------------------------------------
+ CHARGE=5 SOLV(FRCM,KAPPA=1.0,DELTA=0.0,EPS0=78.39,EPS8=1.78,
+ GEOM=MARCUS-TWO-SPHERE.D,XYZOUT=MARCUS-TWO-SPHERE.XYZ) EREORG(REAC=1,PROD=2,EBIAS=0,VEL=0.1,RATE,
+ PLOT=MARCUS-TWO-SPHERE.DAT)
+ -------------------------------------------------------------------------------
+
+ Total charge of the solute:      5.000000
+
+ Static solvent parameters:
+          Static dielectric constant:      78.390000
+          Optical dielectric constant:      1.780000
+          Inverse Pekar factor f0:         22.887854
+          Total charge of the solute:       5.000000
+
+ FRCM model will be used for solvation calculations
+
+ The custom value of KAPPA parameter was specified in the input
+
+
+ The custom value of DELTA parameter was specified in the input
+
+
+ FRCM cavity parameters:
+          Factor for VdW radii (KAPPA):          1.000000
+          Width of the inner layer (DELTA):      0.000000 Angstroms
+
+ Geometry for solvation calculations from the file <marcus-two-sphere.d>
+ *   XYZ     - CARTESIAN COORDINATE SYSTEM TO BE USED
+*********************************************************************************
+ *
+ *  FRCM SOLVATION CODES WRITTEN BY I.V. ROSTOV
+ *
+ *  Charge distribution of the solute is described as a sum of point charges
+ *  at the centers of atomic spheres
+ *
+*********************************************************************************
+ Because of DELTA = 0.0 parameters for outer sphere (MODFE, NTETFI) corrected to be equal to parameters
+of inner sphere
+
+
+ *********     PARAMETERS FOR THE SOLVATION CALCULATION     *********
+
+ STATIC DIELECTRIC PERMITTIVITY,                     EPS =     78.390
+ OPTICAL DIELECTRIC PERMITTIVITY,                  EPSEL =      1.780
+ PARAMETER FOR INNER CAVITY SPHERES RADII,         KAPPA =      1.000
+ PARAMETER FOR OUTER CAVITY SPHERES RADII,         DELTA =      0.000 ANGSTROEMS
+
+ POLAR. PROCEDURE CRITERION,                      SELFCR =  0.20D-03
+ MAXIMUM NUMBER OF ITERATION IN POLAR. PROCEDURE,   ITSE =  15
+ MAX. ALLOWED DEVIATION OF SURFACE CHARGE
+ BEFORE COMPENSATION,                             CHDIFF =  0.10D+00
+
+!!!
+ THE CASE WITH DELTA=0.0 CAN NOT BE TREATED IN FRCM MODEL
+ FOR THIS CASE ONE-CAVITY BKO MODEL WILL BE APPLIED 
+!!!
+
+
+ INNER SPHERE PARAMETERS:
+ EFFECTIVE RADIUS OF THE SOLVENT MOLECULE,         SOLRD =      1.000
+ MIN. UNREACHABLE VOLUME TO INCLUDE EXTRA SPHERES, EXVOL =      1.000
+ PARAMETER OF TESSERA SIZES                       MODFE1 =  6  (NORMAL)
+                                       PARAMETER NTETFI1 =  1
+
+ OUTER SPHERE PARAMETERS:
+ PARAMETER OF TESSERA SIZES                       MODFE2 =  6  (NORMAL)
+                                       PARAMETER NTETFI2 =  6
+
+
+     CARTESIAN COORDINATES, RADII, AND ATOMIC CHARGES OF SOLUTE 
+
+  NO.   ATOM      X         Y         Z      RVDW     RAD1     RAD2
+
+   1    Fe     0.0000    0.0000   -2.5000   1.5000   1.5000   1.5000
+   2    Fe     0.0000    0.0000    2.5000   1.5000   1.5000   1.5000
+
+ Geometry for solvation calculations is written to the file <marcus-two-sphere.xyz>
+in xyz format (use MOLDEN to view)
+
+ ======================================================
+ Reorganization energy matrices and Marcus ET reaction:
+ ======================================================
+ Inner sphere reorganization energy (kcal/mol):   0.00000    
+ Reactant EVB state:   1
+ Product  EVB state:   2
+
+ Gas-phase bias (kcal/mol):         0.000
+ Electronic coupling (kcal/mol):    0.100
+
+ Left  limit for ZE: -3*Er
+ Right limit for ZE:  3*Er
+
+ Number of points:     100
+ Free energy data are are in the external file <marcus-two-sphere/marcus-two-sphere.dat>
+
+ Gas phase ET Hamiltonian
+                  1              2
+     1         0.000000       0.100000
+     2         0.100000       0.000000
+
+ Total number of tesserae produced:
+ on inner cavity =   166
+ on outer cavity =   166
+
+
+
+  N.SF     X         Y         Z        RV1       RV2   N.TES1 N.TES2
+   1    0.0000    0.0000   -2.5000    1.5000    1.5000    83    83
+   2    0.0000    0.0000    2.5000    1.5000    1.5000    83    83
+
+       SQUARE OF INTERNAL CAVITY  =       56.549  ANGSTROM**2
+       VOLUME OF INTERNAL CAVITY  =       28.275  ANGSTROM**3
+     MEAN RADIUS OF INNER CAVITY  =        1.890  ANGSTROM
+
+ IN KCAL/MOL:
+
+
+ MATRIX T (Y-REPRESENTATION), KCAL/MOL
+           1         2         3         4
+    1 3627.6089 3474.6385 3627.6089 3474.6385
+    2 3474.6385 3627.6088 3474.6385 3627.6088
+    3 3627.6089 3474.6385 3627.6089 3474.6385
+    4 3474.6385 3627.6088 3474.6385 3627.6088
+
+ MATRIX T_EL (Y-REPRESENTATION), KCAL/MOL
+           1         2         3         4
+    1 1607.6875 1539.9777 1607.6875 1539.9777
+    2 1539.9777 1607.6877 1539.9777 1607.6877
+    3 1607.6875 1539.9777 1607.6875 1539.9777
+    4 1539.9777 1607.6877 1539.9777 1607.6877
+
+ MATRIX T_IN (Y-REPRESENTATION), KCAL/MOL
+           1         2         3         4
+    1 2019.9214 1934.6608 2019.9214 1934.6608
+    2 1934.6608 2019.9211 1934.6608 2019.9211
+    3 2019.9214 1934.6608 2019.9214 1934.6608
+    4 1934.6608 2019.9211 1934.6608 2019.9211
+
+ Table of reorganization energies for all possible couples of diabatic states
+
+    E_s(1,2)  E_s(3,4)  E_s(1,3)  E_s(2,4)  E_s(1,4)  E_s(2,3)
+    85.2605   85.2605    0.0000    0.0000   85.2605   85.2605
+
+---------------------------------------------------------------------------------
+
+ Full inertial reorganization energy matrix
+                  1              2
+     1      2019.921408    1934.660773
+     2      1934.660773    2019.921066
+
+ Full electronic reorganization energy matrix
+                  1              2
+     1      1607.687503    1539.977679
+     2      1539.977679    1607.687730
+
+ Full inertial reduced reorganization energy matrix
+                  1              2
+     1      2019.921408     -85.260635
+     2       -85.260635     170.520928
+
+ Gas phase ET Hamiltonian with electronic solvation
+                  1              2
+     1      -803.843751       0.100000
+     2         0.100000    -803.843865
+
+ ET reorganization energy      :      85.260464 kcal/mol
+ Stokes shift (linear response):   59680.495133 cm^-1
+
+ Total solvation free energy of the reactant state:  -1813.804455 kcal/mol
+ Total solvation free energy of the product  state:  -1813.804398 kcal/mol
+
+ ET reaction free energy:              0.000057 kcal/mol
+ ET activation free energy:           21.315144 kcal/mol
+
+ ET nonadiabatic rate  (1/sec) at    298.150 K:      0.390488205E-04
+
+ ========================================================================
+ all jobs done ...
+ total time elapsed:           0.069 sec.
+ ========================================================================
+
