@@ -52,7 +52,7 @@ subroutine setjob
    integer :: irhmin, npntspow2, iarlim, igquant, ingast, icoulomb
    integer :: idist, ideltag, ivept, ipars, ispa, lenf
    integer :: igeo, ixyz, imajor, iminor, ikappa, idelta, igeom, itread
-   integer :: natsol_, natgas_, nhpt, k, ieps0, ieps8, npntssol2
+   integer :: natsol_, natgas_, nhpt, k, ieps0, ieps8, npntssol2, nelst_in
 
    real(8) :: x, ba, ba2
 
@@ -73,6 +73,22 @@ subroutine setjob
    endif
    write(6,'(/1x,"Total charge of the solute: ",f13.6)') charge
 
+
+   !==================================================
+   ! Number of electronic states (NELST)
+   !==================================================
+
+   ikey = index(keywrd,' NELST=')
+   if (ikey.ne.0) then
+      nelst_in = reada(keywrd,ikey+7)
+   else
+      nelst_in = 4
+   endif
+
+   !-- set parameters for array dimensions
+   call init_pardim(nelst_in)
+
+   write(6,'(/1x,"Number of electronic states in the basis: ",i3)') nelst
 
    !===============================================================
    ! Solvent model

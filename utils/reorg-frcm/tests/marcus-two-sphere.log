@@ -56,15 +56,17 @@
 
    Title of the job:  JOBNAME=marcus-two-sphere
                       Marcus reorganization energy
-   Start date:        12/16/2019 at 14:03:19
+   Start date:        12/17/2019 at 18:52:41
    Job identificator: marcus-two-sphere
  -------------------------------------------------------------------------------
- CHARGE=5 SOLV(FRCM,KAPPA=0.9,DELTA=0.9,EPS0=78.39,EPS8=1.78,
- GEOM=MARCUS-TWO-SPHERE.D,XYZOUT=MARCUS-TWO-SPHERE.XYZ) EREORG(REAC=1,PROD=2,EBIAS=0,VEL=0.1,RATE,
- PLOT=MARCUS-TWO-SPHERE.DAT)
+ CHARGE=5 NELST=2 SOLV(FRCM,KAPPA=0.9,DELTA=0.9,EPS0=78.39,EPS8=1.78,
+ GEOM=MARCUS-TWO-SPHERE.D,XYZOUT=MARCUS-TWO-SPHERE.XYZ) EREORG(REAC=1,PROD=2,EBIAS=0,
+ VEL=0.1,RATE,PLOT=MARCUS-TWO-SPHERE.DAT)
  -------------------------------------------------------------------------------
 
  Total charge of the solute:      5.000000
+
+ Number of electronic states in the basis:   2
 
  Static solvent parameters:
           Static dielectric constant:      78.390000
@@ -172,30 +174,24 @@ in xyz format (use MOLDEN to view)
 
 
  MATRIX T (Y-REPRESENTATION), KCAL/MOL
-           1         2         3         4
-    1 2458.4119 2269.9337 2458.4119 2269.9337
-    2 2269.9337 2458.4119 2269.9337 2458.4119
-    3 2458.4119 2269.9337 2458.4119 2269.9337
-    4 2269.9337 2458.4119 2269.9337 2458.4119
+           1         2
+    1 2458.4119 2269.9337
+    2 2269.9337 2458.4119
 
  MATRIX T_EL (Y-REPRESENTATION), KCAL/MOL
-           1         2         3         4
-    1 1402.8928 1295.2578 1402.8928 1295.2578
-    2 1295.2578 1402.8928 1295.2578 1402.8928
-    3 1402.8928 1295.2578 1402.8928 1295.2578
-    4 1295.2578 1402.8928 1295.2578 1402.8928
+           1         2
+    1 1402.8928 1295.2578
+    2 1295.2578 1402.8928
 
  MATRIX T_IN (Y-REPRESENTATION), KCAL/MOL
-           1         2         3         4
-    1 1055.5192  974.6760 1055.5192  974.6760
-    2  974.6760 1055.5192  974.6760 1055.5192
-    3 1055.5192  974.6760 1055.5192  974.6760
-    4  974.6760 1055.5192  974.6760 1055.5192
+           1         2
+    1 1055.5192  974.6760
+    2  974.6760 1055.5192
 
- Table of reorganization energies for all possible couples of diabatic states
-
-    E_s(1,2)  E_s(3,4)  E_s(1,3)  E_s(2,4)  E_s(1,4)  E_s(2,3)
-    80.8432   80.8432    0.0000    0.0000   80.8432   80.8432
+ REORGANIZATION ENERGIES FOR ALL COUPLES OF STATES, KCAL/MOL
+           1         2
+    1    0.0000   80.8432
+    2   80.8432    0.0000
 
 ---------------------------------------------------------------------------------
 
@@ -231,7 +227,7 @@ in xyz format (use MOLDEN to view)
  ET nonadiabatic rate  (1/sec) at    298.150 K:      0.258611104E-03
 
  ========================================================================
- all jobs done ...
- total time elapsed:           0.034 sec.
+ job done ...
+ total time elapsed:           0.023 sec.
  ========================================================================
 

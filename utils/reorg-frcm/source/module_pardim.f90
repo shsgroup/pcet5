@@ -37,11 +37,16 @@ module pardim
    public :: init_pardim
 
 contains
-  
-   subroutine init_pardim
+
+   subroutine init_pardim(nelst_)
+      integer, intent(in) :: nelst_
       maxatm   = 250
       maxpnt   = 256
-      nelst    =   4
+      if (nelst_.gt.1) then
+         nelst = nelst_
+      else
+         nelst    =   4
+      endif
       nprstmax =  100
       ngastmax =  100
       maxsta   = nelst*nprstmax*ngastmax

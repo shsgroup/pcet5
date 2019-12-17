@@ -285,7 +285,7 @@ C     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       !include 'SIZES'
       !include 'parsol.h'
 
-      real(8), intent(out), dimension(4,4) :: TK,TINFK,TRK,TRINFK
+      real(8), intent(out), dimension(N,N) :: TK,TINFK,TRK,TRINFK
       logical, save :: FIRST=.true., PRNT, S12DR
 
       !COMMON /EPSS/ EPS,EPSEL
@@ -301,7 +301,7 @@ C     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       !COMMON /CHARGE/CHARGE,QA(NMECI,NUMATM),N
 
       real(8), dimension(NMI,NMI) :: TIN,TEL,T
-      real(8), dimension(4,4) :: TKBACK,TINFKBACK
+      real(8), dimension(N,N) :: TKBACK,TINFKBACK,ERIN
 
       !SAVE PRNT,S12DR
       !DATA FIRST /.TRUE./
@@ -490,28 +490,32 @@ C
       CALL PRMATR(ICHOUT,NMI,N,TEL)
       WRITE (6,'(/'' MATRIX T_IN (Y-REPRESENTATION), KCAL/MOL'')')
       CALL PRMATR(ICHOUT,NMI,N,TIN)
-      ERIN12=(TIN(1,1)+TIN(2,2)-TIN(1,2)*2.D0)*0.5D0
-      ERIN34=(TIN(3,3)+TIN(4,4)-TIN(3,4)*2.D0)*0.5D0
-      ERIN13=(TIN(1,1)+TIN(3,3)-TIN(1,3)*2.D0)*0.5D0
-      ERIN24=(TIN(2,2)+TIN(4,4)-TIN(2,4)*2.D0)*0.5D0
-      ERIN14=(TIN(1,1)+TIN(4,4)-TIN(1,4)*2.D0)*0.5D0
-      ERIN23=(TIN(2,2)+TIN(3,3)-TIN(2,3)*2.D0)*0.5D0
-      WRITE (6,'(/'' Table of reorganization energies for all possible''
-     *,'' couples of diabatic states''//
-     *''    E_s(1,2)  E_s(3,4)  E_s(1,3)  E_s(2,4)  E_s(1,4)  E_s(2,3)''
-     *)')
-      WRITE (6,'(2x,F9.4,5F10.4)')ERIN12,ERIN34,ERIN13,ERIN24,ERIN14,
-     *ERIN23
+
+
+      DO I=1,N
+         DO J=1,N
+            ERIN(I,J) = (TIN(I,I)+TIN(J,J)-TIN(I,J)*2.D0)*0.5D0
+         ENDDO
+      ENDDO
+
+      WRITE (6,'(/" REORGANIZATION ENERGIES FOR ALL COUPLES",
+     *             " OF STATES, KCAL/MOL")')
+      CALL PRMATR(ICHOUT,N,N,ERIN)
+
       WRITE(6,'(/81(''-''))')
 C
 C     TRANSFER TO SASHAS ARRAYS
 C
-      DO I=1,4
-         DO J=1,4
-	    TK(I,J)=TIN(I,J)
-	    TINFK(I,J)=TEL(I,J)
+      DO I=1,N
+         DO J=1,N
+            TK(I,J) = TIN(I,J)
+            TINFK(I,J) = TEL(I,J)
          ENDDO
       ENDDO
+
+C== only for 4-state PCET reaction:
+
+      IF (N.EQ.4) THEN
 
 C==(HYD) 19 JULY 2001: NEW OPTION TO TAKE CARE OF SOLVATION MATRICES
 C========(HYD) NOW TAKING CARE OF SOLVATION MATRIX OPTIONS==============
@@ -561,6 +565,7 @@ C============USING A SET OF REDUCED DENSITIES===========================
       ENDIF
 C==========(HYD) END SOLVATION MATRIX OPTIONS===========================
 
+      ENDIF
 
 C============(HYD) NOW SYMMETRIZING RELATIVE TO DIAGONAL================
 C============MUST ALWAYS BE DONE ELSE WHOLE APPROACH NOT VALIDATED======
@@ -568,14 +573,14 @@ C======NOSYMD SHOULD BE USED TO CHECK ONLY TO SEE HOW VALID APPROACH IS
       IF (NOSYMD) THEN
         GOTO 99
       ELSE
-      DO I=1,4
-        IF ((I+1).LT.4) THEN
-          DO J=I+1,4
-            TK(J,I)=TK(I,J)
-            TINFK(J,I)=TINFK(I,J)
-          ENDDO
-        ENDIF
-      ENDDO
+        DO I=1,N
+          IF ((I+1).LT.N) THEN
+            DO J=I+1,N
+              TK(J,I)=TK(I,J)
+              TINFK(J,I)=TINFK(I,J)
+            ENDDO
+          ENDIF
+        ENDDO
       ENDIF
  
 C (END HYD SECTION)=====================================================
@@ -598,15 +603,15 @@ C     Construction of reduced matrices [t']
       TRK(1,1) = T00
       TRINFK(1,1) = T008
 
-      DO I=2,4
+      DO I=2,N
          TRK(I,1) = TK(I,1) - T00
          TRK(1,I) = TRK(I,1)
          TRINFK(I,1) = TINFK(I,1) - T008
          TRINFK(1,I) = TRINFK(I,1)
       ENDDO
 
-      DO I=2,4
-         DO J=2,4
+      DO I=2,N
+         DO J=2,N
             TRK(I,J) = TK(I,J) + T00 - TK(I,1) - TK(J,1)
             TRINFK(I,J) = TINFK(I,J) + T008 - TINFK(I,1) - TINFK(J,1)
          ENDDO

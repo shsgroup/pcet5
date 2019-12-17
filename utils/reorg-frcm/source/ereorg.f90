@@ -84,7 +84,7 @@ subroutine ereorg
    real(8) :: zestep, ze, se, ureac, uprod, uplus, uminu
    real(8) :: uground, uexcite, temp, prefac, dg0, er, ea, wps, gsreac, gsprod
 
-   real(8), dimension(4,4) :: tk, tinfk, trk, trinfk
+   real(8), dimension(nelst,nelst) :: tk, tinfk, trk, trinfk
    real(8), dimension(2,2) :: hg2, erm
 
    write(6,'(/1x,''======================================================'',/,&
@@ -102,7 +102,7 @@ subroutine ereorg
       !-- All options are set to the default values
 
       ireac = 1
-      iprod = 3
+      iprod = 2
       ze1 = 0.d0
       ze2 = 0.d0
       nze = 100

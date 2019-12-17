@@ -75,7 +75,8 @@ program reorg_frcm
    !---------------------------------------------
    ! Initialize maximum dimensions
    !---------------------------------------------
-   call init_pardim
+   !-now called in setjob
+   !call init_pardim
 
    !---------------------------------------------------
    ! Initialization of constants and conversion factors
@@ -104,20 +105,7 @@ program reorg_frcm
    !---------------------------------------------
    open(5,file=input(1:lfile),status='old')
 
-   ijob = 0
-
-   !-----------------------------------------------------
-   ! MAIN LOOP OVER THE JOBS SPECIFIED IN THE INPUT FILE
-   !-----------------------------------------------------
-
-   loop_over_jobs: do
-
-      read(5,'(a)') line
-
-      if (index(line,'END').ne.0.or.&
-      &   index(line,'end').ne.0.or.&
-      &   index(line,'End').ne.0.or.&
-      &   index(line,'EnD').ne.0)     exit loop_over_jobs
+   read(5,'(a)') line
 
       !-------------------------------------------------
       ! Extract the name of the job from the first line
@@ -132,7 +120,7 @@ program reorg_frcm
          job = line(ijobn+8:ijobn+ispa+6)
          ljob = ispa - 1
       else
-         ijob = ijob + 1
+         ijob = 1
          write(job,'(i2.2)') ijob
          ljob = 2
       endif
@@ -230,17 +218,12 @@ program reorg_frcm
       !-------------------------------------------------
       call deinitmat
 
-   enddo loop_over_jobs
-   !---------------------------------------------------------------
-   ! END OF THE MAIN LOOP OVER THE JOBS SPECIFIED IN THE INPUT FILE
-   !---------------------------------------------------------------
-
    close(5)
 
    tend = second()
    ttotal = tend - tstart
    write(*,'(/1x,72(''=''))')
-   write(*,'( 1x,''all jobs done ...'')')
+   write(*,'( 1x,''job done ...'')')
    write(*,'( 1x,''total time elapsed: '',f15.3,'' sec.'')') ttotal
    write(*,'( 1x,72(''='')/)')
 

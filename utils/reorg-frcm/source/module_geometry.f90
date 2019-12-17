@@ -62,7 +62,12 @@ contains
 
       do
          read(in,'(a)',iostat=io_status) line
-         if (line.eq.' '.or.io_status.lt.0) exit
+         if (line.eq.' '.or.&
+            &io_status.lt.0.or.&
+            &index(line,'END').ne.0.or.&
+            &index(line,'end').ne.0.or.&
+            &index(line,'End').ne.0.or.&
+            &index(line,'EnD').ne.0) exit
 
          !-- remove double spaces and forbidden symbols
 
