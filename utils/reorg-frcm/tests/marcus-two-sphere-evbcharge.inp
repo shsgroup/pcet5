@@ -1,0 +1,7 @@
+JOBNAME=marcus-two-sphere-evbcharge
+Marcus reorganization energy
+NELST=2
+SOLV(FRCM,KAPPA=0.9,DELTA=0.9,EPS0=78.39,EPS8=1.78,GEOM=marcus-two-sphere-evbcharge.d,XYZOUT=marcus-two-sphere-evbcharge.xyz)
+EREORG(REAC=1,PROD=2,EBIAS=0,VEL=0.1,RATE,PLOT=marcus-two-sphere-evbcharge.dat)
+
+END
