@@ -4,6 +4,7 @@ subroutine deinitmat
 !  Deinitializes the matrices on the grid
 !===================================================================
 
+   use control
    use pardim
    use geosol
 
@@ -13,7 +14,6 @@ subroutine deinitmat
    !   by calling corresponding module procedures
 
    call dealloc_geosol
-
-   return
+   call dealloc_charge
 
 end subroutine deinitmat

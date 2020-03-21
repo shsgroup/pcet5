@@ -110,19 +110,15 @@ contains
    !---------------------------------------------------------------------
    ! Reads geometry of the reaction complex
    ! and charges for EVB states.
+   ! (including total charges for EVB states)
    !---------------------------------------------------------------------
    !  Parameters:
    !
-   !  IN  - channel number for the input file
-   !
+   !  IN   - channel number for the input file
    !  NAT_ - number of atoms including dummy atoms (input)
-   !
    !  NAT  - number of atoms excluding dummy atoms (output)
-   !
    !  LABELS(NAT) - atomic numbers of atoms.
-   !
    !  XYZ(3,NAT)  - cartesian coordinates of the reaction complex.
-   !
    !  CHR(4,NAT)  - charges on atoms for the EVB states 1a,1b,2a,and 2b.
    !--------------------------------------------------------------------
    !  The input file is supposed to have the following format:
@@ -133,25 +129,16 @@ contains
    !          <...> - any FRCM keywords.
    !
    !  Card 2: Title (up to 80 characters)
-   !
    !  Card 3: Comment (up to 80 characters)
-   !
    !  Cards 4..N: geometry specification
-   !
    !  Card N+1: empty line
-   !
    !  Card N+2: optional line with RADIUS keyword (custom VdW radii)
-   !
    !  Cards N+3..M: VdW radii for FRCM
-   !
    !  Card M+1: empty line
-   !
    !  Card M+2: Title for EVB charges (with CHARGES keyword)
-   !
-   !  Cards M+3..L: charges on atoms for EVB states 1a, 1b, 2a, and 2b
-   !
+   !  Card M+3: total charges for EVB states 1...NELST
+   !  Cards M+3..L: charges on atoms for EVB states 1...NELST
    !  Card L+1: empty line
-   !
    !--------------------------------------------------------------------
       implicit none
 
@@ -290,8 +277,8 @@ contains
 
       enddo
 
-
       !-- Read in EVB charges on atoms
+      !   (first line contain TOTAL charges for EVB states)
       !   (Note that dummy atoms are not in the list!!!)
 
       call getchr(in,nchr,chr)
@@ -305,8 +292,8 @@ contains
          stop 'try again...'
       endif
 
-      !-- Check whether a total charge for all EVB states
-      !   is equal to the total charge specified in KEYWORDS
+      !-- Check whether a total charge of each EVB state
+      !   is equal to the total charge specified in input
 
       do i=1,nelst
 
@@ -316,7 +303,7 @@ contains
             tach = tach + qatom(j)
          enddo
 
-         dif = dabs(tach - charge)
+         dif = dabs(tach - charge(i))
 
          if (dif.gt.1.0d-2) then
 
@@ -326,7 +313,7 @@ contains
             &'' specified in keyword ('',F10.3,''). The program'',&
             &'' considers this''/'' difference (''&
             &,F10.3,'' as result of an error in the input file'')')&
-            tach,i,charge,dif
+            tach,i,charge(i),dif
             write(6,'('' program execution is terminated'')')
             write(6,'('' check charges in the input file'')')
             stop 'In GEO...'
@@ -338,9 +325,9 @@ contains
             write(6,'(/'' ATTENTION! Sum of atomic charges ('',F12.5,&
             &'') is slightly different''/&
             &'' from the charge specified in keyword ('',F12.5,'').'')')&
-            tach,charge
+            tach,charge(i)
 
-            call normch(nchr,charge,qatom)
+            call normch(nchr,charge(i),qatom)
 
             do j=1,nchr
                chr(i,j) = qatom(j)
@@ -575,13 +562,13 @@ contains
       enddo
 
 
-      ! Read in EVB charges on atoms
-      ! (Note that dummy atoms are not in the list!!!)
+      !-- Read in EVB charges on atoms
+      !   (Note that dummy atoms are not in the list!!!)
 
       call getchr(in,nchr,chr)
 
-      ! Check whether a number of charges is consistent
-      ! with a number of atoms
+      !-- Check whether a number of charges is consistent
+      !   with a number of atoms
 
       if (nchr.ne.nat) then
          write(*,'(/1x,''*** input error (in geo): '',&
@@ -589,8 +576,8 @@ contains
          stop 'try again...'
       endif
 
-      ! Check whether a total charge for all EVB states
-      ! is equal to the total charge specified in KEYWORDS
+      !-- Check whether a total charge for all EVB states
+      !   is equal to the total charge specified in KEYWORDS
 
       do i=1,nelst
 
@@ -600,7 +587,7 @@ contains
             tach=tach + qatom(j)
          enddo
 
-         dif = dabs(tach-charge)
+         dif = dabs(tach-charge(i))
 
          if (dif.gt.1.0d-2) then
 
@@ -610,7 +597,7 @@ contains
             &'' specified in keyword ('',F10.3,''). The program'',&
             &'' considers this''/'' difference (''&
             &,F10.3,'' as result of an error in the input file'')')&
-            tach,i,charge,dif
+            tach,i,charge(i),dif
             write(6,'('' program execution is terminated'')')
             write(6,'('' check charges in the input file'')')
             stop 'In GEO...'
@@ -622,9 +609,9 @@ contains
             write(6,'(/'' ATTENTION! Sum of atomic charges ('',F12.5,&
             &'') is slightly different''/&
             &'' from the charge specified in keyword ('',F12.5,'').'')')&
-            tach,charge
+            tach,charge(i)
 
-            call normch(nchr,charge,qatom)
+            call normch(nchr,charge(i),qatom)
 
             do j=1,nchr
                chr(i,j)=qatom(j)
@@ -804,7 +791,7 @@ contains
                natoms_ = natoms_ - 1
                exit
             endif
-            
+
             if (label.lt.0.or.label.gt.108) then
                write(6,'(''  illegal atomic number'')')
                j = natoms_ - 1
@@ -906,6 +893,8 @@ contains
    !
    !  on output NCHR   = total number of point charges
    !            CHR    = charges for EVB states
+   !
+   !  Also initializes the total charges for EVB states (CHARGE(1:NELST))
    !---------------------------------------------------------------------
       implicit none
       integer, intent(in)  :: iread
@@ -917,17 +906,17 @@ contains
       character(120)         :: line, tit
       integer                :: io_status, i, nvalue
 
-      NCHR = 0
+      nchr = -1
 
-      ! read title
+      !-- read title
       read(iread,'(a)',iostat=io_status) tit
       if (io_status.gt.0) then
          write(*,'('' error in getchr: title record '')')
          stop 'at the getchr routine...'
       endif
 
-      ! read a line
-      ! empty line or end of file terminates the loop
+      !-- read a line
+      !   empty line or end of file terminates the loop
       do
 
          read(iread,'(a)',iostat=io_status) line
@@ -947,20 +936,20 @@ contains
 
          nchr = nchr + 1
 
-         ! clean the input data
+         !-- clean the input data
 
          do i=1,120
             if (line(i:i).eq.tab.or.line(i:i).eq.comma) line(i:i) = space
          enddo
 
-         ! initialize istart to interpret blanks as zero's
+         !-- initialize istart to interpret blanks as zero's
 
          do i=1,10
             istart(i) = 80
          enddo
 
-         ! find initial digit of all numbers, check for leading spaces
-         ! followed by a character and store in istart
+         !-- find initial digit of all numbers, check for leading spaces
+         !   followed by a character and store in istart
 
          leadsp = .true.
          nvalue = 0
@@ -972,12 +961,23 @@ contains
             leadsp = (line(i:i).eq.space)
          enddo
 
-         ! assign charges (1a, 1b, 2a, 2b)
-         do i=1,nelst
-            chr(i,nchr) = reada(line,istart(i))
-         enddo
+         if (nchr.eq.0) then
 
-      ! read next line
+            !-- read total charge for EVB states CHARGE(1:NELST)
+            do i=1,nelst
+               charge(i) = reada(line,istart(i))
+            enddo
+
+         else
+
+            !-- assign charges for each EVB state
+            do i=1,nelst
+               chr(i,nchr) = reada(line,istart(i))
+            enddo
+
+         endif
+
+      !-- read next line
       enddo
 
       return
@@ -1019,7 +1019,7 @@ contains
 
          if (dabs(qqn).gt.1.d-10.and.dabs(qqp).gt.1.d-10) then
 
-            ! Mertush's charge compensation
+            !-- Mertush's charge compensation
 
             zqn = 1.d0 - 0.5d0*qq2/qqn
             zqp = 1.d0 - 0.5d0*qq2/qqp

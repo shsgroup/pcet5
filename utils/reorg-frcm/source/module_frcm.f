@@ -47,6 +47,7 @@
       ! Use statements
       !----------------------------------------------------------------|
       use pardim
+      use control, only: chrtot => charge
       use timers
       use parsol
       use elmnts
@@ -71,7 +72,7 @@
       integer, PARAMETER :: MAXORB=4*MAXHEV+MAXLIT
       integer, PARAMETER :: MAXPAR=3*NUMATM
       integer, PARAMETER :: MPACK=MAXORB*(MAXORB+1)/2
-      integer, PARAMETER :: NMECI=10
+      integer, PARAMETER :: NMECI=100
       integer, PARAMETER :: NSECMX=200
       integer, PARAMETER :: NSF=NUMATM*GATINC
       integer, PARAMETER :: NS=NUMATM*NSECMX
@@ -123,15 +124,16 @@
 
       integer :: NDLATS(NSF),NDNEB(NDNBMX)                ! /CURLEN/
 
-      real(8) :: CORE(107)                                 ! /CORE/
-      real(8) :: QATOM(NUMATM)                             ! /QATOM/
+      real(8) :: CORE(107)                                ! /CORE
+      real(8) :: CHARGE                                   ! from /CHARGE/
+      real(8) :: QATOM(NUMATM)                            ! /QATO/
 
-      real(8) :: TSF1,TSF2,TSF3,TSFE,TCOLA,TCOLE,TCONNU    ! /TIMSF/
-      real(8) :: TIME0                                     ! /TIMING/
+      real(8) :: TSF1,TSF2,TSF3,TSFE,TCOLA,TCOLE,TCONNU   ! /TIMSF/
+      real(8) :: TIME0                                    ! /TIMING/
 
-      real(8), public :: XX(NSF),YY(NSF),ZZ(NSF)           ! /PR/
-      real(8) :: RV(NSF),QSFE(NSF)                         ! /PR/
-      real(8) :: COL2,COL1,COIN,COEL                       ! /PECAR/
+      real(8), public :: XX(NSF),YY(NSF),ZZ(NSF)          ! /PR/
+      real(8) :: RV(NSF),QSFE(NSF)                        ! /PR/
+      real(8) :: COL2,COL1,COIN,COEL                      ! /PECAR/
 
       real(8) :: X0(NS),Y0(NS),Z0(NS),
      ,          AS(NS),QS(NS),QCOR(NS)                    ! /SOLMAT/
@@ -139,26 +141,26 @@
       real(8) :: X0EL(NS),Y0EL(NS),Z0EL(NS),
      ,          ASEL(NS),QSEL(NS),QCOREL(NS)              ! /SOLMAEL/
 
-      real(8) :: RVEL(NSF),QSFEEL(NSF)                     ! /PREL/
-      real(8) :: FACTOR,FACTOR2                            ! /FACTSF/
+      real(8) :: RVEL(NSF),QSFEEL(NSF)                    ! /PREL/
+      real(8) :: FACTOR,FACTOR2                           ! /FACTSF/
 
-      real(8),  public :: COORD(3,NUMATM)                  !
+      real(8),  public :: COORD(3,NUMATM)                 !
       integer, public :: NHB(3)                           ! /GEOMXYZ/
 
-      real(8)  :: EPS,EPSEL                                ! /EPSS
+      real(8)  :: EPS,EPSEL                               ! /EPSS
 
-      real(8)  :: CHARGE,QA(NMECI,NUMATM)                  !
       integer :: N                                        ! /CHARGE/
+      real(8) :: QA(NMECI,NUMATM)                         !
 
-      real(8)  :: RADD(NSF),NADD(NSF)                      !
+      real(8)  :: RADD(NSF),NADD(NSF)                     !
       integer :: NUMADD                                   ! /ADDSF/
 
-      real(8)  :: CON,VSOLV,RSOLV,SELFCR,CHDIFF            !
+      real(8)  :: CON,VSOLV,RSOLV,SELFCR,CHDIFF           !
       integer :: ITSE                                     ! /VOL/
 
-      real(8) :: RADDEL(NSF)                               ! /ADDSFEL/
+      real(8) :: RADDEL(NSF)                              ! /ADDSFEL/
 
-      real(8)  :: DATTE0(MXRAS),DPRAM(MXRAS),DRASD,DSMIN   !
+      real(8)  :: DATTE0(MXRAS),DPRAM(MXRAS),DRASD,DSMIN  !
       integer :: ITMA                                     ! /RESINF/
 
       real(8) :: COTETM(NTQ),SITETM(NTQ)
@@ -321,6 +323,7 @@ C     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 C         N1=1
 
+         CHARGE = CHRTOT(J)
          DO K=1,NUMAT
             QATOM(K)=QA(J,K)
          ENDDO
@@ -350,6 +353,7 @@ C         N1=1
 
          DO K=1,N
             IF (K.EQ.J) GOTO 1
+            CHARGE = CHRTOT(K)
             DO L=1,NUMAT
                QATOM(L)=QA(K,L)
             ENDDO
@@ -390,6 +394,7 @@ C         N1=1
             COIN=0.0D0
             COL1=COEL
             EPS2=0.0D0
+            CHARGE = CHRTOT(J)
             DO K=1,NUMAT
                QATOM(K)=QA(J,K)
             ENDDO
@@ -415,11 +420,12 @@ C         N1=1
 
             DO K=1,N
                IF (K.EQ.J) GOTO 2
+               CHARGE=CHRTOT(K)
                DO L=1,NUMAT
                   QATOM(L)=QA(K,L)
                ENDDO
                CALL CONN(COORD,X0EL,Y0EL,Z0EL,QSEL,IJEL,TEL(J,K))
-      	       TEL(J,K)=-TEL(J,K)
+               TEL(J,K)=-TEL(J,K)
                IF (PRNT) THEN
                   WRITE(6,*)'N1=',N1
                   WRITE(6,*)'J,K,TEL(J,K):',J,K,TEL(J,K)
@@ -622,7 +628,7 @@ C     Construction of reduced matrices [t']
       END SUBROUTINE SOLINT
 
 !======================================================================!
-      SUBROUTINE FRCMINIT(ISFILE,EPS0,EPS8,KAPPA,DELTA,CHRTOT,
+      SUBROUTINE FRCMINIT(ISFILE,EPS0,EPS8,KAPPA,DELTA,
      ,                    NAT,LAB,XYZ,CHR)
 C======================================================================C
 C     In case of FRCM solvation model:
@@ -641,7 +647,6 @@ C======================================================================C
       real(8), intent(in)                     :: EPS0,EPS8,KAPPA,DELTA
       real(8), intent(inout), dimension(:,:)  :: XYZ
       real(8), intent(in), dimension(:,:)     :: CHR
-      real(8), intent(in)                     :: CHRTOT
 
       !DIMENSION IPT(*),LAB(*),XYZ(3,*),CHR(NELST,*)
       !CHARACTER KEYWRD*241, KOMENT*81, TITLE*81
@@ -782,10 +787,11 @@ C     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 C     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 C     Initialize charges for EVB states
 C     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      CHARGE = CHRTOT
+C     CHARGE = CHRTOT
+
       N = NELST
-      DO I=1,NUMAT
-         DO J=1,N
+      DO J=1,N
+         DO I=1,NUMAT
             QA(J,I) = CHR(J,I)
          ENDDO
       ENDDO

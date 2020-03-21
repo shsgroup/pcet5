@@ -87,8 +87,19 @@ module control
    save
 
    integer :: method, mgquant, igas, isolv, iminim
-   real*8  :: charge
+   real*8, allocatable, dimension(:) :: charge
    logical :: gquant
    !===============================================================
+
+contains
+
+   subroutine alloc_charge(n_)
+      integer, intent(in) :: n_
+      allocate (charge(n_))
+   end subroutine alloc_charge
+
+   subroutine dealloc_charge
+      if (allocated(charge)) deallocate (charge)
+   end subroutine dealloc_charge
 
 end module control

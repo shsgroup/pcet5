@@ -64,15 +64,15 @@ subroutine setjob
    !==================================================
    ! Total charge of the solute
    !==================================================
+   !ikey = index(keywrd,' CHARGE=')
+   !if (ikey.ne.0) then
+   !   charge = reada(keywrd,ikey+8)
+   !else
+   !   charge = 0.d0
+   !endif
+   !write(6,'(/1x,"Total charge of the solute: ",f13.6)') charge
 
-   ikey = index(keywrd,' CHARGE=')
-   if (ikey.ne.0) then
-      charge = reada(keywrd,ikey+8)
-   else
-      charge = 0.d0
-   endif
-   write(6,'(/1x,"Total charge of the solute: ",f13.6)') charge
-
+   write(6,'(/1x,"Total charge of the solute is now specified for each electronic state separately!")')
 
    !==================================================
    ! Number of electronic states (NELST)
@@ -87,6 +87,9 @@ subroutine setjob
 
    !-- set parameters for array dimensions
    call init_pardim(nelst_in)
+
+   !-- allocate array for total charges of electronic states
+   call alloc_charge(nelst_in)
 
    write(6,'(/1x,"Number of electronic states in the basis: ",i3)') nelst
 
@@ -222,7 +225,6 @@ subroutine setjob
    write(6,'(10x,"Static dielectric constant:  ",f13.6)') eps0
    write(6,'(10x,"Optical dielectric constant: ",f13.6)') eps8
    write(6,'(10x,"Inverse Pekar factor f0:     ",f13.6)') f0
-   write(6,'(10x,"Total charge of the solute:  ",f13.6)') charge
 
    if (symt) then
       write(6,'("Solvation T matrices symmetrized for PCET in a symmetric system")')
@@ -376,6 +378,7 @@ subroutine setjob
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Read external file with the geometry of the complex
    ! for solvation calculations and charges for EVB states
+   ! (including total charges, for each EVB state)
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    igeom = index(options,' GEOM=')
@@ -414,7 +417,7 @@ subroutine setjob
          ! - initialize internal COMMON-blocks used in FRCM
          !   calculations of the reorganization energy matrices
          !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-         call frcminit(1,eps0,eps8,kappa,delta,charge,natsol,labsol,xyzsol,chrsol)
+         call frcminit(1,eps0,eps8,kappa,delta,natsol,labsol,xyzsol,chrsol)
 
          !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
          ! - use specific FRCM keywords

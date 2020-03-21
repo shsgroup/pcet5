@@ -233,9 +233,9 @@ subroutine ereorg
    call primat(hg2,2,2,2,5,6,0,'Gas phase ET Hamiltonian')
 
 
-   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   ! Calculate [4x4] reorganization energy matrices
-   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! Calculate [NELST x NELST] reorganization energy matrices
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    if (isolv.eq.1) then
 
