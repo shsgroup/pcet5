@@ -11,9 +11,8 @@ source/Rebuild.log
 *.bin
 *.o
 *.mod
+*.tar.gz
+*.tar.bz2
 
 .DS_Store
 docs/.DS_Store
-pcet-5.6.tar.gz
-utils/reorg-frcm_5.4.tar.gz
-utils/reorg-frcm_5.5a.tar.gz
