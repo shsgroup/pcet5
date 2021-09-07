@@ -28,6 +28,13 @@ subroutine dynamicset2
 !
 !  Z0=<float> - center of the initial distribution along Z=X (or z=x) coordinate
 !
+!  FIXEDINIT - use center of the initial distribution as an initial coordinate value
+!              (no sampling from Gaussian distribution)
+!
+!  VZE0=<float> - initial velocity along Z (energy gap) coordinate
+!
+!  VZ10=<float> - initial velocity along z (scaled energy gap) coordinate
+!
 !  TRAJOUT=<string> - name of the output files with trajectory data
 !                     (default filename "trajectory_n.dat" where n is the
 !                     trajectory index starting from 1)
@@ -89,6 +96,9 @@ subroutine dynamicset2
 !
 !  NDUMP888=<int> - couplings output frequency
 !                   (every NDUMP888 steps; no output if NDUMP888=0, default)
+!
+!  NDUMP999=<int> - moments output frequency (AFSSH)
+!                   (every NDUMP999 steps; no output if NDUMP999=0, default)
 !
 !  T=<float> - temperature in K
 !
@@ -169,6 +179,7 @@ subroutine dynamicset2
    character(len=  15) :: zscadim="(kcal/mol)^1/2"
    character(len=   5) :: mode_dyn
    character(len=   6) :: traj_suffix
+   character(len=   1) :: state_index
    character(len=  20) :: str
    character(len=1), dimension(4) :: iset_char_diab4=(/"1","2","3","4"/)
 
@@ -187,19 +198,20 @@ subroutine dynamicset2
    logical :: interaction_region_prev=.false.
    logical :: interaction_region=.false.
    logical :: double_well=.false.
+   logical :: fixedinit=.false.
 
    logical :: reset_random=.false.
 
    integer :: nstates_dyn, nzdim_dyn, ielst_dyn, iseed_inp, iset_dyn
    integer :: initial_state=-1, iground=1, idecoherence=0
-   integer :: istate, new_state, ndump6, ndump777, ndump888
+   integer :: istate, new_state, ndump6, ndump777, ndump888, ndump999
    integer :: number_of_skipped_trajectories=0
    integer :: number_of_failed_trajectories=0
    integer :: itraj_start=1
    integer :: ntraj_valid
    integer :: nqsteps_var
 
-   integer :: ikey, ikeya, ikeyb, ioption, ioption2, ioption3, kg0, ifrom, ito
+   integer :: ikey, ikeya, ikeyb, ioption, ioption2, ioption3, ioptionve, ioptionv1, kg0, ifrom, ito
    integer :: islash1, islash2, islash3, idum1, idum2, idum3, idum4
    integer :: ioutput, lenf, ispa, idash, icount, ireac, iprod
    integer :: itraj, istep, iqstep, k, itmp, itmp1
@@ -212,7 +224,7 @@ subroutine dynamicset2
    real(kind=8) :: zeit_start, zeit_end, zeit_total, traj_time_start, traj_time_end
    real(kind=8) :: zeit, zeit_prev
    real(kind=8) :: zeitq, zeitq_prev
-   real(kind=8) :: z1, ze, vz1, vze, z10, ze0, y1, force1, force2, coup12
+   real(kind=8) :: z1, ze, vz10, vz1, vze0, vze, z10, ze0, y1, force1, force2, coup12
    real(kind=8) :: ekin, ekin1, ekin_prev, ekinhalf1, efes
    real(kind=8) :: vz1_prev, z1_prev, ze_prev
    real(kind=8) :: qtstep_var
@@ -313,6 +325,8 @@ subroutine dynamicset2
          write(6,'(1x,"(Solvent dynamics with a single relaxation period and effective solvent mass)")')
       elseif (solvent_model.eq."ONODERA2") then
          write(6,'(1x,"(Solvent dynamics with two relaxation periods and effective solvent mass)")')
+      elseif (solvent_model.eq."NEWTON") then
+         write(6,'(1x,"(Ballistic Solvent dynamics with effective solvent mass and no random forces)")')
       else
          write(6,'(1x,"(UNKNOWN model: abort calculation)")')
          call clean_exit
@@ -333,7 +347,37 @@ subroutine dynamicset2
 
    write(6,'(/1x,"Parameters of the dielectric function ",a/)') trim(solvent_model)
 
-   if (solvent_model.eq."DEBYE") then
+   if (solvent_model.eq."NEWTON") then
+
+      ioption = index(options,' EFFMASS=')
+      if (ioption.ne.0) then
+         effmass1 = reada(options,ioption+9)
+      else
+         write(*,'(/1x,"*** (in DYNAMICSET2): You MUST specify EFFMASS= option for NEWTON model ***"/)')
+         call clean_exit
+      endif
+
+      ioption = index(options,' EPS0=')
+      if (ioption.ne.0) then
+         eps0_dyn = reada(options,ioption+6)
+      else
+         eps0_dyn = eps0
+      endif
+
+      ioption = index(options,' EPS8=')
+      if (ioption.ne.0) then
+         eps8_dyn = reada(options,ioption+6)
+      else
+         eps8_dyn = eps8
+      endif
+
+      call set_newton_model_parameters()
+      write(6,'(1x,"Static dielectric constant EPS0:           ",f15.6)') eps0_dyn
+      write(6,'(1x,"Optical dielectric constant EPS_inf:       ",f15.6)') eps8_dyn
+      write(6,'(1x,"Inverse Pekar factor f_0 (force constant): ",f15.6)') f0
+      write(6,'(1x,"Effective mass of the solvent (ps^2):      ",f15.6)') effmass1
+
+   elseif (solvent_model.eq."DEBYE") then
 
       ioption = index(options,' TAUD=')
       if (ioption.ne.0) then
@@ -364,6 +408,7 @@ subroutine dynamicset2
       write(6,'(1x,"Debye relaxation time TAUD (ps):        ",f15.6)') taud
       write(6,'(1x,"Longitudianl relaxation time TAUL (ps): ",f15.6)') taul
       write(6,'(1x,"Effective mass of the solvent (ps^2):   ",f15.6)') effmass1
+
 
    elseif (solvent_model.eq."DEBYE2") then
 
@@ -1196,7 +1241,9 @@ subroutine dynamicset2
 
    if (double_well) then
 
-      if (solvent_model.eq."DEBYE") then
+      if (solvent_model.eq."NEWTON") then
+         adiabatic_rate = tst_rate(temp,fr,eb)
+      elseif (solvent_model.eq."DEBYE") then
          adiabatic_rate = kgh_rate_debye1(temp,fr,fb,eb)
       elseif (solvent_model.eq."ONODERA") then
          adiabatic_rate = kgh_rate_onodera1(temp,fr,fb,eb)
@@ -1421,6 +1468,19 @@ subroutine dynamicset2
       ndump888 = 0
    endif
 
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   ! AFSSH moments output frequency (every NDUMP999 steps)
+   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   ioption = index(options," NDUMP999=")
+
+   if (ioption.ne.0) then
+      ndump999 = reada(options,ioption+10)
+      write(6,'(1x,"Dump expectation values of moments for all states every ",i10," steps"/)') ndump999
+   else
+      ndump999 = 0
+   endif
+
 
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    ! Random seed for RAN2NR (negative to reinitialize)
@@ -1531,8 +1591,17 @@ subroutine dynamicset2
    !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
    ioption  = index(options,' ZE0=')
+   ioptionve = index(options,' VZE0=')
+   ioptionv1 = index(options,' VZ10=')
    ioption2 = index(options,' ZE0R')
    ioption3 = index(options,' ZE0P')
+
+   if (ioptionve.ne.0.and.ioptionv1.ne.0) then
+      write(*,'(/1x,"*** (in DYNAMICSET2): You can specify either of the VZE0= or VZ10=, not both ***"/)')
+      call clean_exit
+   endif
+
+   fixedinit = index(options,' FIXEDINIT').ne.0
 
    if (ioption.ne.0) then
 
@@ -1560,14 +1629,27 @@ subroutine dynamicset2
 
    endif
 
-    if (reactive_flux) then
-       if (scaled) then 
-          Call z1_to_ze(z10,ze0)
-          dividing_surface_egap = ze0
-       else
-          dividing_surface_egap = ze0
-       end if
-    end if
+
+   if (ioptionve.ne.0) then
+      ioptionve = ioptionve + 6
+      vze0 = reada(options,ioptionve)
+      call ve_to_v1(vze0,vz10)
+   endif
+
+   if (ioptionv1.ne.0) then
+      ioptionv1 = ioptionv1 + 6
+      vz10 = reada(options,ioptionve)
+      call v1_to_ve(vz10,vze0)
+   endif
+
+   if (reactive_flux) then
+      if (scaled) then 
+         Call z1_to_ze(z10,ze0)
+         dividing_surface_egap = ze0
+      else
+         dividing_surface_egap = ze0
+      end if
+   end if
 
    call ze_to_z1(ze0,z10)
 
@@ -1837,9 +1919,10 @@ subroutine dynamicset2
 
       !-- pick the initial value of the solvent coordinate
       !   from a gaussian distribution centered at (z10)
+      !   or use a fixed value from the input (z10)
 
       !-- CAS adding this to set initial energy gap to value chosen in input file (no distribution around center)
-      if (reactive_flux) then 
+      if (reactive_flux.or.fixedinit) then
          z1 = z10
       else
          sigma = sqrt(kb*temp/f0)
@@ -1855,16 +1938,12 @@ subroutine dynamicset2
          !   from a gaussian distribution centered at (-z10)
          sigma = sqrt(kb*temp/gamma)
          sample = gaussdist_boxmuller()
-         y1 = -z10 + sigma*sample
+         if (fixedinit) then
+            y1 = -z10
+         else
+            y1 = -z10 + sigma*sample
+         endif
       endif
-
-      !--(DEBUG)--start
-      !-- ignoring sampling
-      !z1 = z10
-      !if (solvent_model.eq."ONODERA2") then
-      !   y1 = -z10
-      !endif
-      !--(DEBUG)--end
 
       !-- zero out the moments (A-FSSH)
       if (mdqt.and.afssh) then
@@ -1879,14 +1958,7 @@ subroutine dynamicset2
          !-- overdamped dynamics
          vz1 = 0.d0
 
-      elseif (solvent_model.eq."ONODERA") then
-
-         !-- initial velocity from Maxwell distribution
-         sigma1 = sqrt(kb*temp/effmass1)
-         sample = gaussdist_boxmuller()
-         vz1 = sigma1*sample
-
-      elseif (solvent_model.eq."ONODERA2") then
+      elseif (solvent_model.eq."ONODERA".or.solvent_model.eq."ONODERA2".or.solvent_model.eq."NEWTON") then
 
          !-- initial velocity from Maxwell distribution
          sigma1 = sqrt(kb*temp/effmass1)
@@ -1896,10 +1968,12 @@ subroutine dynamicset2
       else
 
          !-- Other models are not implemented yet...
-         write(6,'(1x,"(From DYNAMICS3: solvent model ",a10," is not implemented: abort calculation)")') solvent_model
+         write(6,'(1x,"(From DYNAMICSET2: solvent model ",a10," is not implemented: abort calculation)")') solvent_model
          call clean_exit
 
       endif
+
+      if (fixedinit) vz1 = vz10
 
       !-- For reactive flux, check if velocity is negative.  If it is, reverse it.  
       if (reactive_flux) then
@@ -2110,7 +2184,8 @@ subroutine dynamicset2
 
 
       write(6,'(/1x,"===> Trajectory ",i5," starts on the electronic state ",i3)') itraj, istate
-      write(6,'( 1x,"===> Initial solvent coordinate (z1), (kcal/mol)^(1/2): ",f13.6)') z1
+      write(6,'( 1x,"===> Initial solvent coordinate (z1), (kcal/mol)^(1/2):    ",f13.6)') z1
+      write(6,'( 1x,"===> Initial solvent velocity  (vz1), (kcal/mol)^(1/2)/ps: ",f13.6)') vz1
       call z1_to_ze(z1,ze)
 
       write(6,*)
@@ -2125,11 +2200,22 @@ subroutine dynamicset2
          open(777,file=job(1:ljob)//"/populations_"//traj_suffix//".dat")
          open(778,file=job(1:ljob)//"/coherences_"//traj_suffix//".dat")
       endif
+
       if (ndump888.ne.0) then
          open(888,file=job(1:ljob)//"/couplings_"//traj_suffix//".dat")
          write(888,'("#",132("-"))')
          write(888,'("#",t6,"t(ps)",t22,"|d(1,2)|",t42,"d12",t62,"v*d12",t82,"U(ground)",t102,"U(excited)",t120,"Adiabatic gap")')
          write(888,'("#",132("-"))')
+      endif
+
+      if (ndump999.ne.0) then
+         do i=1,nstates_dyn
+            write(state_index,'(i1)') i
+            open(999+i+1,file=job(1:ljob)//"/afssh-moments_state"//state_index//"_traj"//traj_suffix//".dat")
+            write(999+i+1,'("#-State ",i1,124("-"))') i
+            write(999+i+1,'("#",t6,"t(ps)",t22,"z-moment(Re,Im)",t62,"pz-moment(Re,Im)")')
+            write(999+i+1,'("#",132("-"))')
+         enddo
       endif
       !--(DEBUG)--end
 
@@ -2184,7 +2270,13 @@ subroutine dynamicset2
 
          !-- Propagate solvent coordinates and velocities
 
-         if (solvent_model.eq."DEBYE") then
+         if (solvent_model.eq."NEWTON") then
+
+            !-- Newton equation (ballistic model)
+            call velocity_verlet_1d(istate,z1,vz1,tstep,ekin1,efes)
+            ekin = ekin1
+
+         elseif (solvent_model.eq."DEBYE") then
 
             !-- overdamped Langevin equation (pure Debye model)
             call langevin_debye_1d(istate,z1,vz1,tstep,temp,ekin1,efes)
@@ -2433,6 +2525,15 @@ subroutine dynamicset2
             !-- print out couplings (channel 888)
             if (ndump888.ne.0.and.mod(istep,ndump888).eq.0) then
                call print_couplings_and_splittings(888,zeit)
+            endif
+
+            !-- print out afssh moments (channel 999)
+            if (afssh) then
+               if (ndump999.ne.0.and.mod(istep,ndump999).eq.0) then
+                  do i=1,nstates_dyn
+                     call print_afssh_moments(999+i+1,zeit,i)
+                  enddo
+               endif
             endif
 
             !-- hook for the debugger (for setting up a breakpoint)
@@ -2687,6 +2788,7 @@ subroutine dynamicset2
          close(778)
       endif
       if (ndump888.ne.0) close(888)
+      if (ndump999.ne.0) close(999)
       !--(DEBUG)--end
 
       write(6,*)

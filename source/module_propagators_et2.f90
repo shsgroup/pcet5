@@ -146,6 +146,7 @@ module propagators_et2
    public :: get_diabatic_populations_lfs
    public :: get_nonadiabatic_coupling
    public :: get_gradient
+   public :: velocity_verlet_1d
    public :: langevin_debye_1d
    public :: langevin_debye2_1d
    public :: langevin_onodera_1d
@@ -182,6 +183,7 @@ module propagators_et2
    public :: print_coherences_den
    public :: print_coherences_amp
    public :: print_couplings_and_splittings
+   public :: print_afssh_moments
    public :: calculate_switch_prob_function
    public :: calculate_w_mu
    public :: print_amplitudes
@@ -257,6 +259,12 @@ contains
       integer :: k
       write(channel,'(f12.6,1x,140g15.6)') t_, (amplitude(istate_)*conjg(amplitude(k)),k=1,nstates)
    end subroutine print_coherences_amp
+
+   subroutine print_afssh_moments(channel,t_,istate_)
+      integer, intent(in) :: channel, istate_
+      real(kind=8), intent(in) :: t_
+      write(channel,'(f12.6,2x,4g20.10)') t_, zmom1(istate_,istate_), pzmom1(istate_,istate_)
+   end subroutine print_afssh_moments
 
 
    subroutine set_mode_et2(mode_,nstates_,ielst_,iset_)
@@ -786,7 +794,7 @@ contains
       integer :: i
       ctrace = 0.d0
       do i=1,nstates
-      	ctrace = ctrace + zmom1(i,i)
+         ctrace = ctrace + zmom1(i,i)
       enddo
       trace = real(ctrace,kind=8)
    end function zmom1_trace
@@ -800,7 +808,7 @@ contains
       integer :: i
       ctrace = 0.d0
       do i=1,nstates
-      	ctrace = ctrace + pzmom1(i,i)
+         ctrace = ctrace + pzmom1(i,i)
       enddo
       trace = real(ctrace,kind=8)
    end function pzmom1_trace
@@ -1188,6 +1196,54 @@ contains
       enddo
 
    end subroutine get_diabatic_populations_lfs
+
+   !--------------------------------------------------------------------
+   !-- Velocity Verlet for Newton dynamics
+   !--------------------------------------------------------------------
+   subroutine velocity_verlet_1d(istate,z1,vz1,dt,ekin1,efes)
+
+      implicit none
+      integer, intent(in)    :: istate
+      real(kind=8), intent(in)    :: dt
+      real(kind=8), intent(inout) :: z1, vz1
+      real(kind=8), intent(out)   :: ekin1, efes
+
+      real(kind=8) :: x, v, xnew, dv
+      real(kind=8) :: f1, f2
+
+      x = z1
+      v = vz1
+
+      !-- calculate electronic states
+      !   REUSE STATES FROM THE END OF THE PREVIOUS TIMESTEP
+      call calculate_electronic_states(x)
+
+      f1 = -f0*x/effmass1
+      !-- add forces from the interaction surface
+      f1 = f1 - grad1(istate)/effmass1
+      xnew = x + v*dt + half*f1*dt*dt
+
+      !-- calculate electronic states and free energies at new positions
+      call calculate_electronic_states(xnew)
+
+      !-- propagate positions and velocities
+      f2 = -f0*xnew/effmass1
+      !-- add forces from the interaction surface
+      f2 = f2 - grad1(istate)/effmass1
+      dv = 0.5d0*dt*(f1 + f2)
+      x = xnew
+      v = v + dv
+
+      z1 = x
+      vz1 = v
+
+      !-- current free energy (PMF)
+      efes = fe(istate)
+
+      !-- calculate kinetic energy
+      ekin1 = half*effmass1*v*v
+
+   end subroutine velocity_verlet_1d
 
 
    !--------------------------------------------------------------------
@@ -2163,9 +2219,9 @@ contains
 
       !== DEBUG start ==============================
       !write(*,*) "--------------------------------------------------------------------------------"
-      !write(*,*) "Checking moments for occupied states"
-      !write(*,*) "<i|zmom1|i>  = ", zmom1(istate_,istate_)
-      !write(*,*) "<i|pzmom1|i> = ", pzmom1(istate_,istate_)
+      !write(*,*) "Checking matrices of moments"
+      !write(*,*) "zmom1  = ", zmom1
+      !write(*,*) "pzmom1 = ", pzmom1
       !write(*,*) "--------------------------------------------------------------------------------"
       !== DEBUG end ================================
 
@@ -2386,6 +2442,9 @@ contains
       !write(*,*) "Checking moments for occupied states"
       !write(*,*) "<i|zmom1|i>  = ", zmom1(istate_,istate_)
       !write(*,*) "<i|pzmom1|i> = ", pzmom1(istate_,istate_)
+      !write(*,*) "Checking matrices of moments"
+      !write(*,*) "zmom1  = ", zmom1
+      !write(*,*) "pzmom1 = ", pzmom1
       !write(*,*) "--------------------------------------------------------------------------------"
       !== DEBUG end ================================
 

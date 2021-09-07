@@ -13,6 +13,17 @@ module rates_et2
 contains
 
    !----------------------------------------------------------------------------
+   !  TST rate (no solvent dynamics)
+   !----------------------------------------------------------------------------
+   function tst_rate(temp,fr,eb) result(rate)
+      real(kind=8) :: temp, fr, eb
+      real(kind=8) :: rate
+      real(kind=8) :: factor
+      factor = sqrt(fr/effmass1)
+      rate = 1.d12*(0.5d0/pi)*factor*exp(-eb/kb/temp)
+   end function tst_rate
+
+   !----------------------------------------------------------------------------
    !  Kramers-Grote-Hynes rate for Debye-1 relaxation
    !----------------------------------------------------------------------------
    function kgh_rate_debye1(temp,fr,fb,eb) result(rate)

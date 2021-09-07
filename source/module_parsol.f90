@@ -73,6 +73,11 @@ module parsol
 contains
 
    !=======================================================================
+   subroutine set_newton_model_parameters()
+      f0 = four*pi*eps0_dyn*eps8_dyn/(eps0_dyn - eps8_dyn)
+   end subroutine set_newton_model_parameters
+
+   !=======================================================================
    subroutine set_debye_model_parameters()
       taul  = eps8_dyn*taud/eps0_dyn
       f0 = four*pi*eps0_dyn*eps8_dyn/(eps0_dyn - eps8_dyn)
@@ -125,9 +130,9 @@ contains
       f0 = four*pi*eps0_dyn*eps8_dyn/(eps0_dyn - eps8_dyn)
       taul  = eps8_dyn*tau2/eps0_dyn
 
-      alpha = (eps1_dyn - eps8_dyn)*tau1 + (eps0_dyn - eps1_dyn)*tau2                                                                            
-      alpha2 = alpha*alpha                                                                                                   
-      alpha3 = alpha*alpha2                                                                                                  
+      alpha = (eps1_dyn - eps8_dyn)*tau1 + (eps0_dyn - eps1_dyn)*tau2
+      alpha2 = alpha*alpha
+      alpha3 = alpha*alpha2
 
       if (tau0.gt.0) then
          effmass1 = 4.d0*pi*eps8_dyn*eps8_dyn*tau0*tau1*tau2/alpha
