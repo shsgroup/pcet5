@@ -7,7 +7,7 @@
 #
 #############################################################
 
-ARCH = gfortran_6.4.0_macports
+ARCH = gfortran_11_ARM64_macports
 FC = /opt/local/bin/gfortran
 # Important: MODFLAG must NOT have a trailing blank
 MODFLAG = -J

@@ -7,7 +7,7 @@
 #
 #############################################################
 
-ARCH = gfortran_x86_64
+ARCH = gfortran-x86_64
 FC = /usr/bin/gfortran
 # Important: MODFLAG must NOT have a trailing blank
 MODFLAG = -J
