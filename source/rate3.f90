@@ -142,9 +142,6 @@ subroutine rate3
 !
 !     ALPHA=<VALUE> - alpha parameter (common for all pairs) (in 1/A)
 !
-!     RATELIMIT=HIGH - calculate
-!
-!
 !-----------------------------------------------------------------------
 !
 !  $Author: souda $
@@ -169,7 +166,7 @@ subroutine rate3
    use fesmin_3d
    use feszz_3d, only: feszz3
 
-   implicit real*8 (a-h,o-z)            !----- FIX THIS! Change to implicit none
+   implicit none
 
    character(1024) :: options
    character( 40)  :: fname
@@ -184,20 +181,48 @@ subroutine rate3
    integer, allocatable, dimension(:)    :: istel, istpr
    integer :: iprin, imcorr, ifactr, ipgtol
 
-   real*8, allocatable, dimension(:)     :: fe
-   real*8, allocatable, dimension(:,:)   :: z_px, z_sx
-   real*8, allocatable, dimension(:,:)   :: enel, envib
-   real*8, allocatable, dimension(:,:,:) :: psiel_px, psipr_px
-   real*8, allocatable, dimension(:,:,:) :: psiel_sx, psipr_sx
-   real*8, allocatable, dimension(:,:)   :: zpi, zei, zpj, zej
-   real*8, allocatable, dimension(:,:,:) :: zpx, zex
-   real*8, allocatable, dimension(:,:)   :: fei, fej
-   real*8, allocatable, dimension(:,:,:) :: fex, de, ea, ea_low, er, v2
-   real*8, allocatable, dimension(:)     :: vrpkk
+   integer :: ikey, ilog, lenf, ispa, log, igr, igrq, igrc, igra, igrh
+   integer :: igfreq, igmass, igaver, midpoint, iiprec, inprec, iprec
+   integer :: nprec, insucc, nsucc, irdm, itemp, n_t
+   integer :: islash, islash1, islash2, idash, itemp_start, itemp_end
+   integer :: idashn, izprec, izprec1, izsucc, izsucc1
+   integer :: islim, iacc, ixacc, imaxit, imaxitx, maxitx
+   integer :: izps, izes, ilin, i, iel, ielst, ierr, imu
+   integer :: it, j, jel, jnu, kg, kk, kzfr, levb, mevb
+   integer :: ndabf, nij, np, nzdim
+   integer :: k, kmu, l, lnu, mu, nu
 
-   real(8) :: zpij00, zeij00, zpxij, zexij
+   real(kind=8), allocatable, dimension(:)     :: fe
+   real(kind=8), allocatable, dimension(:,:)   :: z_px, z_sx
+   real(kind=8), allocatable, dimension(:,:)   :: enel, envib
+   real(kind=8), allocatable, dimension(:,:,:) :: psiel_px, psipr_px
+   real(kind=8), allocatable, dimension(:,:,:) :: psiel_sx, psipr_sx
+   real(kind=8), allocatable, dimension(:,:)   :: zpi, zei, zpj, zej
+   real(kind=8), allocatable, dimension(:,:,:) :: zpx, zex
+   real(kind=8), allocatable, dimension(:,:)   :: fei, fej
+   real(kind=8), allocatable, dimension(:,:,:) :: fex, de, ea, ea_low, er, v2
+   real(kind=8), allocatable, dimension(:)     :: vrpkk
 
-   real(8) :: alphamunu=0.d0, deltar=0.d0
+   real(kind=8) :: zpij00, zeij00, zpxij, zexij
+   real(kind=8) :: alphamunu=0.d0, deltar=0.d0
+
+   real(kind=8) :: aeff, alin, alphamunu_au, beta, betafirst, betalast
+   real(kind=8) :: d2zemin, d2zpmin, d2zpzemin, defe, defet
+   real(kind=8) :: deltabeta, deltar_au, deltarate, denom, dtemp
+   real(kind=8) :: dzemin, dzpmin, ea_high_total, eaeff, eaexp
+   real(kind=8) :: eaija, eaija_high, eaija_low, eaijn, elet, elpt
+   real(kind=8) :: elxx, elxy, elyy, er_alpha, er_r, er_tot, er_total
+   real(kind=8) :: erij_a, erij_n, fcad, feij, feprec, fesucc, fezero
+   real(kind=8) :: fezerot, gaver, gfreq, gfreq_au, gfreq_kcal
+   real(kind=8) :: gint, gmass, gmass_au, gr, prefac, prefac_high, prefac_low
+   real(kind=8) :: psiel_ovl, psipr_ovl, range, ratefirst, ratelast
+   real(kind=8) :: roi, roit, rr, t_start, t_end, temp
+   real(kind=8) :: totalout, totalout_low, totalrate, totalrate_low
+   real(kind=8) :: vij, wi, wi_low, wij, wij_low, wijsum
+   real(kind=8) :: wr, wr_low, wrout, wrout_low, wtotal, wtotal_low
+   real(kind=8) :: xacc, zeij, zeprec, zeprec0, zes, zesucc, zesucc0
+   real(kind=8) :: zfr, zft, zpij, zpprec, zpprec0, zps, zpsucc, zpsucc0
+   real(kind=8) :: vklmunu
 
 
    if (method.eq.2) then
@@ -587,7 +612,7 @@ subroutine rate3
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ! Reactant minimum guess (ZPPREC0,ZEPREC0)
       !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-      izprec1 = izprec+7
+      izprec1 = izprec + 7
       islash = index(options(izprec1:),'/')
       zpprec0 = reada(options(izprec1:izprec1+islash-2),1)
       zeprec0 = reada(options,izprec1+islash)
