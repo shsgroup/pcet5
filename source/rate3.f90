@@ -1374,11 +1374,11 @@ subroutine rate3
 
       if (igr.eq.1.or.igr.eq.2) then
 
-         write(74,'("#-----------------------------------------------------------------")')
+         write(74,'("#",131("="))')
          write(74,'("# non-adiabatic rate as a function of gating distance")')
          write(74,'("#")')
          write(74,'("# harmonic approximation for the gating potential")')
-         write(74,'("# k_tot = int[dr*g(r)*k(r)]")')
+         write(74,'("# k_tot = int[dR*g(R)*k(R)]")')
          write(74,'("# g(r) is a quantum distribution function for harmonic oscillator:")')
          write(74,'("# oscillator mass (daltons)  :",f10.3)') gmass/dalton
          write(74,'("# oscillator frequency (1/cm):",f10.3)') gfreq
@@ -1386,12 +1386,12 @@ subroutine rate3
          write(74,'("#")')
          write(74,'("# 5 columns:")')
          write(74,'("#")')
-         write(74,'("#   r    g(r)   k(r)  g(r)k(r)dr   k_tot")')
-         write(74,'("#-----------------------------------------------------------------")')
+         write(74,'("#",t15,"R",t33,"g(R)",t53,"k(R)",t67,"g(R)k(R)dR",t92,"k_tot")')
+         write(74,'("#",131("-"))')
 
       elseif (igr.eq.3) then
 
-         write(74,'("#-----------------------------------------------------------------")')
+         write(74,'("#",131("="))')
          write(74,'("# Non-adiabatic rate as a function of gating distance")')
          write(74,'("#")')
          write(74,'("# explicit averaging over gating coordinate")')
@@ -1400,19 +1400,19 @@ subroutine rate3
          write(74,'("#")')
          write(74,'("# 3 columns:")')
          write(74,'("#")')
-         write(74,'("# r sum_i[p(i,r)*sum_f[k_if(r)]] k(tot)")')
-         write(74,'("#-----------------------------------------------------------------")')
+         write(74,'("#     R     sum_i[p(i,R)*sum_f[k_if(R)]]      k(tot)")')
+         write(74,'("#",131("-"))')
          write(74,'("#")')
 
       elseif (igr.eq.4) then
 
-         write(74,'("#-----------------------------------------------------------------")')
+         write(74,'("#",131("="))')
          write(74,'("# Non-adiabatic rate as a function of gating distance (harmonic R-mode)")')
          write(74,'("#")')
          write(74,'("# 3 columns:")')
          write(74,'("#")')
-         write(74,'("# r  k(tot,High-T)  k(tot,low-T)")')
-         write(74,'("#-----------------------------------------------------------------")')
+         write(74,'("#      R      k(tot,High-T)      k(tot,low-T)")')
+         write(74,'("#",131("-"))')
          write(74,'("#")')
 
       else
@@ -1608,7 +1608,7 @@ subroutine rate3
             wrout = wr*1.d12
             if (totalout.lt.1.d-20) totalout = 0.d0
             if (wrout.lt.1.d-20) wrout = 0.d0
-            write(74,'(5g20.6)') rr,wrout,totalout
+            write(74,'(5g20.6)') rr, wrout, totalout
             write(log,'(1x,"(igr=3)   Rate (1/sec) at R=",f10.3,": ",e20.9)') rr,wr*1.d12
 
 	 elseif (igr.eq.4) then
@@ -1687,7 +1687,7 @@ subroutine rate3
       if (igr.eq.3) then
 
          open(74,file=job(1:ljob)//"/rate_i_ofr"//ctemp//".dat")
-         write(74,'("#-----------------------------------------------------------------")')
+         write(74,'("#",131("-"))')
          write(74,'("# Non-adiabatic rate for each precursor state")')
          write(74,'("#")')
          write(74,'("# Explicit averaging over gating coordinate")')
@@ -1697,7 +1697,7 @@ subroutine rate3
          write(74,'("# 5 Columns:")')
          write(74,'("#")')
          write(74,'("# R   P(i,R)   Sum_f[k_if(R)]] P(i,R)*Sum_f[k_if(R)]] k_i(tot)")')
-         write(74,'("#-----------------------------------------------------------------")')
+         write(74,'("#",131("-"))')
          write(74,'("#")')
 
          !--------------------------------------
