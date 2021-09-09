@@ -1,0 +1,11 @@
+JOBNAME=5-site-model-rate3-test
+Test RATE3 calculation
+METHOD=1 CHARGE=1 MINIM=2
+HGAS(HYBRID,pars=hybrid.ini,GEOM=5-site-model-gas.d,XYZOUT=5-site-model-geom-gas.xyz)
+SOLV(Ellipse,Water,A=10.0,B=3.5,GEOM=5-site-model-sol.d,XYZOUT=5-site-model-geom-sol.xyz)
+QUANTUM(Proton,NPRST=40,NGRID=64,NGRIDS=0,LIMITS=-1.75/1.75,RHMIN=0.1)
+PTGAS
+PTSOL(ZP=0.0,ZE=0.0)
+RATE3(T=300,ZPREC=4/30,ZSUCC=-4/-30,MAXIT=500,GRCLASS,GRAVER,NPREC=2,NSUCC=10,WEIGHTS,VERBOSE,GMASS=10,GFREQ=100)
+
+END
