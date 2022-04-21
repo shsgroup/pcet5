@@ -1,5 +1,5 @@
 XYZ
-5-site collinear model
+Model I
 
 De  0.000  0.000  -3.50000 
 Dp  0.000  0.000  -1.40000

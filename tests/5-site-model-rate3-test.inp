@@ -1,6 +1,6 @@
-JOBNAME=5-site-model-rate3-test
+JOBNAME=rate3.test
 Test RATE3 calculation
-METHOD=1 CHARGE=1 MINIM=2
+METHOD=1 CHARGE=1
 HGAS(HYBRID,pars=hybrid.ini,GEOM=5-site-model-gas.d,XYZOUT=5-site-model-geom-gas.xyz)
 SOLV(Ellipse,Water,A=10.0,B=3.5,GEOM=5-site-model-sol.d,XYZOUT=5-site-model-geom-sol.xyz)
 QUANTUM(Proton,NPRST=40,NGRID=64,NGRIDS=0,LIMITS=-1.75/1.75,RHMIN=0.1)
